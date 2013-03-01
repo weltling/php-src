@@ -63,4 +63,7 @@ PHP_ARG_WITH(pcre-regex,,
     PHP_ADD_BUILD_DIR($ext_builddir/pcrelib)
     PHP_INSTALL_HEADERS([ext/pcre], [php_pcre.h pcrelib/])
     AC_DEFINE(HAVE_BUNDLED_PCRE, 1, [ ])
+
+    PCRE_CFLAGS="-DHAVE_CONFIG_H $PCRE_CFLAGS"
+    PHP_SUBST(PCRE_CFLAGS)
   fi
