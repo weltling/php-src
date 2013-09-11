@@ -594,22 +594,20 @@ END_EXTERN_C()
 		Z_TYPE_P(__z) = IS_STRING;	\
 	} while (0)
 
-#define ZVAL_ZVAL(z, zv, copy, dtor) {			\
-		zend_uchar is_ref = Z_ISREF_P(z);		\
-		zend_uint refcount = Z_REFCOUNT_P(z);	\
-		ZVAL_COPY_VALUE(z, zv);					\
+#define ZVAL_ZVAL(z, zv, copy, dtor) do {		\
+		zval *__z = (z);						\
+		zval *__zv = (zv);						\
+		ZVAL_COPY_VALUE(__z, __zv);				\
 		if (copy) {								\
-			zval_copy_ctor(z);					\
+			zval_copy_ctor(__z);				\
 	    }										\
 		if (dtor) {								\
 			if (!copy) {						\
-				ZVAL_NULL(zv);					\
+				ZVAL_NULL(__zv);				\
 			}									\
-			zval_ptr_dtor(&zv);					\
+			zval_ptr_dtor(&__zv);				\
 	    }										\
-		Z_SET_ISREF_TO_P(z, is_ref);			\
-		Z_SET_REFCOUNT_P(z, refcount);			\
-	}
+	} while (0)
 
 #define ZVAL_FALSE(z)  					ZVAL_BOOL(z, 0)
 #define ZVAL_TRUE(z)  					ZVAL_BOOL(z, 1)
@@ -637,6 +635,18 @@ END_EXTERN_C()
 #define RETURN_ZVAL(zv, copy, dtor)		{ RETVAL_ZVAL(zv, copy, dtor); return; }
 #define RETURN_FALSE  					{ RETVAL_FALSE; return; }
 #define RETURN_TRUE   					{ RETVAL_TRUE; return; }
+
+#define RETVAL_ZVAL_FAST(z) do {      \
+	zval *_z = (z);                   \
+	if (Z_ISREF_P(_z)) {              \
+		RETVAL_ZVAL(_z, 1, 0);        \
+	} else {                          \
+		zval_ptr_dtor(&return_value); \
+		Z_ADDREF_P(_z);               \
+		*return_value_ptr = _z;       \
+	}                                 \
+} while (0)
+#define RETURN_ZVAL_FAST(z) { RETVAL_ZVAL_FAST(z); return; }
 
 #define SET_VAR_STRING(n, v) {																				\
 								{																			\
