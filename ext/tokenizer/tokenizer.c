@@ -132,7 +132,7 @@ static void tokenize(zval *return_value TSRMLS_DC)
 		if (token_type >= 256) {
 			MAKE_STD_ZVAL(keyword);
 			array_init(keyword);
-			add_next_index_int(keyword, token_type);
+			add_next_index_long(keyword, token_type);
 			if (token_type == T_END_HEREDOC) {
 				if (CG(increment_lineno)) {
 					token_line = ++CG(zend_lineno);
@@ -140,7 +140,7 @@ static void tokenize(zval *return_value TSRMLS_DC)
 				}
 			}
 			add_next_index_stringl(keyword, (char *)zendtext, zendleng, 1);
-			add_next_index_int(keyword, token_line);
+			add_next_index_long(keyword, token_line);
 			add_next_index_zval(return_value, keyword);
 		} else {
 			add_next_index_stringl(return_value, (char *)zendtext, zendleng, 1);
@@ -160,9 +160,9 @@ static void tokenize(zval *return_value TSRMLS_DC)
 				if (zendcursor != zendlimit) {
 					MAKE_STD_ZVAL(keyword);
 					array_init(keyword);
-					add_next_index_int(keyword, T_INLINE_HTML);
+					add_next_index_long(keyword, T_INLINE_HTML);
 					add_next_index_stringl(keyword, (char *)zendcursor, zendlimit - zendcursor, 1);
-					add_next_index_int(keyword, token_line);
+					add_next_index_long(keyword, token_line);
 					add_next_index_zval(return_value, keyword);
 				}
 				break;
@@ -185,7 +185,7 @@ PHP_FUNCTION(token_get_all)
 	zval source_z;
 	zend_lex_state original_lex_state;
 
-	if (zend_parse_parameters(argc TSRMLS_CC, "S", &source, &source_len) == FAILURE) {
+	if (zend_parse_parameters(argc TSRMLS_CC, "s", &source, &source_len) == FAILURE) {
 		return;
 	}
 
@@ -213,7 +213,7 @@ PHP_FUNCTION(token_name)
 	int argc = ZEND_NUM_ARGS();
 	php_int_t type;
 
-	if (zend_parse_parameters(argc TSRMLS_CC, "i", &type) == FAILURE) {
+	if (zend_parse_parameters(argc TSRMLS_CC, "l", &type) == FAILURE) {
 		return;
 	}
 	RETVAL_STRING(get_token_type_name(type), 1);

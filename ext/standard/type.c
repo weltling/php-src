@@ -40,7 +40,7 @@ PHP_FUNCTION(gettype)
 			RETVAL_STRING("boolean", 1);
 			break;
 
-		case IS_INT:
+		case IS_LONG:
 			RETVAL_STRING("integer", 1);
 			break;
 
@@ -72,7 +72,7 @@ PHP_FUNCTION(gettype)
 
 		case IS_RESOURCE:
 			{
-				const char *type_name = zend_rsrc_list_get_rsrc_type(Z_IVAL_PP(arg) TSRMLS_CC);
+				const char *type_name = zend_rsrc_list_get_rsrc_type(Z_LVAL_PP(arg) TSRMLS_CC);
 
 				if (type_name) {
 					RETVAL_STRING("resource", 1);
@@ -94,14 +94,14 @@ PHP_FUNCTION(settype)
 	char *type;
 	php_size_t type_len = 0;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ZS", &var, &type, &type_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Zs", &var, &type, &type_len) == FAILURE) {
 		return;
 	}
 
 	if (!strcasecmp(type, "integer")) {
-		convert_to_int(*var);
+		convert_to_long(*var);
 	} else if (!strcasecmp(type, "int")) {
-		convert_to_int(*var);
+		convert_to_long(*var);
 	} else if (!strcasecmp(type, "float")) {
 		convert_to_double(*var);
 	} else if (!strcasecmp(type, "double")) { /* deprecated */
@@ -146,7 +146,7 @@ PHP_FUNCTION(intval)
 			break;
 
 		case 2:
-			if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Zi", &num, &arg_base) == FAILURE) {
+			if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Zl", &num, &arg_base) == FAILURE) {
 				return;
 			}
 			base = arg_base;
@@ -157,7 +157,7 @@ PHP_FUNCTION(intval)
 	}
 
 	RETVAL_ZVAL(*num, 1, 0);
-	convert_to_int_base(return_value, base);
+	convert_to_long_base(return_value, base);
 }
 /* }}} */
 
@@ -233,7 +233,7 @@ static void php_is_type(INTERNAL_FUNCTION_PARAMETERS, int type)
 			}
 		}
 		if (type == IS_RESOURCE) {
-			const char *type_name = zend_rsrc_list_get_rsrc_type(Z_IVAL_PP(arg) TSRMLS_CC);
+			const char *type_name = zend_rsrc_list_get_rsrc_type(Z_LVAL_PP(arg) TSRMLS_CC);
 			if (!type_name) {
 				RETURN_FALSE;
 			}
@@ -273,7 +273,7 @@ PHP_FUNCTION(is_bool)
    Returns true if variable is a long (integer) */
 PHP_FUNCTION(is_long)
 {
-	php_is_type(INTERNAL_FUNCTION_PARAM_PASSTHRU, IS_INT);
+	php_is_type(INTERNAL_FUNCTION_PARAM_PASSTHRU, IS_LONG);
 }
 /* }}} */
 
@@ -320,13 +320,13 @@ PHP_FUNCTION(is_numeric)
 	}
 
 	switch (Z_TYPE_PP(arg)) {
-		case IS_INT:
+		case IS_LONG:
 		case IS_DOUBLE:
 			RETURN_TRUE;
 			break;
 
 		case IS_STRING:
-			if (is_numeric_string(Z_STRVAL_PP(arg), Z_STRSIZE_PP(arg), NULL, NULL, 0)) {
+			if (is_numeric_string(Z_STRVAL_PP(arg), Z_STRLEN_PP(arg), NULL, NULL, 0)) {
 				RETURN_TRUE;
 			} else {
 				RETURN_FALSE;
@@ -353,7 +353,7 @@ PHP_FUNCTION(is_scalar)
 	switch (Z_TYPE_PP(arg)) {
 		case IS_BOOL:
 		case IS_DOUBLE:
-		case IS_INT:
+		case IS_LONG:
 		case IS_STRING:
 			RETURN_TRUE;
 			break;

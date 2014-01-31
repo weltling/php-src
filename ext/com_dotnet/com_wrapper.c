@@ -186,7 +186,7 @@ static HRESULT STDMETHODCALLTYPE disp_getidsofnames(
 			ret = DISP_E_UNKNOWNNAME;
 			rgDispId[i] = 0;
 		} else {
-			rgDispId[i] = Z_IVAL_PP(tmp);
+			rgDispId[i] = Z_LVAL_PP(tmp);
 		}
 
 		efree(name);
@@ -231,7 +231,7 @@ static HRESULT STDMETHODCALLTYPE disp_getdispid(
 	/* Lookup the name in the hash */
 	if (zend_hash_find(disp->name_to_dispid, name, namelen+1, (void**)&tmp) == SUCCESS) {
 		trace("found it\n");
-		*pid = Z_IVAL_PP(tmp);
+		*pid = Z_LVAL_PP(tmp);
 		ret = S_OK;
 	}
 
@@ -260,7 +260,7 @@ static HRESULT STDMETHODCALLTYPE disp_invokeex(
 	if (SUCCESS == zend_hash_index_find(disp->dispid_to_name, id, (void**)&name)) {
 		/* TODO: add support for overloaded objects */
 
-		trace("-- Invoke: %d %20s [%d] flags=%08x args=%d\n", id, Z_STRVAL_PP(name), Z_STRSIZE_PP(name), wFlags, pdp->cArgs);
+		trace("-- Invoke: %d %20s [%d] flags=%08x args=%d\n", id, Z_STRVAL_PP(name), Z_STRLEN_PP(name), wFlags, pdp->cArgs);
 		
 		/* convert args into zvals.
 		 * Args are in reverse order */
@@ -287,9 +287,9 @@ static HRESULT STDMETHODCALLTYPE disp_invokeex(
 		 * and expose it as a COM exception */
 		
 		if (wFlags & DISPATCH_PROPERTYGET) {
-			retval = zend_read_property(Z_OBJCE_P(disp->object), disp->object, Z_STRVAL_PP(name), Z_STRSIZE_PP(name)+1, 1 TSRMLS_CC);
+			retval = zend_read_property(Z_OBJCE_P(disp->object), disp->object, Z_STRVAL_PP(name), Z_STRLEN_PP(name)+1, 1 TSRMLS_CC);
 		} else if (wFlags & DISPATCH_PROPERTYPUT) {
-			zend_update_property(Z_OBJCE_P(disp->object), disp->object, Z_STRVAL_PP(name), Z_STRSIZE_PP(name)+1, *params[0] TSRMLS_CC);
+			zend_update_property(Z_OBJCE_P(disp->object), disp->object, Z_STRVAL_PP(name), Z_STRLEN_PP(name)+1, *params[0] TSRMLS_CC);
 		} else if (wFlags & DISPATCH_METHOD) {
 			zend_try {
 				if (SUCCESS == call_user_function_ex(EG(function_table), &disp->object, *name,
@@ -389,7 +389,7 @@ static HRESULT STDMETHODCALLTYPE disp_getmembername(
 	FETCH_DISP("GetMemberName");
 
 	if (SUCCESS == zend_hash_index_find(disp->dispid_to_name, id, (void**)&name)) {
-		OLECHAR *olestr = php_com_string_to_olestring(Z_STRVAL_P(name), Z_STRSIZE_P(name), COMG(code_page) TSRMLS_CC);
+		OLECHAR *olestr = php_com_string_to_olestring(Z_STRVAL_P(name), Z_STRLEN_P(name), COMG(code_page) TSRMLS_CC);
 		*pbstrName = SysAllocString(olestr);
 		efree(olestr);
 		return S_OK;
@@ -471,7 +471,7 @@ static void generate_dispids(php_dispatchex *disp TSRMLS_DC)
 				zend_hash_get_current_key_ex(Z_OBJPROP_P(disp->object), &name,
 			   	&namelen, &pid, 0, &pos))) {
 			char namebuf[32];
-			if (keytype == HASH_KEY_IS_INT) {
+			if (keytype == HASH_KEY_IS_LONG) {
 				snprintf(namebuf, sizeof(namebuf), ZEND_UINT_FMT, pid);
 				name = namebuf;
 				namelen = strlen(namebuf)+1;
@@ -490,7 +490,7 @@ static void generate_dispids(php_dispatchex *disp TSRMLS_DC)
 			zend_hash_index_update(disp->dispid_to_name, pid, (void*)&tmp, sizeof(zval *), NULL);
 
 			MAKE_STD_ZVAL(tmp);
-			ZVAL_INT(tmp, pid);
+			ZVAL_LONG(tmp, pid);
 			zend_hash_update(disp->name_to_dispid, name, namelen, (void*)&tmp, sizeof(zval *), NULL);
 		}
 	}
@@ -503,7 +503,7 @@ static void generate_dispids(php_dispatchex *disp TSRMLS_DC)
 			 	&name, &namelen, &pid, 0, &pos))) {
 
 			char namebuf[32];
-			if (keytype == HASH_KEY_IS_INT) {
+			if (keytype == HASH_KEY_IS_LONG) {
 				snprintf(namebuf, sizeof(namebuf), "%d", pid);
 				name = namebuf;
 				namelen = strlen(namebuf) + 1;
@@ -522,7 +522,7 @@ static void generate_dispids(php_dispatchex *disp TSRMLS_DC)
 			zend_hash_index_update(disp->dispid_to_name, pid, (void*)&tmp, sizeof(zval *), NULL);
 
 			MAKE_STD_ZVAL(tmp);
-			ZVAL_INT(tmp, pid);
+			ZVAL_LONG(tmp, pid);
 			zend_hash_update(disp->name_to_dispid, name, namelen, (void*)&tmp, sizeof(zval *), NULL);
 		}
 	}
@@ -601,14 +601,14 @@ PHP_COM_DOTNET_API IDispatch *php_com_wrapper_export_as_sink(zval *val, GUID *si
 	while (HASH_KEY_NON_EXISTENT != (keytype =
 				zend_hash_get_current_key_ex(id_to_name, &name, &namelen, &pid, 0, &pos))) {
 
-		if (keytype == HASH_KEY_IS_INT) {
+		if (keytype == HASH_KEY_IS_LONG) {
 
 			zend_hash_get_current_data_ex(id_to_name, (void**)&ntmp, &pos);
 			
 			MAKE_STD_ZVAL(tmp);
-			ZVAL_INT(tmp, pid);
+			ZVAL_LONG(tmp, pid);
 			zend_hash_update(disp->name_to_dispid, Z_STRVAL_PP(ntmp),
-				Z_STRSIZE_PP(ntmp)+1, (void*)&tmp, sizeof(zval *), NULL);
+				Z_STRLEN_PP(ntmp)+1, (void*)&tmp, sizeof(zval *), NULL);
 		}
 
 		zend_hash_move_forward_ex(id_to_name, &pos);

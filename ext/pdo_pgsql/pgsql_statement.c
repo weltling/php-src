@@ -326,7 +326,7 @@ static int pgsql_stmt_param_hook(pdo_stmt_t *stmt, struct pdo_bound_param_data *
 								Z_TYPE_P(param->parameter) = IS_STRING;
 								
 								if ((len = php_stream_copy_to_mem(stm, &Z_STRVAL_P(param->parameter), PHP_STREAM_COPY_ALL, 0)) > 0) {
-									Z_STRSIZE_P(param->parameter) = len;
+									Z_STRLEN_P(param->parameter) = len;
 								} else {
 									ZVAL_EMPTY_STRING(param->parameter);
 								}
@@ -350,7 +350,7 @@ static int pgsql_stmt_param_hook(pdo_stmt_t *stmt, struct pdo_bound_param_data *
 						SEPARATE_ZVAL_IF_NOT_REF(&param->parameter);
 						convert_to_string(param->parameter);
 						S->param_values[param->paramno] = Z_STRVAL_P(param->parameter);
-						S->param_lengths[param->paramno] = Z_STRSIZE_P(param->parameter);
+						S->param_lengths[param->paramno] = Z_STRLEN_P(param->parameter);
 						S->param_formats[param->paramno] = 0;
 					}
 
@@ -585,7 +585,7 @@ static int pgsql_stmt_get_column_meta(pdo_stmt_t *stmt, php_int_t colno, zval *r
 	}
 	
 	array_init(return_value);
-	add_assoc_int(return_value, "pgsql:oid", S->cols[colno].pgsql_type);
+	add_assoc_long(return_value, "pgsql:oid", S->cols[colno].pgsql_type);
 
 	/* Fetch metadata from Postgres system catalogue */
 	spprintf(&q, 0, "SELECT TYPNAME FROM PG_TYPE WHERE OID=%u", S->cols[colno].pgsql_type);

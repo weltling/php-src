@@ -75,9 +75,9 @@ static void phar_mung_server_vars(char *fname, char *entry, php_size_t entry_len
 	/* PATH_INFO and PATH_TRANSLATED should always be munged */
 	if (SUCCESS == zend_hash_find(_SERVER, "PATH_INFO", sizeof("PATH_INFO"), (void **) &stuff)) {
 		path_info = Z_STRVAL_PP(stuff);
-		code = Z_STRSIZE_PP(stuff);
+		code = Z_STRLEN_PP(stuff);
 
-		if (Z_STRSIZE_PP(stuff) > entry_len && !memcmp(Z_STRVAL_PP(stuff), entry, entry_len)) {
+		if (Z_STRLEN_PP(stuff) > entry_len && !memcmp(Z_STRVAL_PP(stuff), entry, entry_len)) {
 			ZVAL_STRINGL(*stuff, Z_STRVAL_PP(stuff) + entry_len, request_uri_len, 1);
 
 			MAKE_STD_ZVAL(temp);
@@ -89,8 +89,8 @@ static void phar_mung_server_vars(char *fname, char *entry, php_size_t entry_len
 
 	if (SUCCESS == zend_hash_find(_SERVER, "PATH_TRANSLATED", sizeof("PATH_TRANSLATED"), (void **) &stuff)) {
 		path_info = Z_STRVAL_PP(stuff);
-		code = Z_STRSIZE_PP(stuff);
-		Z_STRSIZE_PP(stuff) = spprintf(&(Z_STRVAL_PP(stuff)), 4096, "phar://%s%s", fname, entry);
+		code = Z_STRLEN_PP(stuff);
+		Z_STRLEN_PP(stuff) = spprintf(&(Z_STRVAL_PP(stuff)), 4096, "phar://%s%s", fname, entry);
 
 		MAKE_STD_ZVAL(temp);
 		ZVAL_STRINGL(temp, path_info, code, 0);
@@ -105,10 +105,10 @@ static void phar_mung_server_vars(char *fname, char *entry, php_size_t entry_len
 	if (PHAR_GLOBALS->phar_SERVER_mung_list & PHAR_MUNG_REQUEST_URI) {
 		if (SUCCESS == zend_hash_find(_SERVER, "REQUEST_URI", sizeof("REQUEST_URI"), (void **) &stuff)) {
 			path_info = Z_STRVAL_PP(stuff);
-			code = Z_STRSIZE_PP(stuff);
+			code = Z_STRLEN_PP(stuff);
 
-			if (Z_STRSIZE_PP(stuff) > basename_len && !memcmp(Z_STRVAL_PP(stuff), basename, basename_len)) {
-				ZVAL_STRINGL(*stuff, Z_STRVAL_PP(stuff) + basename_len, Z_STRSIZE_PP(stuff) - basename_len, 1);
+			if (Z_STRLEN_PP(stuff) > basename_len && !memcmp(Z_STRVAL_PP(stuff), basename, basename_len)) {
+				ZVAL_STRINGL(*stuff, Z_STRVAL_PP(stuff) + basename_len, Z_STRLEN_PP(stuff) - basename_len, 1);
 
 				MAKE_STD_ZVAL(temp);
 				ZVAL_STRINGL(temp, path_info, code, 0);
@@ -121,10 +121,10 @@ static void phar_mung_server_vars(char *fname, char *entry, php_size_t entry_len
 	if (PHAR_GLOBALS->phar_SERVER_mung_list & PHAR_MUNG_PHP_SELF) {
 		if (SUCCESS == zend_hash_find(_SERVER, "PHP_SELF", sizeof("PHP_SELF"), (void **) &stuff)) {
 			path_info = Z_STRVAL_PP(stuff);
-			code = Z_STRSIZE_PP(stuff);
+			code = Z_STRLEN_PP(stuff);
 
-			if (Z_STRSIZE_PP(stuff) > basename_len && !memcmp(Z_STRVAL_PP(stuff), basename, basename_len)) {
-				ZVAL_STRINGL(*stuff, Z_STRVAL_PP(stuff) + basename_len, Z_STRSIZE_PP(stuff) - basename_len, 1);
+			if (Z_STRLEN_PP(stuff) > basename_len && !memcmp(Z_STRVAL_PP(stuff), basename, basename_len)) {
+				ZVAL_STRINGL(*stuff, Z_STRVAL_PP(stuff) + basename_len, Z_STRLEN_PP(stuff) - basename_len, 1);
 
 				MAKE_STD_ZVAL(temp);
 				ZVAL_STRINGL(temp, path_info, code, 0);
@@ -137,7 +137,7 @@ static void phar_mung_server_vars(char *fname, char *entry, php_size_t entry_len
 	if (PHAR_GLOBALS->phar_SERVER_mung_list & PHAR_MUNG_SCRIPT_NAME) {
 		if (SUCCESS == zend_hash_find(_SERVER, "SCRIPT_NAME", sizeof("SCRIPT_NAME"), (void **) &stuff)) {
 			path_info = Z_STRVAL_PP(stuff);
-			code = Z_STRSIZE_PP(stuff);
+			code = Z_STRLEN_PP(stuff);
 			ZVAL_STRINGL(*stuff, entry, entry_len, 1);
 
 			MAKE_STD_ZVAL(temp);
@@ -150,8 +150,8 @@ static void phar_mung_server_vars(char *fname, char *entry, php_size_t entry_len
 	if (PHAR_GLOBALS->phar_SERVER_mung_list & PHAR_MUNG_SCRIPT_FILENAME) {
 		if (SUCCESS == zend_hash_find(_SERVER, "SCRIPT_FILENAME", sizeof("SCRIPT_FILENAME"), (void **) &stuff)) {
 			path_info = Z_STRVAL_PP(stuff);
-			code = Z_STRSIZE_PP(stuff);
-			Z_STRSIZE_PP(stuff) = spprintf(&(Z_STRVAL_PP(stuff)), 4096, "phar://%s%s", fname, entry);
+			code = Z_STRLEN_PP(stuff);
+			Z_STRLEN_PP(stuff) = spprintf(&(Z_STRVAL_PP(stuff)), 4096, "phar://%s%s", fname, entry);
 
 			MAKE_STD_ZVAL(temp);
 			ZVAL_STRINGL(temp, path_info, code, 0);
@@ -479,7 +479,7 @@ PHP_METHOD(Phar, mount)
 	php_size_t fname_len, arch_len, entry_len, path_len, actual_len;
 	phar_archive_data **pphar;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "SS", &path, &path_len, &actual, &actual_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss", &path, &path_len, &actual, &actual_len) == FAILURE) {
 		return;
 	}
 
@@ -575,7 +575,7 @@ PHP_METHOD(Phar, webPhar)
 	phar_archive_data *phar = NULL;
 	phar_entry_info *info = NULL;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|S!S!Saz", &alias, &alias_len, &index_php, &index_php_len, &f404, &f404_len, &mimeoverride, &rewrite) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|s!s!saz", &alias, &alias_len, &index_php, &index_php_len, &f404, &f404_len, &mimeoverride, &rewrite) == FAILURE) {
 		return;
 	}
 
@@ -623,11 +623,11 @@ PHP_METHOD(Phar, webPhar)
 
 			if (SUCCESS == zend_hash_find(_server, "PATH_INFO", sizeof("PATH_INFO"), (void**)&z_path_info) &&
 				IS_STRING == Z_TYPE_PP(z_path_info)) {
-				entry_len = Z_STRSIZE_PP(z_path_info);
+				entry_len = Z_STRLEN_PP(z_path_info);
 				entry = estrndup(Z_STRVAL_PP(z_path_info), entry_len);
-				path_info = emalloc(Z_STRSIZE_PP(z_script_name) + entry_len + 1);
-				memcpy(path_info, Z_STRVAL_PP(z_script_name), Z_STRSIZE_PP(z_script_name));
-				memcpy(path_info + Z_STRSIZE_PP(z_script_name), entry, entry_len + 1);
+				path_info = emalloc(Z_STRLEN_PP(z_script_name) + entry_len + 1);
+				memcpy(path_info, Z_STRVAL_PP(z_script_name), Z_STRLEN_PP(z_script_name));
+				memcpy(path_info + Z_STRLEN_PP(z_script_name), entry, entry_len + 1);
 				free_pathinfo = 1;
 			} else {
 				entry_len = 0;
@@ -635,7 +635,7 @@ PHP_METHOD(Phar, webPhar)
 				path_info = Z_STRVAL_PP(z_script_name);
 			}
 
-			pt = estrndup(Z_STRVAL_PP(z_script_name), Z_STRSIZE_PP(z_script_name));
+			pt = estrndup(Z_STRVAL_PP(z_script_name), Z_STRLEN_PP(z_script_name));
 
 		} else {
 			char *testit;
@@ -728,11 +728,11 @@ PHP_METHOD(Phar, webPhar)
 				efree(entry);
 
 				if (fci.retval_ptr_ptr != &retval_ptr) {
-					entry = estrndup(Z_STRVAL_PP(fci.retval_ptr_ptr), Z_STRSIZE_PP(fci.retval_ptr_ptr));
-					entry_len = Z_STRSIZE_PP(fci.retval_ptr_ptr);
+					entry = estrndup(Z_STRVAL_PP(fci.retval_ptr_ptr), Z_STRLEN_PP(fci.retval_ptr_ptr));
+					entry_len = Z_STRLEN_PP(fci.retval_ptr_ptr);
 				} else {
 					entry = Z_STRVAL_P(retval_ptr);
-					entry_len = Z_STRSIZE_P(retval_ptr);
+					entry_len = Z_STRLEN_P(retval_ptr);
 				}
 
 				break;
@@ -841,10 +841,10 @@ PHP_METHOD(Phar, webPhar)
 
 			if (SUCCESS == zend_hash_find(Z_ARRVAL_P(mimeoverride), ext, strlen(ext)+1, (void **) &val)) {
 				switch (Z_TYPE_PP(val)) {
-					case IS_INT:
-						if (Z_IVAL_PP(val) == PHAR_MIME_PHP || Z_IVAL_PP(val) == PHAR_MIME_PHPS) {
+					case IS_LONG:
+						if (Z_LVAL_PP(val) == PHAR_MIME_PHP || Z_LVAL_PP(val) == PHAR_MIME_PHPS) {
 							mime_type = "";
-							code = Z_IVAL_PP(val);
+							code = Z_LVAL_PP(val);
 						} else {
 							zend_throw_exception_ex(phar_ce_PharException, 0 TSRMLS_CC, "Unknown mime type specifier used, only Phar::PHP, Phar::PHPS and a mime type string are allowed");
 #ifdef PHP_WIN32
@@ -914,11 +914,11 @@ PHP_METHOD(Phar, mungServer)
 			return;
 		}
 
-		if (Z_STRSIZE_PP(data) == sizeof("PHP_SELF")-1 && !strncmp(Z_STRVAL_PP(data), "PHP_SELF", sizeof("PHP_SELF")-1)) {
+		if (Z_STRLEN_PP(data) == sizeof("PHP_SELF")-1 && !strncmp(Z_STRVAL_PP(data), "PHP_SELF", sizeof("PHP_SELF")-1)) {
 			PHAR_GLOBALS->phar_SERVER_mung_list |= PHAR_MUNG_PHP_SELF;
 		}
 
-		if (Z_STRSIZE_PP(data) == sizeof("REQUEST_URI")-1) {
+		if (Z_STRLEN_PP(data) == sizeof("REQUEST_URI")-1) {
 			if (!strncmp(Z_STRVAL_PP(data), "REQUEST_URI", sizeof("REQUEST_URI")-1)) {
 				PHAR_GLOBALS->phar_SERVER_mung_list |= PHAR_MUNG_REQUEST_URI;
 			}
@@ -927,7 +927,7 @@ PHP_METHOD(Phar, mungServer)
 			}
 		}
 
-		if (Z_STRSIZE_PP(data) == sizeof("SCRIPT_FILENAME")-1 && !strncmp(Z_STRVAL_PP(data), "SCRIPT_FILENAME", sizeof("SCRIPT_FILENAME")-1)) {
+		if (Z_STRLEN_PP(data) == sizeof("SCRIPT_FILENAME")-1 && !strncmp(Z_STRVAL_PP(data), "SCRIPT_FILENAME", sizeof("SCRIPT_FILENAME")-1)) {
 			PHAR_GLOBALS->phar_SERVER_mung_list |= PHAR_MUNG_SCRIPT_FILENAME;
 		}
 	}
@@ -962,7 +962,7 @@ PHP_METHOD(Phar, createDefaultStub)
 	php_size_t index_len = 0, webindex_len = 0;
 	size_t stub_len;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|SS", &index, &index_len, &webindex, &webindex_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|ss", &index, &index_len, &webindex, &webindex_len) == FAILURE) {
 		return;
 	}
 
@@ -985,7 +985,7 @@ PHP_METHOD(Phar, mapPhar)
 	php_size_t alias_len = 0;
 	php_int_t dataoffset = 0;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|S!i", &alias, &alias_len, &dataoffset) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|s!l", &alias, &alias_len, &dataoffset) == FAILURE) {
 		return;
 	}
 
@@ -1006,7 +1006,7 @@ PHP_METHOD(Phar, loadPhar)
 	char *fname, *alias = NULL, *error;
 	php_size_t fname_len, alias_len = 0;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S|S!", &fname, &fname_len, &alias, &alias_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|s!", &fname, &fname_len, &alias, &alias_len) == FAILURE) {
 		return;
 	}
 
@@ -1037,7 +1037,7 @@ PHP_METHOD(Phar, canCompress)
 {
 	php_int_t method = 0;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|i", &method) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|l", &method) == FAILURE) {
 		return;
 	}
 
@@ -1086,7 +1086,7 @@ PHP_METHOD(Phar, isValidPharFilename)
 	int is_executable;
 	zend_bool executable = 1;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S|b", &fname, &fname_len, &executable) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|b", &fname, &fname_len, &executable) == FAILURE) {
 		return;
 	}
 
@@ -1158,11 +1158,11 @@ PHP_METHOD(Phar, __construct)
 	is_data = instanceof_function(Z_OBJCE_P(zobj), phar_ce_data TSRMLS_CC);
 
 	if (is_data) {
-		if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S|iS!i", &fname, &fname_len, &flags, &alias, &alias_len, &format) == FAILURE) {
+		if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|ls!l", &fname, &fname_len, &flags, &alias, &alias_len, &format) == FAILURE) {
 			return;
 		}
 	} else {
-		if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S|iS!", &fname, &fname_len, &flags, &alias, &alias_len) == FAILURE) {
+		if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|ls!", &fname, &fname_len, &flags, &alias, &alias_len) == FAILURE) {
 			return;
 		}
 	}
@@ -1254,7 +1254,7 @@ PHP_METHOD(Phar, __construct)
 	INIT_PZVAL(&arg1);
 	ZVAL_STRINGL(&arg1, fname, fname_len, 0);
 	INIT_PZVAL(&arg2);
-	ZVAL_INT(&arg2, flags);
+	ZVAL_LONG(&arg2, flags);
 
 	zend_call_method_with_2_params(&zobj, Z_OBJCE_P(zobj), 
 		&spl_ce_RecursiveDirectoryIterator->constructor, "__construct", NULL, &arg1, &arg2);
@@ -1330,7 +1330,7 @@ PHP_METHOD(Phar, unlinkArchive)
 	php_size_t fname_len, zname_len, arch_len, entry_len;
 	phar_archive_data *phar;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &fname, &fname_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &fname, &fname_len) == FAILURE) {
 		RETURN_FALSE;
 	}
 
@@ -1471,7 +1471,7 @@ static int phar_build(zend_object_iterator *iter, void *puser TSRMLS_DC) /* {{{ 
 					return ZEND_HASH_APPLY_STOP;
 				}
 
-				str_key_len = Z_STRSIZE(key);
+				str_key_len = Z_STRLEN(key);
 				str_key = estrndup(Z_STRVAL(key), str_key_len);
 
 				save = str_key;
@@ -1540,7 +1540,7 @@ static int phar_build(zend_object_iterator *iter, void *puser TSRMLS_DC) /* {{{ 
 	}
 
 	fname = Z_STRVAL_PP(value);
-	fname_len = Z_STRSIZE_PP(value);
+	fname_len = Z_STRLEN_PP(value);
 
 phar_spl_fileinfo:
 	if (base_len) {
@@ -1599,7 +1599,7 @@ phar_spl_fileinfo:
 				return ZEND_HASH_APPLY_STOP;
 			}
 
-			str_key_len = Z_STRSIZE(key);
+			str_key_len = Z_STRLEN(key);
 			str_key = estrndup(Z_STRVAL(key), str_key_len);
 
 			save = str_key;
@@ -1760,7 +1760,7 @@ PHP_METHOD(Phar, buildFromDirectory)
 		return;
 	}
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S|S", &dir, &dir_len, &regex, &regex_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|s", &dir, &dir_len, &regex, &regex_len) == FAILURE) {
 		RETURN_FALSE;
 	}
 
@@ -1775,7 +1775,7 @@ PHP_METHOD(Phar, buildFromDirectory)
 	INIT_PZVAL(&arg);
 	ZVAL_STRINGL(&arg, dir, dir_len, 0);
 	INIT_PZVAL(&arg2);
-	ZVAL_INT(&arg2, SPL_FILE_DIR_SKIPDOTS|SPL_FILE_DIR_UNIXPATHS);
+	ZVAL_LONG(&arg2, SPL_FILE_DIR_SKIPDOTS|SPL_FILE_DIR_UNIXPATHS);
 
 	zend_call_method_with_2_params(&iter, spl_ce_RecursiveDirectoryIterator, 
 			&spl_ce_RecursiveDirectoryIterator->constructor, "__construct", NULL, &arg, &arg2);
@@ -1898,7 +1898,7 @@ PHP_METHOD(Phar, buildFromIterator)
 		return;
 	}
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "O|S", &obj, zend_ce_traversable, &base, &base_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "O|s", &obj, zend_ce_traversable, &base, &base_len) == FAILURE) {
 		RETURN_FALSE;
 	}
 
@@ -1945,7 +1945,7 @@ PHP_METHOD(Phar, count)
 		return;
 	}
 
-	RETURN_INT(zend_hash_num_elements(&phar_obj->arc.archive->manifest));
+	RETURN_LONG(zend_hash_num_elements(&phar_obj->arc.archive->manifest));
 }
 /* }}} */
 
@@ -1958,7 +1958,7 @@ PHP_METHOD(Phar, isFileFormat)
 	php_int_t type;
 	PHAR_ARCHIVE_OBJECT();
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "i", &type) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &type) == FAILURE) {
 		RETURN_FALSE;
 	}
 
@@ -2367,7 +2367,7 @@ PHP_METHOD(Phar, convertToExecutable)
 	php_int_t format = 9021976, method = 9021976;
 	PHAR_ARCHIVE_OBJECT();
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|iiS", &format, &method, &ext, &ext_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|lls", &format, &method, &ext, &ext_len) == FAILURE) {
 		return;
 	}
 
@@ -2471,7 +2471,7 @@ PHP_METHOD(Phar, convertToData)
 	php_int_t format = 9021976, method = 9021976;
 	PHAR_ARCHIVE_OBJECT();
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|iiS", &format, &method, &ext, &ext_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|lls", &format, &method, &ext, &ext_len) == FAILURE) {
 		return;
 	}
 
@@ -2571,11 +2571,11 @@ PHP_METHOD(Phar, isCompressed)
 	}
 
 	if (phar_obj->arc.archive->flags & PHAR_FILE_COMPRESSED_GZ) {
-		RETURN_INT(PHAR_ENT_COMPRESSED_GZ);
+		RETURN_LONG(PHAR_ENT_COMPRESSED_GZ);
 	}
 
 	if (phar_obj->arc.archive->flags & PHAR_FILE_COMPRESSED_BZ2) {
-		RETURN_INT(PHAR_ENT_COMPRESSED_BZ2);
+		RETURN_LONG(PHAR_ENT_COMPRESSED_BZ2);
 	}
 
 	RETURN_FALSE;
@@ -2627,7 +2627,7 @@ PHP_METHOD(Phar, delete)
 		return;
 	}
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &fname, &fname_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &fname, &fname_len) == FAILURE) {
 		RETURN_FALSE;
 	}
 
@@ -2727,7 +2727,7 @@ PHP_METHOD(Phar, setAlias)
 		RETURN_FALSE;
 	}
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &alias, &alias_len) == SUCCESS) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &alias, &alias_len) == SUCCESS) {
 		if (alias_len == phar_obj->arc.archive->alias_len && memcmp(phar_obj->arc.archive->alias, alias, alias_len) == 0) {
 			RETURN_TRUE;
 		}
@@ -2899,7 +2899,7 @@ PHP_METHOD(Phar, setStub)
 		return;
 	}
 
-	if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS() TSRMLS_CC, "r|i", &zstub, &len) == SUCCESS) {
+	if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS() TSRMLS_CC, "r|l", &zstub, &len) == SUCCESS) {
 		if ((php_stream_from_zval_no_verify(stream, &zstub)) != NULL) {
 			if (len > 0) {
 				len = -len;
@@ -2920,7 +2920,7 @@ PHP_METHOD(Phar, setStub)
 			zend_throw_exception_ex(spl_ce_UnexpectedValueException, 0 TSRMLS_CC,
 				"Cannot change stub, unable to read from input stream");
 		}
-	} else if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &stub, &stub_len) == SUCCESS) {
+	} else if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &stub, &stub_len) == SUCCESS) {
 		if (phar_obj->arc.archive->is_persistent && FAILURE == phar_copy_on_write(&(phar_obj->arc.archive) TSRMLS_CC)) {
 			zend_throw_exception_ex(phar_ce_PharException, 0 TSRMLS_CC, "phar \"%s\" is persistent, unable to copy on write", phar_obj->arc.archive->fname);
 			return;
@@ -2971,7 +2971,7 @@ PHP_METHOD(Phar, setDefaultStub)
 		return;
 	}
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|S!S", &index, &index_len, &webindex, &webindex_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|s!s", &index, &index_len, &webindex, &webindex_len) == FAILURE) {
 		RETURN_FALSE;
 	}
 
@@ -3041,7 +3041,7 @@ PHP_METHOD(Phar, setSignatureAlgorithm)
 		return;
 	}
 
-	if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS() TSRMLS_CC, "i|S", &algo, &key, &key_len) != SUCCESS) {
+	if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS() TSRMLS_CC, "l|s", &algo, &key, &key_len) != SUCCESS) {
 		return;
 	}
 
@@ -3208,7 +3208,7 @@ PHP_METHOD(Phar, compress)
 	zval *ret;
 	PHAR_ARCHIVE_OBJECT();
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "i|S", &method, &ext, &ext_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l|s", &method, &ext, &ext_len) == FAILURE) {
 		return;
 	}
 
@@ -3275,7 +3275,7 @@ PHP_METHOD(Phar, decompress)
 	zval *ret;
 	PHAR_ARCHIVE_OBJECT();
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|S", &ext, &ext_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|s", &ext, &ext_len) == FAILURE) {
 		return;
 	}
 
@@ -3317,7 +3317,7 @@ PHP_METHOD(Phar, compressFiles)
 	php_int_t method;
 	PHAR_ARCHIVE_OBJECT();
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "i", &method) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &method) == FAILURE) {
 		return;
 	}
 
@@ -3441,7 +3441,7 @@ PHP_METHOD(Phar, copy)
 
 	PHAR_ARCHIVE_OBJECT();
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "SS", &oldfile, &oldfile_len, &newfile, &newfile_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss", &oldfile, &oldfile_len, &newfile, &newfile_len) == FAILURE) {
 		return;
 	}
 
@@ -3547,7 +3547,7 @@ PHP_METHOD(Phar, offsetExists)
 
 	PHAR_ARCHIVE_OBJECT();
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &fname, &fname_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &fname, &fname_len) == FAILURE) {
 		return;
 	}
 
@@ -3584,7 +3584,7 @@ PHP_METHOD(Phar, offsetGet)
 	phar_entry_info *entry;
 	PHAR_ARCHIVE_OBJECT();
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &fname, &fname_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &fname, &fname_len) == FAILURE) {
 		return;
 	}
 
@@ -3732,8 +3732,8 @@ PHP_METHOD(Phar, offsetSet)
 		return;
 	}
 
-	if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS() TSRMLS_CC, "Sr", &fname, &fname_len, &zresource) == FAILURE
-	&& zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "SS", &fname, &fname_len, &cont_str, &cont_len) == FAILURE) {
+	if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS() TSRMLS_CC, "sr", &fname, &fname_len, &zresource) == FAILURE
+	&& zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss", &fname, &fname_len, &cont_str, &cont_len) == FAILURE) {
 		return;
 	}
 
@@ -3771,7 +3771,7 @@ PHP_METHOD(Phar, offsetUnset)
 		return;
 	}
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &fname, &fname_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &fname, &fname_len) == FAILURE) {
 		return;
 	}
 
@@ -3818,7 +3818,7 @@ PHP_METHOD(Phar, addEmptyDir)
 
 	PHAR_ARCHIVE_OBJECT();
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &dirname, &dirname_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &dirname, &dirname_len) == FAILURE) {
 		return;
 	}
 
@@ -3843,7 +3843,7 @@ PHP_METHOD(Phar, addFile)
 
 	PHAR_ARCHIVE_OBJECT();
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S|S", &fname, &fname_len, &localname, &localname_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|s", &fname, &fname_len, &localname, &localname_len) == FAILURE) {
 		return;
 	}
 
@@ -3887,7 +3887,7 @@ PHP_METHOD(Phar, addFromString)
 
 	PHAR_ARCHIVE_OBJECT();
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "SS", &localname, &localname_len, &cont_str, &cont_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss", &localname, &localname_len, &cont_str, &cont_len) == FAILURE) {
 		return;
 	}
 
@@ -4272,7 +4272,7 @@ PHP_METHOD(Phar, extractTo)
 
 	PHAR_ARCHIVE_OBJECT();
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S|z!b", &pathto, &pathto_len, &zval_files, &overwrite) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|z!b", &pathto, &pathto_len, &zval_files, &overwrite) == FAILURE) {
 		return;
 	}
 
@@ -4320,7 +4320,7 @@ PHP_METHOD(Phar, extractTo)
 				goto all_files;
 			case IS_STRING:
 				filename = Z_STRVAL_P(zval_files);
-				filename_len = Z_STRSIZE_P(zval_files);
+				filename_len = Z_STRLEN_P(zval_files);
 				break;
 			case IS_ARRAY:
 				nelems = zend_hash_num_elements(Z_ARRVAL_P(zval_files));
@@ -4338,7 +4338,7 @@ PHP_METHOD(Phar, extractTo)
 									"Invalid argument, array of filenames to extract contains non-string value");
 								return;
 						}
-						if (FAILURE == zend_hash_find(&phar_obj->arc.archive->manifest, Z_STRVAL_PP(zval_file), Z_STRSIZE_PP(zval_file), (void **)&entry)) {
+						if (FAILURE == zend_hash_find(&phar_obj->arc.archive->manifest, Z_STRVAL_PP(zval_file), Z_STRLEN_PP(zval_file), (void **)&entry)) {
 							zend_throw_exception_ex(phar_ce_PharException, 0 TSRMLS_CC,
 								"Phar Error: attempted to extract non-existent file \"%s\" from phar \"%s\"", Z_STRVAL_PP(zval_file), phar_obj->arc.archive->fname);
 						}
@@ -4411,7 +4411,7 @@ PHP_METHOD(PharFileInfo, __construct)
 	phar_archive_data *phar_data;
 	zval *zobj = getThis(), arg1;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &fname, &fname_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &fname, &fname_len) == FAILURE) {
 		return;
 	}
 
@@ -4501,7 +4501,7 @@ PHP_METHOD(PharFileInfo, getCompressedSize)
 		return;
 	}
 
-	RETURN_INT(entry_obj->ent.entry->compressed_filesize);
+	RETURN_LONG(entry_obj->ent.entry->compressed_filesize);
 }
 /* }}} */
 
@@ -4514,7 +4514,7 @@ PHP_METHOD(PharFileInfo, isCompressed)
 	php_int_t method = 9021976;
 	PHAR_ENTRY_OBJECT();
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|i", &method) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|l", &method) == FAILURE) {
 		return;
 	}
 
@@ -4550,7 +4550,7 @@ PHP_METHOD(PharFileInfo, getCRC32)
 	}
 
 	if (entry_obj->ent.entry->is_crc_checked) {
-		RETURN_INT(entry_obj->ent.entry->crc32);
+		RETURN_LONG(entry_obj->ent.entry->crc32);
 	} else {
 		zend_throw_exception_ex(spl_ce_BadMethodCallException, 0 TSRMLS_CC, \
 			"Phar entry was not CRC checked"); \
@@ -4584,7 +4584,7 @@ PHP_METHOD(PharFileInfo, getPharFlags)
 		return;
 	}
 
-	RETURN_INT(entry_obj->ent.entry->flags & ~(PHAR_ENT_PERM_MASK|PHAR_ENT_COMPRESSION_MASK));
+	RETURN_LONG(entry_obj->ent.entry->flags & ~(PHAR_ENT_PERM_MASK|PHAR_ENT_COMPRESSION_MASK));
 }
 /* }}} */
 
@@ -4608,7 +4608,7 @@ PHP_METHOD(PharFileInfo, chmod)
 		return;
 	}
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "i", &perms) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &perms) == FAILURE) {
 		return;
 	}
 
@@ -4843,7 +4843,7 @@ PHP_METHOD(PharFileInfo, getContent)
 
 	phar_seek_efp(link, 0, SEEK_SET, 0, 0 TSRMLS_CC);
 	Z_TYPE_P(return_value) = IS_STRING;
-	Z_STRSIZE_P(return_value) = php_stream_copy_to_mem(fp, &(Z_STRVAL_P(return_value)), link->uncompressed_filesize, 0);
+	Z_STRLEN_P(return_value) = php_stream_copy_to_mem(fp, &(Z_STRVAL_P(return_value)), link->uncompressed_filesize, 0);
 
 	if (!Z_STRVAL_P(return_value)) {
 		Z_STRVAL_P(return_value) = estrndup("", 0);
@@ -4860,7 +4860,7 @@ PHP_METHOD(PharFileInfo, compress)
 	char *error;
 	PHAR_ENTRY_OBJECT();
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "i", &method) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &method) == FAILURE) {
 		return;
 	}
 
@@ -5348,8 +5348,8 @@ zend_function_entry phar_exception_methods[] = {
 };
 /* }}} */
 
-#define REGISTER_PHAR_CLASS_CONST_INT(class_name, const_name, value) \
-	zend_declare_class_constant_int(class_name, const_name, sizeof(const_name)-1, (long)value TSRMLS_CC);
+#define REGISTER_PHAR_CLASS_CONST_LONG(class_name, const_name, value) \
+	zend_declare_class_constant_long(class_name, const_name, sizeof(const_name)-1, (long)value TSRMLS_CC);
 
 #define phar_exception_get_default() zend_exception_get_default(TSRMLS_C)
 
@@ -5383,20 +5383,20 @@ void phar_object_init(TSRMLS_D) /* {{{ */
 	phar_ce_data->ce_flags |= ZEND_ACC_FINAL_CLASS;
 #endif
 
-	REGISTER_PHAR_CLASS_CONST_INT(phar_ce_archive, "BZ2", PHAR_ENT_COMPRESSED_BZ2)
-	REGISTER_PHAR_CLASS_CONST_INT(phar_ce_archive, "GZ", PHAR_ENT_COMPRESSED_GZ)
-	REGISTER_PHAR_CLASS_CONST_INT(phar_ce_archive, "NONE", PHAR_ENT_COMPRESSED_NONE)
-	REGISTER_PHAR_CLASS_CONST_INT(phar_ce_archive, "PHAR", PHAR_FORMAT_PHAR)
-	REGISTER_PHAR_CLASS_CONST_INT(phar_ce_archive, "TAR", PHAR_FORMAT_TAR)
-	REGISTER_PHAR_CLASS_CONST_INT(phar_ce_archive, "ZIP", PHAR_FORMAT_ZIP)
-	REGISTER_PHAR_CLASS_CONST_INT(phar_ce_archive, "COMPRESSED", PHAR_ENT_COMPRESSION_MASK)
-	REGISTER_PHAR_CLASS_CONST_INT(phar_ce_archive, "PHP", PHAR_MIME_PHP)
-	REGISTER_PHAR_CLASS_CONST_INT(phar_ce_archive, "PHPS", PHAR_MIME_PHPS)
-	REGISTER_PHAR_CLASS_CONST_INT(phar_ce_archive, "MD5", PHAR_SIG_MD5)
-	REGISTER_PHAR_CLASS_CONST_INT(phar_ce_archive, "OPENSSL", PHAR_SIG_OPENSSL)
-	REGISTER_PHAR_CLASS_CONST_INT(phar_ce_archive, "SHA1", PHAR_SIG_SHA1)
-	REGISTER_PHAR_CLASS_CONST_INT(phar_ce_archive, "SHA256", PHAR_SIG_SHA256)
-	REGISTER_PHAR_CLASS_CONST_INT(phar_ce_archive, "SHA512", PHAR_SIG_SHA512)
+	REGISTER_PHAR_CLASS_CONST_LONG(phar_ce_archive, "BZ2", PHAR_ENT_COMPRESSED_BZ2)
+	REGISTER_PHAR_CLASS_CONST_LONG(phar_ce_archive, "GZ", PHAR_ENT_COMPRESSED_GZ)
+	REGISTER_PHAR_CLASS_CONST_LONG(phar_ce_archive, "NONE", PHAR_ENT_COMPRESSED_NONE)
+	REGISTER_PHAR_CLASS_CONST_LONG(phar_ce_archive, "PHAR", PHAR_FORMAT_PHAR)
+	REGISTER_PHAR_CLASS_CONST_LONG(phar_ce_archive, "TAR", PHAR_FORMAT_TAR)
+	REGISTER_PHAR_CLASS_CONST_LONG(phar_ce_archive, "ZIP", PHAR_FORMAT_ZIP)
+	REGISTER_PHAR_CLASS_CONST_LONG(phar_ce_archive, "COMPRESSED", PHAR_ENT_COMPRESSION_MASK)
+	REGISTER_PHAR_CLASS_CONST_LONG(phar_ce_archive, "PHP", PHAR_MIME_PHP)
+	REGISTER_PHAR_CLASS_CONST_LONG(phar_ce_archive, "PHPS", PHAR_MIME_PHPS)
+	REGISTER_PHAR_CLASS_CONST_LONG(phar_ce_archive, "MD5", PHAR_SIG_MD5)
+	REGISTER_PHAR_CLASS_CONST_LONG(phar_ce_archive, "OPENSSL", PHAR_SIG_OPENSSL)
+	REGISTER_PHAR_CLASS_CONST_LONG(phar_ce_archive, "SHA1", PHAR_SIG_SHA1)
+	REGISTER_PHAR_CLASS_CONST_LONG(phar_ce_archive, "SHA256", PHAR_SIG_SHA256)
+	REGISTER_PHAR_CLASS_CONST_LONG(phar_ce_archive, "SHA512", PHAR_SIG_SHA512)
 }
 /* }}} */
 

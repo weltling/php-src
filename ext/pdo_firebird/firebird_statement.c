@@ -430,7 +430,7 @@ static int firebird_bind_blob(pdo_stmt_t *stmt, ISC_QUAD *blob_id, zval *param T
 
 	convert_to_string_ex(&param);
 	
-	for (rem_cnt = Z_STRSIZE_P(param); rem_cnt > 0; rem_cnt -= chunk_size)  {
+	for (rem_cnt = Z_STRLEN_P(param); rem_cnt > 0; rem_cnt -= chunk_size)  {
 
 		chunk_size = rem_cnt > USHRT_MAX ? USHRT_MAX : (unsigned short)rem_cnt;
 
@@ -536,10 +536,10 @@ static int firebird_stmt_param_hook(pdo_stmt_t *stmt, struct pdo_bound_param_dat
 			switch (Z_TYPE_P(param->parameter)) {
 				int force_null;
 				
-				case IS_INT:
+				case IS_LONG:
 					/* keep the allow-NULL flag */
 					var->sqltype = (sizeof(php_int_t) == 8 ? SQL_INT64 : SQL_LONG) | (var->sqltype & 1);
-					var->sqldata = (void*)&Z_IVAL_P(param->parameter);
+					var->sqldata = (void*)&Z_LVAL_P(param->parameter);
 					var->sqllen = sizeof(php_int_t);
 					break;
 				case IS_DOUBLE:
@@ -561,13 +561,13 @@ static int firebird_stmt_param_hook(pdo_stmt_t *stmt, struct pdo_bound_param_dat
 						case SQL_TIMESTAMP:
 						case SQL_TYPE_DATE:
 						case SQL_TYPE_TIME:
-							force_null = (Z_STRSIZE_P(param->parameter) == 0);
+							force_null = (Z_STRLEN_P(param->parameter) == 0);
 					}
 					if (!force_null) {
 						/* keep the allow-NULL flag */
 						var->sqltype = SQL_TEXT | (var->sqltype & 1);
 						var->sqldata = Z_STRVAL_P(param->parameter);
-						var->sqllen	 = Z_STRSIZE_P(param->parameter);
+						var->sqllen	 = Z_STRLEN_P(param->parameter);
 						break;
 					}
 				case IS_NULL:
@@ -606,7 +606,7 @@ static int firebird_stmt_param_hook(pdo_stmt_t *stmt, struct pdo_bound_param_dat
 						}
 					case PDO_PARAM_INT:
 						if (value) {
-							ZVAL_INT(param->parameter, *(php_int_t*)value);
+							ZVAL_LONG(param->parameter, *(php_int_t*)value);
 							break;
 						}
                                         case PDO_PARAM_EVT_NORMALIZE:

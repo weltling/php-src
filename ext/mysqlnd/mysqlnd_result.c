@@ -69,7 +69,7 @@ MYSQLND_METHOD(mysqlnd_res, initialize_result_set_rest)(MYSQLND_RES * const resu
 				  Thus for NULL and zero-length we are quite efficient.
 				*/
 				if (Z_TYPE_P(data_cursor[i]) >= IS_STRING) {
-					php_uint_t len = Z_STRSIZE_P(data_cursor[i]);
+					php_uint_t len = Z_STRLEN_P(data_cursor[i]);
 					if (result->meta->fields[i].max_length < len) {
 						result->meta->fields[i].max_length = len;
 					}
@@ -581,7 +581,7 @@ mysqlnd_fetch_lengths_buffered(MYSQLND_RES * const result TSRMLS_DC)
 
 	previous_row = set->data_cursor - result->meta->field_count;
 	for (i = 0; i < result->meta->field_count; i++) {
-		result->lengths[i] = (Z_TYPE_P(previous_row[i]) == IS_NULL)? 0:Z_STRSIZE_P(previous_row[i]);
+		result->lengths[i] = (Z_TYPE_P(previous_row[i]) == IS_NULL)? 0:Z_STRLEN_P(previous_row[i]);
 	}
 
 	return result->lengths;
@@ -675,7 +675,7 @@ mysqlnd_fetch_row_unbuffered_c(MYSQLND_RES * result TSRMLS_DC)
 					if (Z_TYPE_P(data) != IS_NULL) {
 						convert_to_string(data);
 						retrow[i] = Z_STRVAL_P(data);
-						len = Z_STRSIZE_P(data);
+						len = Z_STRLEN_P(data);
 					} else {
 						retrow[i] = NULL;
 						len = 0;
@@ -782,7 +782,7 @@ mysqlnd_fetch_row_unbuffered(MYSQLND_RES * result, void *param, php_uint_t flags
 			}
 			for (i = 0; i < field_count; i++, field++, hash_key++) {
 				zval *data = result->unbuf->last_row_data[i];
-				php_size_t len = (Z_TYPE_P(data) == IS_NULL)? 0:Z_STRSIZE_P(data);
+				php_size_t len = (Z_TYPE_P(data) == IS_NULL)? 0:Z_STRLEN_P(data);
 
 				if (lengths) {
 					lengths[i] = len;
@@ -946,7 +946,7 @@ mysqlnd_fetch_row_buffered_c(MYSQLND_RES * result TSRMLS_DC)
 				  Thus for NULL and zero-length we are quite efficient.
 				*/
 				if (Z_TYPE_P(current_row[i]) >= IS_STRING) {
-					php_uint_t len = Z_STRSIZE_P(current_row[i]);
+					php_uint_t len = Z_STRLEN_P(current_row[i]);
 					if (field->max_length < len) {
 						field->max_length = len;
 					}
@@ -1018,7 +1018,7 @@ mysqlnd_fetch_row_buffered(MYSQLND_RES * result, void *param, php_uint_t flags, 
 				  Thus for NULL and zero-length we are quite efficient.
 				*/
 				if (Z_TYPE_P(current_row[i]) >= IS_STRING) {
-					php_uint_t len = Z_STRSIZE_P(current_row[i]);
+					php_uint_t len = Z_STRLEN_P(current_row[i]);
 					if (field->max_length < len) {
 						field->max_length = len;
 					}

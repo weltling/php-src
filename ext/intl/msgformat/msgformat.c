@@ -39,7 +39,7 @@ static void msgfmt_ctor(INTERNAL_FUNCTION_PARAMETERS)
 
 	object = return_value;
 	/* Parse parameters. */
-	if( zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "SS",
+	if( zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "ss",
 		&locale, &locale_len, &pattern, &pattern_len ) == FAILURE )
 	{
 		intl_error_set( NULL, U_ILLEGAL_ARGUMENT_ERROR,
@@ -133,7 +133,7 @@ PHP_FUNCTION( msgfmt_get_error_code )
 	mfo = (MessageFormatter_object *) zend_object_store_get_object( object TSRMLS_CC );
 
 	/* Return formatter's last error code. */
-	RETURN_INT( INTL_DATA_ERROR_CODE(mfo) );
+	RETURN_LONG( INTL_DATA_ERROR_CODE(mfo) );
 }
 /* }}} */
 

@@ -89,8 +89,8 @@ static void php_pack(zval **val, php_size_t size, int *map, char *output)
 	int i;
 	char *v;
 
-	convert_to_int_ex(val);
-	v = (char *) &Z_IVAL_PP(val);
+	convert_to_long_ex(val);
+	v = (char *) &Z_LVAL_PP(val);
 
 	for (i = 0; i < size; i++) {
 		*output++ = v[map[i]];
@@ -126,7 +126,7 @@ PHP_FUNCTION(pack)
 	convert_to_string_ex(argv[0]);
 
 	format = Z_STRVAL_PP(argv[0]);
-	formatlen = Z_STRSIZE_PP(argv[0]);
+	formatlen = Z_STRLEN_PP(argv[0]);
 
 	/* We have a maximum of <formatlen> format codes to deal with */
 	formatcodes = safe_emalloc(formatlen, sizeof(*formatcodes), 0);
@@ -186,7 +186,7 @@ PHP_FUNCTION(pack)
 						SEPARATE_ZVAL(argv[currentarg]);
 					}
 					convert_to_string_ex(argv[currentarg]);
-					arg = Z_STRSIZE_PP(argv[currentarg]);
+					arg = Z_STRLEN_PP(argv[currentarg]);
 					if (code == 'Z') {
 						/* add one because Z is always NUL-terminated:
 						 * pack("Z*", "aa") === "aa\0"
@@ -332,7 +332,7 @@ PHP_FUNCTION(pack)
 				}
 				convert_to_string_ex(val);
 				memcpy(&output[outputpos], Z_STRVAL_PP(val),
-					   (Z_STRSIZE_PP(val) < arg_cp) ? Z_STRSIZE_PP(val) : arg_cp);
+					   (Z_STRLEN_PP(val) < arg_cp) ? Z_STRLEN_PP(val) : arg_cp);
 				outputpos += arg;
 				break;
 			}
@@ -350,9 +350,9 @@ PHP_FUNCTION(pack)
 				convert_to_string_ex(val);
 				v = Z_STRVAL_PP(val);
 				outputpos--;
-				if(arg > Z_STRSIZE_PP(val)) {
+				if(arg > Z_STRLEN_PP(val)) {
 					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Type %c: not enough characters in string", code);
-					arg = Z_STRSIZE_PP(val);
+					arg = Z_STRLEN_PP(val);
 				}
 
 				while (arg-- > 0) {
@@ -533,7 +533,7 @@ PHP_FUNCTION(unpack)
 	php_size_t formatlen, inputpos, inputlen;
 	int i;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "SS", &formatarg, &formatarg_len,
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss", &formatarg, &formatarg_len,
 		&inputarg, &inputarg_len) == FAILURE) {
 		return;
 	}
@@ -788,7 +788,7 @@ PHP_FUNCTION(unpack)
 					case 'C': {
 						int issigned = (type == 'c') ? (input[inputpos] & 0x80) : 0;
 						php_int_t v = php_unpack(&input[inputpos], 1, issigned, byte_map);
-						add_assoc_int(return_value, n, v);
+						add_assoc_long(return_value, n, v);
 						break;
 					}
 
@@ -809,7 +809,7 @@ PHP_FUNCTION(unpack)
 						}
 
 						v = php_unpack(&input[inputpos], 2, issigned, map);
-						add_assoc_int(return_value, n, v);
+						add_assoc_long(return_value, n, v);
 						break;
 					}
 
@@ -823,7 +823,7 @@ PHP_FUNCTION(unpack)
 						}
 
 						v = php_unpack(&input[inputpos], sizeof(int), issigned, int_map);
-						add_assoc_int(return_value, n, v);
+						add_assoc_long(return_value, n, v);
 						break;
 					}
 
@@ -857,7 +857,7 @@ PHP_FUNCTION(unpack)
 								v = (unsigned int) v;
 							}
 						}
-						add_assoc_int(return_value, n, v);
+						add_assoc_long(return_value, n, v);
 						break;
 					}
 
@@ -967,8 +967,8 @@ PHP_MINIT_FUNCTION(pack)
 	}
 	else {
 		zval val;
-		int size = sizeof(Z_IVAL(val));
-		Z_IVAL(val)=0; /*silence a warning*/
+		int size = sizeof(Z_LVAL(val));
+		Z_LVAL(val)=0; /*silence a warning*/
 
 		/* Where to get hi to lo bytes from */
 		byte_map[0] = size - 1;

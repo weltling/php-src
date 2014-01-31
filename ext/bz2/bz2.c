@@ -331,7 +331,7 @@ static PHP_FUNCTION(bzread)
 	php_int_t len = 1024;
 	php_stream *stream;
 
-	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r|i", &bz, &len)) {
+	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r|l", &bz, &len)) {
 		RETURN_FALSE;
 	}
 	
@@ -343,15 +343,15 @@ static PHP_FUNCTION(bzread)
 	}
 
 	Z_STRVAL_P(return_value) = emalloc(len + 1);
-	Z_STRSIZE_P(return_value) = php_stream_read(stream, Z_STRVAL_P(return_value), len);
+	Z_STRLEN_P(return_value) = php_stream_read(stream, Z_STRVAL_P(return_value), len);
 	
-	if (Z_STRSIZE_P(return_value) < 0) {
+	if (Z_STRLEN_P(return_value) < 0) {
 		efree(Z_STRVAL_P(return_value));
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "could not read valid bz2 data from stream");
 		RETURN_FALSE;		
 	}
 	
-	Z_STRVAL_P(return_value)[Z_STRSIZE_P(return_value)] = 0;
+	Z_STRVAL_P(return_value)[Z_STRLEN_P(return_value)] = 0;
 	Z_TYPE_P(return_value) = IS_STRING;
 }
 /* }}} */
@@ -367,7 +367,7 @@ static PHP_FUNCTION(bzopen)
 	BZFILE   *bz;     /* The compressed file stream */
 	php_stream *stream = NULL;
 	
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ZS", &file, &mode, &mode_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Zs", &file, &mode, &mode_len) == FAILURE) {
 		return;
 	}
 
@@ -378,7 +378,7 @@ static PHP_FUNCTION(bzopen)
 
 	/* If it's not a resource its a string containing the filename to open */
 	if (Z_TYPE_PP(file) == IS_STRING) {
-		if (Z_STRSIZE_PP(file) == 0) {
+		if (Z_STRLEN_PP(file) == 0) {
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "filename cannot be empty");
 			RETURN_FALSE;
 		}
@@ -491,19 +491,19 @@ static PHP_FUNCTION(bzcompress)
 
 	argc = ZEND_NUM_ARGS();
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S|ii", &source, &source_len, &zblock_size, &zwork_factor) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|ll", &source, &source_len, &zblock_size, &zwork_factor) == FAILURE) {
 		return;
 	}
 
 	if (source_len > UINT_MAX) {
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "The string to compress is too large");
-		RETURN_INT(BZ_PARAM_ERROR);
+		RETURN_LONG(BZ_PARAM_ERROR);
 	} else if (argc > 1 && zblock_size > INT_MAX) {
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid block size");
-		RETURN_INT(BZ_PARAM_ERROR);
+		RETURN_LONG(BZ_PARAM_ERROR);
 	} else if (argc > 2 && zwork_factor > INT_MAX) {
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid work factor");
-		RETURN_INT(BZ_PARAM_ERROR);
+		RETURN_LONG(BZ_PARAM_ERROR);
 	}
 
 	/* Assign them to easy to use variables, dest_len is initially the length of the data
@@ -527,7 +527,7 @@ static PHP_FUNCTION(bzcompress)
 	error = BZ2_bzBuffToBuffCompress(dest, &dest_len, source, source_len, block_size, 0, work_factor);
 	if (error != BZ_OK) {
 		efree(dest);
-		RETURN_INT(error);
+		RETURN_LONG(error);
 	} else {
 		/* Copy the buffer, we have perhaps allocate a lot more than we need,
 		   so we erealloc() the buffer to the proper size */
@@ -553,7 +553,7 @@ static PHP_FUNCTION(bzdecompress)
 #endif
 	bz_stream bzs;
 
-	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S|i", &source, &source_len, &small)) {
+	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|l", &source, &source_len, &small)) {
 		RETURN_FALSE;
 	}
 
@@ -591,7 +591,7 @@ static PHP_FUNCTION(bzdecompress)
 		RETVAL_STRINGL(dest, (int) size, 0);
 	} else { /* real error */
 		efree(dest);
-		RETVAL_INT(error);
+		RETVAL_LONG(error);
 	}
 
 	BZ2_bzDecompressEnd(&bzs);
@@ -626,7 +626,7 @@ static void php_bz2_error(INTERNAL_FUNCTION_PARAMETERS, int opt)
 	/* Determine what to return */
 	switch (opt) {
 		case PHP_BZ_ERRNO:
-			RETURN_INT(errnum);
+			RETURN_LONG(errnum);
 			break;
 		case PHP_BZ_ERRSTR:
 			RETURN_STRING((char*)errstr, 1);
@@ -634,7 +634,7 @@ static void php_bz2_error(INTERNAL_FUNCTION_PARAMETERS, int opt)
 		case PHP_BZ_ERRBOTH:
 			array_init(return_value);
 		
-			add_assoc_int  (return_value, "errno",  errnum);
+			add_assoc_long  (return_value, "errno",  errnum);
 			add_assoc_string(return_value, "errstr", (char*)errstr, 1);
 			break;
 	}

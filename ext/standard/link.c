@@ -59,7 +59,7 @@ PHP_FUNCTION(readlink)
 	char buff[MAXPATHLEN];
 	int ret;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &link, &link_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &link, &link_len) == FAILURE) {
 		return;
 	}
 
@@ -90,7 +90,7 @@ PHP_FUNCTION(linkinfo)
 	php_stat_t sb;
 	int ret;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "P", &link, &link_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "p", &link, &link_len) == FAILURE) {
 		return;
 	}
 
@@ -106,11 +106,11 @@ PHP_FUNCTION(linkinfo)
 	if (ret == -1) {
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "%s", strerror(errno));
 		efree(dirname);
-		RETURN_INT(-1L);
+		RETURN_LONG(-1L);
 	}
 
 	efree(dirname);
-	RETURN_INT((php_int_t) sb.st_dev);
+	RETURN_LONG((php_int_t) sb.st_dev);
 }
 /* }}} */
 
@@ -126,7 +126,7 @@ PHP_FUNCTION(symlink)
 	char dirname[MAXPATHLEN];
 	php_size_t len;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "PP", &topath, &topath_len, &frompath, &frompath_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "pp", &topath, &topath_len, &frompath, &frompath_len) == FAILURE) {
 		return;
 	}
 	
@@ -182,7 +182,7 @@ PHP_FUNCTION(link)
 	char source_p[MAXPATHLEN];
 	char dest_p[MAXPATHLEN];
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "PP", &topath, &topath_len, &frompath, &frompath_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "pp", &topath, &topath_len, &frompath, &frompath_len) == FAILURE) {
 		return;
 	}
 

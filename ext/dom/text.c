@@ -73,7 +73,7 @@ PHP_METHOD(domtext, __construct)
 	zend_error_handling error_handling;
 
 	zend_replace_error_handling(EH_THROW, dom_domexception_class_entry, &error_handling TSRMLS_CC);
-	if (zend_parse_method_parameters(ZEND_NUM_ARGS() TSRMLS_CC, getThis(), "O|S", &id, dom_text_class_entry, &value, &value_len) == FAILURE) {
+	if (zend_parse_method_parameters(ZEND_NUM_ARGS() TSRMLS_CC, getThis(), "O|s", &id, dom_text_class_entry, &value, &value_len) == FAILURE) {
 		zend_restore_error_handling(&error_handling TSRMLS_CC);
 		return;
 	}
@@ -155,7 +155,7 @@ PHP_FUNCTION(dom_text_split_text)
 	int         length;
 	dom_object	*intern;
 
-	if (zend_parse_method_parameters(ZEND_NUM_ARGS() TSRMLS_CC, getThis(), "Oi", &id, dom_text_class_entry, &offset) == FAILURE) {
+	if (zend_parse_method_parameters(ZEND_NUM_ARGS() TSRMLS_CC, getThis(), "Ol", &id, dom_text_class_entry, &offset) == FAILURE) {
 		return;
 	}
 	DOM_GET_OBJ(node, id, xmlNodePtr, intern);

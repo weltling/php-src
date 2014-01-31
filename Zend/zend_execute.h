@@ -109,17 +109,17 @@ static zend_always_inline int i_zend_is_true(zval *op TSRMLS_DC)
 		case IS_NULL:
 			result = 0;
 			break;
-		case IS_INT:
+		case IS_LONG:
 		case IS_BOOL:
 		case IS_RESOURCE:
-			result = (Z_IVAL_P(op)?1:0);
+			result = (Z_LVAL_P(op)?1:0);
 			break;
 		case IS_DOUBLE:
 			result = (Z_DVAL_P(op) ? 1 : 0);
 			break;
 		case IS_STRING:
-			if (Z_STRSIZE_P(op) == 0
-				|| (Z_STRSIZE_P(op)==1 && Z_STRVAL_P(op)[0]=='0')) {
+			if (Z_STRLEN_P(op) == 0
+				|| (Z_STRLEN_P(op)==1 && Z_STRVAL_P(op)[0]=='0')) {
 				result = 0;
 			} else {
 				result = 1;
@@ -133,7 +133,7 @@ static zend_always_inline int i_zend_is_true(zval *op TSRMLS_DC)
 				if (Z_OBJ_HT_P(op)->cast_object) {
 					zval tmp;
 					if (Z_OBJ_HT_P(op)->cast_object(op, &tmp, IS_BOOL TSRMLS_CC) == SUCCESS) {
-						result = (int)Z_IVAL(tmp);
+						result = (int)Z_LVAL(tmp);
 						break;
 					}
 				} else if (Z_OBJ_HT_P(op)->get) {
@@ -141,7 +141,7 @@ static zend_always_inline int i_zend_is_true(zval *op TSRMLS_DC)
 					if(Z_TYPE_P(tmp) != IS_OBJECT) {
 						/* for safety - avoid loop */
 						convert_to_boolean(tmp);
-						result = (int)Z_IVAL_P(tmp);
+						result = (int)Z_LVAL_P(tmp);
 						zval_ptr_dtor(&tmp);
 						break;
 					}

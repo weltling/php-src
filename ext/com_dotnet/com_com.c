@@ -57,11 +57,11 @@ PHP_FUNCTION(com_create_instance)
 	obj = CDNO_FETCH(object);
 
 	if (FAILURE == zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET,
-			ZEND_NUM_ARGS() TSRMLS_CC, "S|S!iS",
+			ZEND_NUM_ARGS() TSRMLS_CC, "s|s!ls",
 			&module_name, &module_name_len, &server_name, &server_name_len,
 			&obj->code_page, &typelib_name, &typelib_name_len) &&
 		FAILURE == zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET,
-			ZEND_NUM_ARGS() TSRMLS_CC, "Sa|iS",
+			ZEND_NUM_ARGS() TSRMLS_CC, "sa|ls",
 			&module_name, &module_name_len, &server_params, &obj->code_page,
 			&typelib_name, &typelib_name_len)) {
 
@@ -81,7 +81,7 @@ PHP_FUNCTION(com_create_instance)
 				"Server", sizeof("Server"), (void**)&tmp)) {
 			convert_to_string_ex(tmp);
 			server_name = Z_STRVAL_PP(tmp);
-			server_name_len = Z_STRSIZE_PP(tmp);
+			server_name_len = Z_STRLEN_PP(tmp);
 			ctx = CLSCTX_REMOTE_SERVER;
 		}
 
@@ -89,27 +89,27 @@ PHP_FUNCTION(com_create_instance)
 				"Username", sizeof("Username"), (void**)&tmp)) {
 			convert_to_string_ex(tmp);
 			user_name = Z_STRVAL_PP(tmp);
-			user_name_len = Z_STRSIZE_PP(tmp);
+			user_name_len = Z_STRLEN_PP(tmp);
 		}
 
 		if (SUCCESS == zend_hash_find(HASH_OF(server_params),
 				"Password", sizeof("Password"), (void**)&tmp)) {
 			convert_to_string_ex(tmp);
 			password = Z_STRVAL_PP(tmp);
-			password_len = Z_STRSIZE_PP(tmp);
+			password_len = Z_STRLEN_PP(tmp);
 		}
 
 		if (SUCCESS == zend_hash_find(HASH_OF(server_params),
 				"Domain", sizeof("Domain"), (void**)&tmp)) {
 			convert_to_string_ex(tmp);
 			domain_name = Z_STRVAL_PP(tmp);
-			domain_name_len = Z_STRSIZE_PP(tmp);
+			domain_name_len = Z_STRLEN_PP(tmp);
 		}
 
 		if (SUCCESS == zend_hash_find(HASH_OF(server_params),
 				"Flags", sizeof("Flags"), (void**)&tmp)) {
-			convert_to_int_ex(tmp);
-			ctx = (CLSCTX)Z_IVAL_PP(tmp);
+			convert_to_long_ex(tmp);
+			ctx = (CLSCTX)Z_LVAL_PP(tmp);
 		}
 	}
 
@@ -296,7 +296,7 @@ PHP_FUNCTION(com_get_active_object)
 	OLECHAR *module = NULL;
 
 	php_com_initialize(TSRMLS_C);
-	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S|i",
+	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|l",
 				&module_name, &module_name_len, &code_page)) {
 		php_com_throw_exception(E_INVALIDARG, "Invalid arguments!" TSRMLS_CC);
 		return;
@@ -665,7 +665,7 @@ PHP_FUNCTION(com_create_guid)
 	php_com_initialize(TSRMLS_C);
 	if (CoCreateGuid(&retval) == S_OK && StringFromCLSID(&retval, &guid_string) == S_OK) {
 		Z_TYPE_P(return_value) = IS_STRING;
-		Z_STRVAL_P(return_value) = php_com_olestring_to_string(guid_string, &Z_STRSIZE_P(return_value), CP_ACP TSRMLS_CC);
+		Z_STRVAL_P(return_value) = php_com_olestring_to_string(guid_string, &Z_STRLEN_P(return_value), CP_ACP TSRMLS_CC);
 
 		CoTaskMemFree(guid_string);
 	} else {
@@ -747,7 +747,7 @@ PHP_FUNCTION(com_print_typeinfo)
 	php_com_dotnet_object *obj = NULL;
 	ITypeInfo *typeinfo;
 	
-	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z/|S!b", &arg1, &ifacename,
+	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z/|s!b", &arg1, &ifacename,
 				&ifacelen, &wantsink)) {
 		RETURN_FALSE;
 	}
@@ -780,7 +780,7 @@ PHP_FUNCTION(com_message_pump)
 	MSG msg;
 	DWORD result;
 	
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|i", &timeoutms) == FAILURE)
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|l", &timeoutms) == FAILURE)
 		RETURN_FALSE;
 	
 	php_com_initialize(TSRMLS_C);
@@ -811,7 +811,7 @@ PHP_FUNCTION(com_load_typelib)
 	php_int_t codepage = COMG(code_page);
 	int cached = 0;
 
-	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S|b", &name, &namelen, &cs)) {
+	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|b", &name, &namelen, &cs)) {
 		return;
 	}
 

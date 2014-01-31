@@ -194,7 +194,7 @@ PHP_FUNCTION(convert_uuencode)
 	char *src, *dst;
 	php_size_t src_len, dst_len;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &src, &src_len) == FAILURE || src_len < 1) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &src, &src_len) == FAILURE || src_len < 1) {
 		RETURN_FALSE;
 	}
 
@@ -212,7 +212,7 @@ PHP_FUNCTION(convert_uudecode)
 	php_size_t src_len, dst_len;
 	int err = 0;;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &src, &src_len) == FAILURE || src_len < 1) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &src, &src_len) == FAILURE || src_len < 1) {
 		RETURN_FALSE;
 	}
 

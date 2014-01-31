@@ -68,7 +68,7 @@ PHP_FUNCTION( msgfmt_set_pattern )
 	MSG_FORMAT_METHOD_INIT_VARS;
 
 	/* Parse parameters. */
-	if( zend_parse_method_parameters( ZEND_NUM_ARGS() TSRMLS_CC, getThis(), "OS",
+	if( zend_parse_method_parameters( ZEND_NUM_ARGS() TSRMLS_CC, getThis(), "Os",
 		&object, MessageFormatter_ce_ptr, &value, &value_len ) == FAILURE )
 	{
 		intl_error_set(NULL, U_ILLEGAL_ARGUMENT_ERROR,	

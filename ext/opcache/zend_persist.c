@@ -35,10 +35,10 @@
 
 #if ZEND_EXTENSION_API_NO > PHP_5_3_X_API_NO
 # define zend_accel_memdup_interned_string(str, len) \
-	IS_INTERNED(str) ? str : zend_accel_memdup(str, len)
+	IS_LONGERNED(str) ? str : zend_accel_memdup(str, len)
 
 # define zend_accel_store_interned_string(str, len) do { \
-		if (!IS_INTERNED(str)) { zend_accel_store(str, len); } \
+		if (!IS_LONGERNED(str)) { zend_accel_store(str, len); } \
 	} while (0)
 #else
 # define zend_accel_memdup_interned_string(str, len) \
@@ -244,7 +244,7 @@ static void zend_persist_op_array_ex(zend_op_array *op_array, zend_persistent_sc
 		EG(in_execution) = 1;
 		EG(active_op_array) = op_array;
 		if (zend_get_constant("__COMPILER_HALT_OFFSET__", sizeof("__COMPILER_HALT_OFFSET__") - 1, &offset TSRMLS_CC)) {
-			main_persistent_script->compiler_halt_offset = Z_IVAL(offset);
+			main_persistent_script->compiler_halt_offset = Z_LVAL(offset);
 		}
 		EG(active_op_array) = orig_op_array;
 		EG(in_execution) = orig_in_execution;

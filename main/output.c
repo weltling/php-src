@@ -193,20 +193,20 @@ PHPAPI void php_output_deactivate(TSRMLS_D)
 /* {{{ void php_output_register_constants() */
 PHPAPI void php_output_register_constants(TSRMLS_D)
 {
-	REGISTER_MAIN_INT_CONSTANT("PHP_OUTPUT_HANDLER_START", PHP_OUTPUT_HANDLER_START, CONST_CS | CONST_PERSISTENT);
-	REGISTER_MAIN_INT_CONSTANT("PHP_OUTPUT_HANDLER_WRITE", PHP_OUTPUT_HANDLER_WRITE, CONST_CS | CONST_PERSISTENT);
-	REGISTER_MAIN_INT_CONSTANT("PHP_OUTPUT_HANDLER_FLUSH", PHP_OUTPUT_HANDLER_FLUSH, CONST_CS | CONST_PERSISTENT);
-	REGISTER_MAIN_INT_CONSTANT("PHP_OUTPUT_HANDLER_CLEAN", PHP_OUTPUT_HANDLER_CLEAN, CONST_CS | CONST_PERSISTENT);
-	REGISTER_MAIN_INT_CONSTANT("PHP_OUTPUT_HANDLER_FINAL", PHP_OUTPUT_HANDLER_FINAL, CONST_CS | CONST_PERSISTENT);
-	REGISTER_MAIN_INT_CONSTANT("PHP_OUTPUT_HANDLER_CONT", PHP_OUTPUT_HANDLER_WRITE, CONST_CS | CONST_PERSISTENT);
-	REGISTER_MAIN_INT_CONSTANT("PHP_OUTPUT_HANDLER_END", PHP_OUTPUT_HANDLER_FINAL, CONST_CS | CONST_PERSISTENT);
+	REGISTER_MAIN_LONG_CONSTANT("PHP_OUTPUT_HANDLER_START", PHP_OUTPUT_HANDLER_START, CONST_CS | CONST_PERSISTENT);
+	REGISTER_MAIN_LONG_CONSTANT("PHP_OUTPUT_HANDLER_WRITE", PHP_OUTPUT_HANDLER_WRITE, CONST_CS | CONST_PERSISTENT);
+	REGISTER_MAIN_LONG_CONSTANT("PHP_OUTPUT_HANDLER_FLUSH", PHP_OUTPUT_HANDLER_FLUSH, CONST_CS | CONST_PERSISTENT);
+	REGISTER_MAIN_LONG_CONSTANT("PHP_OUTPUT_HANDLER_CLEAN", PHP_OUTPUT_HANDLER_CLEAN, CONST_CS | CONST_PERSISTENT);
+	REGISTER_MAIN_LONG_CONSTANT("PHP_OUTPUT_HANDLER_FINAL", PHP_OUTPUT_HANDLER_FINAL, CONST_CS | CONST_PERSISTENT);
+	REGISTER_MAIN_LONG_CONSTANT("PHP_OUTPUT_HANDLER_CONT", PHP_OUTPUT_HANDLER_WRITE, CONST_CS | CONST_PERSISTENT);
+	REGISTER_MAIN_LONG_CONSTANT("PHP_OUTPUT_HANDLER_END", PHP_OUTPUT_HANDLER_FINAL, CONST_CS | CONST_PERSISTENT);
 
-	REGISTER_MAIN_INT_CONSTANT("PHP_OUTPUT_HANDLER_CLEANABLE", PHP_OUTPUT_HANDLER_CLEANABLE, CONST_CS | CONST_PERSISTENT);
-	REGISTER_MAIN_INT_CONSTANT("PHP_OUTPUT_HANDLER_FLUSHABLE", PHP_OUTPUT_HANDLER_FLUSHABLE, CONST_CS | CONST_PERSISTENT);
-	REGISTER_MAIN_INT_CONSTANT("PHP_OUTPUT_HANDLER_REMOVABLE", PHP_OUTPUT_HANDLER_REMOVABLE, CONST_CS | CONST_PERSISTENT);
-	REGISTER_MAIN_INT_CONSTANT("PHP_OUTPUT_HANDLER_STDFLAGS", PHP_OUTPUT_HANDLER_STDFLAGS, CONST_CS | CONST_PERSISTENT);
-	REGISTER_MAIN_INT_CONSTANT("PHP_OUTPUT_HANDLER_STARTED", PHP_OUTPUT_HANDLER_STARTED, CONST_CS | CONST_PERSISTENT);
-	REGISTER_MAIN_INT_CONSTANT("PHP_OUTPUT_HANDLER_DISABLED", PHP_OUTPUT_HANDLER_DISABLED, CONST_CS | CONST_PERSISTENT);
+	REGISTER_MAIN_LONG_CONSTANT("PHP_OUTPUT_HANDLER_CLEANABLE", PHP_OUTPUT_HANDLER_CLEANABLE, CONST_CS | CONST_PERSISTENT);
+	REGISTER_MAIN_LONG_CONSTANT("PHP_OUTPUT_HANDLER_FLUSHABLE", PHP_OUTPUT_HANDLER_FLUSHABLE, CONST_CS | CONST_PERSISTENT);
+	REGISTER_MAIN_LONG_CONSTANT("PHP_OUTPUT_HANDLER_REMOVABLE", PHP_OUTPUT_HANDLER_REMOVABLE, CONST_CS | CONST_PERSISTENT);
+	REGISTER_MAIN_LONG_CONSTANT("PHP_OUTPUT_HANDLER_STDFLAGS", PHP_OUTPUT_HANDLER_STDFLAGS, CONST_CS | CONST_PERSISTENT);
+	REGISTER_MAIN_LONG_CONSTANT("PHP_OUTPUT_HANDLER_STARTED", PHP_OUTPUT_HANDLER_STARTED, CONST_CS | CONST_PERSISTENT);
+	REGISTER_MAIN_LONG_CONSTANT("PHP_OUTPUT_HANDLER_DISABLED", PHP_OUTPUT_HANDLER_DISABLED, CONST_CS | CONST_PERSISTENT);
 }
 /* }}} */
 
@@ -384,7 +384,7 @@ PHPAPI int php_output_get_contents(zval *p TSRMLS_DC)
 PHPAPI int php_output_get_length(zval *p TSRMLS_DC)
 {
 	if (OG(active)) {
-		ZVAL_INT(p, OG(active)->buffer.used);
+		ZVAL_LONG(p, OG(active)->buffer.used);
 		return SUCCESS;
 	} else {
 		ZVAL_NULL(p);
@@ -480,8 +480,8 @@ PHPAPI php_output_handler *php_output_handler_create_user(zval *output_handler, 
 			handler = php_output_handler_create_internal(ZEND_STRL(php_output_default_handler_name), php_output_handler_default_func, chunk_size, flags TSRMLS_CC);
 			break;
 		case IS_STRING:
-			if (Z_STRSIZE_P(output_handler) && (alias = php_output_handler_alias(Z_STRVAL_P(output_handler), Z_STRSIZE_P(output_handler) TSRMLS_CC))) {
-				handler = (*alias)(Z_STRVAL_P(output_handler), Z_STRSIZE_P(output_handler), chunk_size, flags TSRMLS_CC);
+			if (Z_STRLEN_P(output_handler) && (alias = php_output_handler_alias(Z_STRVAL_P(output_handler), Z_STRLEN_P(output_handler) TSRMLS_CC))) {
+				handler = (*alias)(Z_STRVAL_P(output_handler), Z_STRLEN_P(output_handler), chunk_size, flags TSRMLS_CC);
 				break;
 			}
 		default:
@@ -955,7 +955,7 @@ static inline php_output_handler_status_t php_output_handler_op(php_output_handl
 			MAKE_STD_ZVAL(ob_data);
 			ZVAL_STRINGL(ob_data, handler->buffer.data, handler->buffer.used, 1);
 			MAKE_STD_ZVAL(ob_mode);
-			ZVAL_INT(ob_mode, (long) context->op);
+			ZVAL_LONG(ob_mode, (long) context->op);
 			zend_fcall_info_argn(&handler->func.user->fci TSRMLS_CC, 2, &ob_data, &ob_mode);
 
 #define PHP_OUTPUT_USER_SUCCESS(retval) (retval && !(Z_TYPE_P(retval) == IS_BOOL && Z_BVAL_P(retval)==0))
@@ -964,9 +964,9 @@ static inline php_output_handler_status_t php_output_handler_op(php_output_handl
 				status = PHP_OUTPUT_HANDLER_NO_DATA;
 				if (Z_TYPE_P(retval) != IS_BOOL) {
 					convert_to_string_ex(&retval);
-					if (Z_STRSIZE_P(retval)) {
-						context->out.data = estrndup(Z_STRVAL_P(retval), Z_STRSIZE_P(retval));
-						context->out.used = Z_STRSIZE_P(retval);
+					if (Z_STRLEN_P(retval)) {
+						context->out.data = estrndup(Z_STRVAL_P(retval), Z_STRLEN_P(retval));
+						context->out.used = Z_STRLEN_P(retval);
 						context->out.free = 1;
 						status = PHP_OUTPUT_HANDLER_SUCCESS;
 					}
@@ -1185,12 +1185,12 @@ static inline zval *php_output_handler_status(php_output_handler *handler, zval 
 	}
 
 	add_assoc_stringl(entry, "name", handler->name, handler->name_len, 1);
-	add_assoc_int(entry, "type", (long) (handler->flags & 0xf));
-	add_assoc_int(entry, "flags", (long) handler->flags);
-	add_assoc_int(entry, "level", (long) handler->level);
-	add_assoc_int(entry, "chunk_size", (long) handler->size);
-	add_assoc_int(entry, "buffer_size", (long) handler->buffer.size);
-	add_assoc_int(entry, "buffer_used", (long) handler->buffer.used);
+	add_assoc_long(entry, "type", (long) (handler->flags & 0xf));
+	add_assoc_long(entry, "flags", (long) handler->flags);
+	add_assoc_long(entry, "level", (long) handler->level);
+	add_assoc_long(entry, "chunk_size", (long) handler->size);
+	add_assoc_long(entry, "buffer_size", (long) handler->buffer.size);
+	add_assoc_long(entry, "buffer_used", (long) handler->buffer.used);
 
 	return entry;
 }
@@ -1307,7 +1307,7 @@ PHP_FUNCTION(ob_start)
 	php_int_t chunk_size = 0;
 	php_int_t flags = PHP_OUTPUT_HANDLER_STDFLAGS;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|z/ii", &output_handler, &chunk_size, &flags) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|z/ll", &output_handler, &chunk_size, &flags) == FAILURE) {
 		return;
 	}
 
@@ -1463,7 +1463,7 @@ PHP_FUNCTION(ob_get_level)
 		return;
 	}
 
-	RETURN_INT(php_output_get_level(TSRMLS_C));
+	RETURN_LONG(php_output_get_level(TSRMLS_C));
 }
 /* }}} */
 
@@ -1529,7 +1529,7 @@ PHP_FUNCTION(ob_implicit_flush)
 {
 	php_int_t flag = 1;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|i", &flag) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|l", &flag) == FAILURE) {
 		return;
 	}
 
@@ -1556,7 +1556,7 @@ PHP_FUNCTION(output_add_rewrite_var)
 	char *name, *value;
 	php_size_t name_len, value_len;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "SS", &name, &name_len, &value, &value_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss", &name, &name_len, &value, &value_len) == FAILURE) {
 		return;
 	}
 

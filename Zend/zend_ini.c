@@ -205,9 +205,9 @@ ZEND_API int zend_register_ini_entries(const zend_ini_entry *ini_entry, int modu
 		hashed_ini_entry->module_number = module_number;
 		if ((zend_get_configuration_directive(p->name, p->name_length, &default_value)) == SUCCESS) {
 			if (!hashed_ini_entry->on_modify
-				|| hashed_ini_entry->on_modify(hashed_ini_entry, Z_STRVAL(default_value), Z_STRSIZE(default_value), hashed_ini_entry->mh_arg1, hashed_ini_entry->mh_arg2, hashed_ini_entry->mh_arg3, ZEND_INI_STAGE_STARTUP TSRMLS_CC) == SUCCESS) {
+				|| hashed_ini_entry->on_modify(hashed_ini_entry, Z_STRVAL(default_value), Z_STRLEN(default_value), hashed_ini_entry->mh_arg1, hashed_ini_entry->mh_arg2, hashed_ini_entry->mh_arg3, ZEND_INI_STAGE_STARTUP TSRMLS_CC) == SUCCESS) {
 				hashed_ini_entry->value = Z_STRVAL(default_value);
-				hashed_ini_entry->value_length = Z_STRSIZE(default_value);
+				hashed_ini_entry->value_length = Z_STRLEN(default_value);
 				config_directive_success = 1;
 			}
 		}
@@ -345,7 +345,7 @@ ZEND_API int zend_ini_register_displayer(char *name, zend_size_t name_length, vo
  * Data retrieval
  */
 
-ZEND_API zend_int_t zend_ini_int(char *name, zend_size_t name_length, int orig) /* {{{ */
+ZEND_API zend_int_t zend_ini_long(char *name, zend_size_t name_length, int orig) /* {{{ */
 {
 	zend_ini_entry *ini_entry;
 	TSRMLS_FETCH();

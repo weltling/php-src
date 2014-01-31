@@ -454,7 +454,7 @@ file_replace(struct magic_set *ms, const char *pat, const char *rep)
 	ZVAL_STRINGL(patt, pat, strlen(pat), 0);
 	opts |= PCRE_MULTILINE;
 	convert_libmagic_pattern(patt, opts);
-	if ((pce = pcre_get_compiled_regex_cache(Z_STRVAL_P(patt), Z_STRSIZE_P(patt) TSRMLS_CC)) == NULL) {
+	if ((pce = pcre_get_compiled_regex_cache(Z_STRVAL_P(patt), Z_STRLEN_P(patt) TSRMLS_CC)) == NULL) {
 		zval_dtor(patt);
 		FREE_ZVAL(patt);
 		return -1;

@@ -4,7 +4,7 @@
   +----------------------------------------------------------------------+
   | PHP Version 5                                                        |
   +----------------------------------------------------------------------+
-  | Copyright (c) 1997-2014 The PHP Group                                |
+  | Copyright (c) 1997-2013 The PHP Group                                |
   +----------------------------------------------------------------------+
   | This source file is subject to version 3.01 of the PHP license,      |
   | that is bundled with this package in the file LICENSE, and is        |
@@ -302,7 +302,7 @@ static inline int process_nested_data(UNSERIALIZE_PARAMETER, HashTable *ht, php_
 			return 0;
 		}
 
-		if (Z_TYPE_P(key) != IS_INT && Z_TYPE_P(key) != IS_STRING) {
+		if (Z_TYPE_P(key) != IS_LONG && Z_TYPE_P(key) != IS_STRING) {
 			zval_dtor(key);
 			FREE_ZVAL(key);
 			return 0;
@@ -320,23 +320,23 @@ static inline int process_nested_data(UNSERIALIZE_PARAMETER, HashTable *ht, php_
 
 		if (!objprops) {
 			switch (Z_TYPE_P(key)) {
-			case IS_INT:
-				if (zend_hash_index_find(ht, Z_IVAL_P(key), (void **)&old_data)==SUCCESS) {
+			case IS_LONG:
+				if (zend_hash_index_find(ht, Z_LVAL_P(key), (void **)&old_data)==SUCCESS) {
 					var_push_dtor(var_hash, old_data);
 				}
-				zend_hash_index_update(ht, Z_IVAL_P(key), &data, sizeof(data), NULL);
+				zend_hash_index_update(ht, Z_LVAL_P(key), &data, sizeof(data), NULL);
 				break;
 			case IS_STRING:
-				if (zend_symtable_find(ht, Z_STRVAL_P(key), Z_STRSIZE_P(key) + 1, (void **)&old_data)==SUCCESS) {
+				if (zend_symtable_find(ht, Z_STRVAL_P(key), Z_STRLEN_P(key) + 1, (void **)&old_data)==SUCCESS) {
 					var_push_dtor(var_hash, old_data);
 				}
-				zend_symtable_update(ht, Z_STRVAL_P(key), Z_STRSIZE_P(key) + 1, &data, sizeof(data), NULL);
+				zend_symtable_update(ht, Z_STRVAL_P(key), Z_STRLEN_P(key) + 1, &data, sizeof(data), NULL);
 				break;
 			}
 		} else {
 			/* object properties should include no integers */
 			convert_to_string(key);
-			zend_hash_update(ht, Z_STRVAL_P(key), Z_STRSIZE_P(key) + 1, &data,
+			zend_hash_update(ht, Z_STRVAL_P(key), Z_STRLEN_P(key) + 1, &data,
 					sizeof data, NULL);
 		}
 		
@@ -1126,9 +1126,9 @@ yy79:
 	}
 
 	/* Use double for large long values that were serialized on a 64-bit system */
-	if (digits >= MAX_LENGTH_OF_ZEND_INT - 1) {
-		if (digits == MAX_LENGTH_OF_ZEND_INT - 1) {
-			int cmp = strncmp(YYCURSOR - MAX_LENGTH_OF_ZEND_INT, int_min_digits, MAX_LENGTH_OF_ZEND_INT - 1);
+	if (digits >= MAX_LENGTH_OF_LONG - 1) {
+		if (digits == MAX_LENGTH_OF_LONG - 1) {
+			int cmp = strncmp(YYCURSOR - MAX_LENGTH_OF_LONG, long_min_digits, MAX_LENGTH_OF_LONG - 1);
 
 			if (!(cmp < 0 || (cmp == 0 && start[2] == '-'))) {
 				goto use_double;
@@ -1140,7 +1140,7 @@ yy79:
 #endif
 	*p = YYCURSOR;
 	INIT_PZVAL(*rval);
-	ZVAL_INT(*rval, parse_iv(start + 2));
+	ZVAL_LONG(*rval, parse_iv(start + 2));
 	return 1;
 }
 #line 1147 "ext/standard/var_unserializer.c"

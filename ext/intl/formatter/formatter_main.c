@@ -36,7 +36,7 @@ static void numfmt_ctor(INTERNAL_FUNCTION_PARAMETERS)
 	FORMATTER_METHOD_INIT_VARS;
 
 	/* Parse parameters. */
-	if( zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "Si|S",
+	if( zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "sl|s",
 		&locale, &locale_len, &style, &pattern, &pattern_len ) == FAILURE )
 	{
 		intl_error_set( NULL, U_ILLEGAL_ARGUMENT_ERROR,
@@ -114,7 +114,7 @@ PHP_FUNCTION( numfmt_get_error_code )
 	nfo = (NumberFormatter_object *) zend_object_store_get_object( object TSRMLS_CC );
 
 	/* Return formatter's last error code. */
-	RETURN_INT( INTL_DATA_ERROR_CODE(nfo) );
+	RETURN_LONG( INTL_DATA_ERROR_CODE(nfo) );
 }
 /* }}} */
 

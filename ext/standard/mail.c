@@ -82,7 +82,7 @@ PHP_FUNCTION(ezmlm_hash)
 	unsigned int h = 5381;
 	php_size_t j, str_len;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &str, &str_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &str, &str_len) == FAILURE) {
 		return;
 	}
 
@@ -92,7 +92,7 @@ PHP_FUNCTION(ezmlm_hash)
 
 	h = (h % 53);
 
-	RETURN_INT((int) h);
+	RETURN_LONG((int) h);
 }
 /* }}} */
 
@@ -108,7 +108,7 @@ PHP_FUNCTION(mail)
 	char *to_r, *subject_r;
 	char *p, *e;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "SSS|SS",	&to, &to_len, &subject, &subject_len, &message, &message_len, &headers, &headers_len, &extra_cmd, &extra_cmd_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sss|ss",	&to, &to_len, &subject, &subject_len, &message, &message_len, &headers, &headers_len, &extra_cmd, &extra_cmd_len) == FAILURE) {
 		return;
 	}
 

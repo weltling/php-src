@@ -35,7 +35,7 @@ static void collator_ctor(INTERNAL_FUNCTION_PARAMETERS)
 	intl_error_reset( NULL TSRMLS_CC );
 	object = return_value;
 	/* Parse parameters. */
-	if( zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "S",
+	if( zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "s",
 		&locale, &locale_len ) == FAILURE )
 	{
 		intl_error_set( NULL, U_ILLEGAL_ARGUMENT_ERROR,

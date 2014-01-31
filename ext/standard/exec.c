@@ -177,11 +177,11 @@ static void php_exec_ex(INTERNAL_FUNCTION_PARAMETERS, int mode) /* {{{ */
 	int ret;
 
 	if (mode) {
-		if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S|z/", &cmd, &cmd_len, &ret_code) == FAILURE) {
+		if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|z/", &cmd, &cmd_len, &ret_code) == FAILURE) {
 			RETURN_FALSE;
 		}
 	} else {
-		if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S|z/z/", &cmd, &cmd_len, &ret_array, &ret_code) == FAILURE) {
+		if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|z/z/", &cmd, &cmd_len, &ret_array, &ret_code) == FAILURE) {
 			RETURN_FALSE;
 		}
 	}
@@ -201,7 +201,7 @@ static void php_exec_ex(INTERNAL_FUNCTION_PARAMETERS, int mode) /* {{{ */
 	}
 	if (ret_code) {
 		zval_dtor(ret_code);
-		ZVAL_INT(ret_code, ret);
+		ZVAL_LONG(ret_code, ret);
 	}
 }
 /* }}} */
@@ -400,7 +400,7 @@ PHP_FUNCTION(escapeshellcmd)
 	php_size_t command_len;
 	char *cmd = NULL;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &command, &command_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &command, &command_len) == FAILURE) {
 		return;
 	}
 
@@ -421,7 +421,7 @@ PHP_FUNCTION(escapeshellarg)
 	php_size_t argument_len;
 	char *cmd = NULL;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &argument, &argument_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &argument, &argument_len) == FAILURE) {
 		return;
 	}
 
@@ -443,7 +443,7 @@ PHP_FUNCTION(shell_exec)
 	char *ret;
 	php_stream *stream;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &command, &command_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &command, &command_len) == FAILURE) {
 		return;
 	}
 
@@ -473,7 +473,7 @@ PHP_FUNCTION(proc_nice)
 {
 	php_int_t pri;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "i", &pri) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &pri) == FAILURE) {
 		RETURN_FALSE;
 	}
 

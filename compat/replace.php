@@ -161,7 +161,7 @@ if ($replace_zpp_vars && !$reverse_replace) {
 
 	/* XXX more cases here to go, var_dump($vars, var_idx); to see what data does already exist at this point */
 
-} else if ($reverse_replace) {
+} else if ($replace_zpp_vars && $reverse_replace) {
 	echo "WARNING: reverse replace for zpp vars isn't implemented, feel free to supply patch" . PHP_EOL;
 }
 

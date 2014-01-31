@@ -514,7 +514,7 @@ static int pdo_mysql_stmt_param_hook(pdo_stmt_t *stmt, struct pdo_bound_param_da
 							if (stm) {
 								SEPARATE_ZVAL_IF_NOT_REF(&param->parameter);
 								Z_TYPE_P(param->parameter) = IS_STRING;
-								Z_STRSIZE_P(param->parameter) = php_stream_copy_to_mem(stm,
+								Z_STRLEN_P(param->parameter) = php_stream_copy_to_mem(stm,
 									&Z_STRVAL_P(param->parameter), PHP_STREAM_COPY_ALL, 0);
 							} else {
 								pdo_raise_impl_error(stmt->dbh, stmt, "HY105", "Expected a stream resource" TSRMLS_CC);
@@ -534,7 +534,7 @@ static int pdo_mysql_stmt_param_hook(pdo_stmt_t *stmt, struct pdo_bound_param_da
 					case IS_STRING:
 						mysqlnd_stmt_bind_one_param(S->stmt, param->paramno, param->parameter, MYSQL_TYPE_VAR_STRING);
 						break;
-					case IS_INT:
+					case IS_LONG:
 #if SIZEOF_ZEND_INT==8
 						mysqlnd_stmt_bind_one_param(S->stmt, param->paramno, param->parameter, MYSQL_TYPE_LONGLONG);
 #elif SIZEOF_ZEND_INT==4
@@ -555,13 +555,13 @@ static int pdo_mysql_stmt_param_hook(pdo_stmt_t *stmt, struct pdo_bound_param_da
 					case IS_STRING:
 						b->buffer_type = MYSQL_TYPE_STRING;
 						b->buffer = Z_STRVAL_P(param->parameter);
-						b->buffer_length = Z_STRSIZE_P(param->parameter);
-						*b->length = Z_STRSIZE_P(param->parameter);
+						b->buffer_length = Z_STRLEN_P(param->parameter);
+						*b->length = Z_STRLEN_P(param->parameter);
 						PDO_DBG_RETURN(1);
 
-					case IS_INT:
+					case IS_LONG:
 						b->buffer_type = MYSQL_TYPE_LONG;
-						b->buffer = &Z_IVAL_P(param->parameter);
+						b->buffer = &Z_LVAL_P(param->parameter);
 						PDO_DBG_RETURN(1);
 
 					case IS_DOUBLE:
@@ -860,10 +860,10 @@ static int pdo_mysql_stmt_col_meta(pdo_stmt_t *stmt, php_int_t colno, zval *retu
 #if SIZEOF_LONG==8
 		case MYSQL_TYPE_LONGLONG:
 #endif
-			add_assoc_int(return_value, "pdo_type", PDO_PARAM_INT);
+			add_assoc_long(return_value, "pdo_type", PDO_PARAM_INT);
 			break;
 		default:
-			add_assoc_int(return_value, "pdo_type", PDO_PARAM_STR);
+			add_assoc_long(return_value, "pdo_type", PDO_PARAM_STR);
 			break;
 	}
 #endif

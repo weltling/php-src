@@ -54,7 +54,7 @@ PHP_FUNCTION(uniqid)
 	php_size_t prefix_len = 0;
 	struct timeval tv;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|Sb", &prefix, &prefix_len,
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|sb", &prefix, &prefix_len,
 							  &more_entropy)) {
 		return;
 	}

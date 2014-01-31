@@ -3583,28 +3583,28 @@ PHP_MINIT_FUNCTION(basic) /* {{{ */
 
 	BG(incomplete_class) = incomplete_class_entry = php_create_incomplete_class(TSRMLS_C);
 
-	REGISTER_INT_CONSTANT("CONNECTION_ABORTED", PHP_CONNECTION_ABORTED, CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("CONNECTION_NORMAL",  PHP_CONNECTION_NORMAL,  CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("CONNECTION_TIMEOUT", PHP_CONNECTION_TIMEOUT, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("CONNECTION_ABORTED", PHP_CONNECTION_ABORTED, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("CONNECTION_NORMAL",  PHP_CONNECTION_NORMAL,  CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("CONNECTION_TIMEOUT", PHP_CONNECTION_TIMEOUT, CONST_CS | CONST_PERSISTENT);
 
-	REGISTER_INT_CONSTANT("INI_USER",   ZEND_INI_USER,   CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("INI_PERDIR", ZEND_INI_PERDIR, CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("INI_SYSTEM", ZEND_INI_SYSTEM, CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("INI_ALL",    ZEND_INI_ALL,    CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("INI_USER",   ZEND_INI_USER,   CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("INI_PERDIR", ZEND_INI_PERDIR, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("INI_SYSTEM", ZEND_INI_SYSTEM, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("INI_ALL",    ZEND_INI_ALL,    CONST_CS | CONST_PERSISTENT);
 
-	REGISTER_INT_CONSTANT("INI_SCANNER_NORMAL", ZEND_INI_SCANNER_NORMAL, CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("INI_SCANNER_RAW",    ZEND_INI_SCANNER_RAW,    CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("INI_SCANNER_NORMAL", ZEND_INI_SCANNER_NORMAL, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("INI_SCANNER_RAW",    ZEND_INI_SCANNER_RAW,    CONST_CS | CONST_PERSISTENT);
 
-	REGISTER_INT_CONSTANT("PHP_URL_SCHEME", PHP_URL_SCHEME, CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("PHP_URL_HOST", PHP_URL_HOST, CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("PHP_URL_PORT", PHP_URL_PORT, CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("PHP_URL_USER", PHP_URL_USER, CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("PHP_URL_PASS", PHP_URL_PASS, CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("PHP_URL_PATH", PHP_URL_PATH, CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("PHP_URL_QUERY", PHP_URL_QUERY, CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("PHP_URL_FRAGMENT", PHP_URL_FRAGMENT, CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("PHP_QUERY_RFC1738", PHP_QUERY_RFC1738, CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("PHP_QUERY_RFC3986", PHP_QUERY_RFC3986, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("PHP_URL_SCHEME", PHP_URL_SCHEME, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("PHP_URL_HOST", PHP_URL_HOST, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("PHP_URL_PORT", PHP_URL_PORT, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("PHP_URL_USER", PHP_URL_USER, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("PHP_URL_PASS", PHP_URL_PASS, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("PHP_URL_PATH", PHP_URL_PATH, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("PHP_URL_QUERY", PHP_URL_QUERY, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("PHP_URL_FRAGMENT", PHP_URL_FRAGMENT, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("PHP_QUERY_RFC1738", PHP_QUERY_RFC1738, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("PHP_QUERY_RFC3986", PHP_QUERY_RFC3986, CONST_CS | CONST_PERSISTENT);
 
 #define REGISTER_MATH_CONSTANT(x)  REGISTER_DOUBLE_CONSTANT(#x, x, CONST_CS | CONST_PERSISTENT)
 	REGISTER_MATH_CONSTANT(M_E);
@@ -3627,10 +3627,10 @@ PHP_MINIT_FUNCTION(basic) /* {{{ */
 	REGISTER_DOUBLE_CONSTANT("INF", php_get_inf(), CONST_CS | CONST_PERSISTENT);
 	REGISTER_DOUBLE_CONSTANT("NAN", php_get_nan(), CONST_CS | CONST_PERSISTENT);
 
-	REGISTER_INT_CONSTANT("PHP_ROUND_HALF_UP", PHP_ROUND_HALF_UP, CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("PHP_ROUND_HALF_DOWN", PHP_ROUND_HALF_DOWN, CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("PHP_ROUND_HALF_EVEN", PHP_ROUND_HALF_EVEN, CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("PHP_ROUND_HALF_ODD", PHP_ROUND_HALF_ODD, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("PHP_ROUND_HALF_UP", PHP_ROUND_HALF_UP, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("PHP_ROUND_HALF_DOWN", PHP_ROUND_HALF_DOWN, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("PHP_ROUND_HALF_EVEN", PHP_ROUND_HALF_EVEN, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("PHP_ROUND_HALF_ODD", PHP_ROUND_HALF_ODD, CONST_CS | CONST_PERSISTENT);
 
 #if ENABLE_TEST_CLASS
 	test_class_startup();
@@ -3856,7 +3856,7 @@ PHP_FUNCTION(constant)
 	char *const_name;
 	php_size_t const_name_len;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &const_name, &const_name_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &const_name, &const_name_len) == FAILURE) {
 		return;
 	}
 
@@ -3877,7 +3877,7 @@ PHP_NAMED_FUNCTION(php_inet_ntop)
 	int af = AF_INET;
 	char buffer[40];
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &address, &address_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &address, &address_len) == FAILURE) {
 		RETURN_FALSE;
 	}
 
@@ -3911,7 +3911,7 @@ PHP_NAMED_FUNCTION(php_inet_pton)
 	php_size_t address_len;
 	char buffer[17];
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &address, &address_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &address, &address_len) == FAILURE) {
 		RETURN_FALSE;
 	}
 
@@ -3951,7 +3951,7 @@ PHP_FUNCTION(ip2long)
 	unsigned long int ip;
 #endif
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &addr, &addr_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &addr, &addr_len) == FAILURE) {
 		return;
 	}
 
@@ -3959,7 +3959,7 @@ PHP_FUNCTION(ip2long)
 	if (addr_len == 0 || inet_pton(AF_INET, addr, &ip) != 1) {
 		RETURN_FALSE;
 	}
-	RETURN_INT(ntohl(ip.s_addr));
+	RETURN_LONG(ntohl(ip.s_addr));
 #else
 	if (addr_len == 0 || (ip = inet_addr(addr)) == INADDR_NONE) {
 		/* The only special case when we should return -1 ourselves,
@@ -3968,11 +3968,11 @@ PHP_FUNCTION(ip2long)
 		if (addr_len == sizeof("255.255.255.255") - 1 &&
 			!memcmp(addr, "255.255.255.255", sizeof("255.255.255.255") - 1)
 		) {
-			RETURN_INT(0xFFFFFFFF);
+			RETURN_LONG(0xFFFFFFFF);
 		}
 		RETURN_FALSE;
 	}
-	RETURN_INT(ntohl(ip));
+	RETURN_LONG(ntohl(ip));
 #endif
 }
 /* }}} */
@@ -3990,7 +3990,7 @@ PHP_FUNCTION(long2ip)
 	char str[40];
 #endif
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &ip, &ip_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &ip, &ip_len) == FAILURE) {
 		return;
 	}
 
@@ -4020,7 +4020,7 @@ PHP_FUNCTION(getenv)
 	char *ptr, *str;
 	php_size_t str_len;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &str, &str_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &str, &str_len) == FAILURE) {
 		RETURN_FALSE;
 	}
 
@@ -4078,7 +4078,7 @@ PHP_FUNCTION(putenv)
 	char *setting;
 	php_size_t setting_len;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &setting, &setting_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &setting, &setting_len) == FAILURE) {
 		return;
 	}
 
@@ -4254,7 +4254,7 @@ PHP_FUNCTION(getopt)
 	php_size_t optname_len = 0;
 	opt_struct *opts, *orig_opts;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S|a", &options, &options_len, &p_longopts) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|a", &options, &options_len, &p_longopts) == FAILURE) {
 		RETURN_FALSE;
 	}
 
@@ -4399,7 +4399,7 @@ PHP_FUNCTION(getopt)
 
 		/* Add this option / argument pair to the result hash. */
 		optname_len = strlen(optname);
-		if (!(optname_len > 1 && optname[0] == '0') && is_numeric_string(optname, optname_len, NULL, NULL, 0) == IS_INT) {
+		if (!(optname_len > 1 && optname[0] == '0') && is_numeric_string(optname, optname_len, NULL, NULL, 0) == IS_LONG) {
 			/* numeric string */
 			int optname_int = atoi(optname);
 			if (zend_hash_index_find(HASH_OF(return_value), optname_int, (void **)&args) != FAILURE) {
@@ -4445,7 +4445,7 @@ PHP_FUNCTION(sleep)
 {
 	php_int_t num;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "i", &num) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &num) == FAILURE) {
 		RETURN_FALSE;
 	}
 	if (num < 0) {
@@ -4453,7 +4453,7 @@ PHP_FUNCTION(sleep)
 		RETURN_FALSE;
 	}
 #ifdef PHP_SLEEP_NON_VOID
-	RETURN_INT(php_sleep(num));
+	RETURN_LONG(php_sleep(num));
 #else
 	php_sleep(num);
 #endif
@@ -4468,7 +4468,7 @@ PHP_FUNCTION(usleep)
 #if HAVE_USLEEP
 	php_int_t num;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "i", &num) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &num) == FAILURE) {
 		return;
 	}
 	if (num < 0) {
@@ -4488,7 +4488,7 @@ PHP_FUNCTION(time_nanosleep)
 	php_int_t tv_sec, tv_nsec;
 	struct timespec php_req, php_rem;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ii", &tv_sec, &tv_nsec) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ll", &tv_sec, &tv_nsec) == FAILURE) {
 		return;
 	}
 
@@ -4507,8 +4507,8 @@ PHP_FUNCTION(time_nanosleep)
 		RETURN_TRUE;
 	} else if (errno == EINTR) {
 		array_init(return_value);
-		add_assoc_int_ex(return_value, "seconds", sizeof("seconds"), php_rem.tv_sec);
-		add_assoc_int_ex(return_value, "nanoseconds", sizeof("nanoseconds"), php_rem.tv_nsec);
+		add_assoc_long_ex(return_value, "seconds", sizeof("seconds"), php_rem.tv_sec);
+		add_assoc_long_ex(return_value, "nanoseconds", sizeof("nanoseconds"), php_rem.tv_nsec);
 		return;
 	} else if (errno == EINVAL) {
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "nanoseconds was not in the range 0 to 999 999 999 or seconds was negative");
@@ -4582,9 +4582,9 @@ static int add_config_entry_cb(zval *entry TSRMLS_DC, int num_args, va_list args
 
 	if (Z_TYPE_P(entry) == IS_STRING) {
 		if (hash_key->nKeyLength > 0) {
-			add_assoc_stringl_ex(retval, hash_key->arKey, hash_key->nKeyLength, Z_STRVAL_P(entry), Z_STRSIZE_P(entry), 1);
+			add_assoc_stringl_ex(retval, hash_key->arKey, hash_key->nKeyLength, Z_STRVAL_P(entry), Z_STRLEN_P(entry), 1);
 		} else {
-			add_index_stringl(retval, hash_key->h, Z_STRVAL_P(entry), Z_STRSIZE_P(entry), 1);
+			add_index_stringl(retval, hash_key->h, Z_STRVAL_P(entry), Z_STRLEN_P(entry), 1);
 		}
 	} else if (Z_TYPE_P(entry) == IS_ARRAY) {
 		MAKE_STD_ZVAL(tmp);
@@ -4604,7 +4604,7 @@ PHP_FUNCTION(get_cfg_var)
 	php_size_t varname_len;
 	zval *retval;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &varname, &varname_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &varname, &varname_len) == FAILURE) {
 		return;
 	}
 
@@ -4686,7 +4686,7 @@ PHP_FUNCTION(error_log)
 	int opt_err = 0, argc = ZEND_NUM_ARGS();
 	php_int_t erropt = 0;
 
-	if (zend_parse_parameters(argc TSRMLS_CC, "S|iPS", &message, &message_len, &erropt, &opt, &opt_len, &headers, &headers_len) == FAILURE) {
+	if (zend_parse_parameters(argc TSRMLS_CC, "s|lps", &message, &message_len, &erropt, &opt, &opt_len, &headers, &headers_len) == FAILURE) {
 		return;
 	}
 
@@ -4761,10 +4761,10 @@ PHP_FUNCTION(error_get_last)
 
 	if (PG(last_error_message)) {
 		array_init(return_value);
-		add_assoc_int_ex(return_value, "type", sizeof("type"), PG(last_error_type));
+		add_assoc_long_ex(return_value, "type", sizeof("type"), PG(last_error_type));
 		add_assoc_string_ex(return_value, "message", sizeof("message"), PG(last_error_message), 1);
 		add_assoc_string_ex(return_value, "file", sizeof("file"), PG(last_error_file)?PG(last_error_file):"-", 1 );
-		add_assoc_int_ex(return_value, "line", sizeof("line"), PG(last_error_lineno));
+		add_assoc_long_ex(return_value, "line", sizeof("line"), PG(last_error_lineno));
 	}
 }
 /* }}} */
@@ -5069,11 +5069,11 @@ static int user_tick_function_compare(user_tick_function_entry * tick_fe1, user_
 	} else if (Z_TYPE_P(func1) == IS_ARRAY && Z_TYPE_P(func2) == IS_ARRAY) {
 		zval result;
 		zend_compare_arrays(&result, func1, func2 TSRMLS_CC);
-		ret = (Z_IVAL(result) == 0);
+		ret = (Z_LVAL(result) == 0);
 	} else if (Z_TYPE_P(func1) == IS_OBJECT && Z_TYPE_P(func2) == IS_OBJECT) {
 		zval result;
 		zend_compare_objects(&result, func1, func2 TSRMLS_CC);
-		ret = (Z_IVAL(result) == 0);
+		ret = (Z_LVAL(result) == 0);
 	} else {
 		ret = 0;
 	}
@@ -5208,7 +5208,7 @@ PHP_FUNCTION(highlight_file)
 	zend_syntax_highlighter_ini syntax_highlighter_ini;
 	zend_bool i = 0;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "P|b", &filename, &filename_len, &i) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "p|b", &filename, &filename_len, &i) == FAILURE) {
 		RETURN_FALSE;
 	}
 
@@ -5249,7 +5249,7 @@ PHP_FUNCTION(php_strip_whitespace)
 	zend_lex_state original_lex_state;
 	zend_file_handle file_handle = {0};
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "P", &filename, &filename_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "p", &filename, &filename_len) == FAILURE) {
 		RETURN_FALSE;
 	}
 
@@ -5329,7 +5329,7 @@ PHP_FUNCTION(ini_get)
 	char *varname, *str;
 	php_size_t varname_len;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &varname, &varname_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &varname, &varname_len) == FAILURE) {
 		return;
 	}
 
@@ -5375,7 +5375,7 @@ static int php_ini_get_option(zend_ini_entry *ini_entry TSRMLS_DC, int num_args,
 				add_assoc_null(option, "local_value");
 			}
 
-			add_assoc_int(option, "access", ini_entry->modifiable);
+			add_assoc_long(option, "access", ini_entry->modifiable);
 
 			add_assoc_zval_ex(ini_array, ini_entry->name, ini_entry->name_length, option);
 		} else {
@@ -5400,7 +5400,7 @@ PHP_FUNCTION(ini_get_all)
 	zend_module_entry *module;
 	zend_bool details = 1;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|S!b", &extname, &extname_len, &details) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|s!b", &extname, &extname_len, &details) == FAILURE) {
 		return;
 	}
 
@@ -5437,7 +5437,7 @@ PHP_FUNCTION(ini_set)
 	php_size_t varname_len, new_value_len;
 	char *old_value;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "SS", &varname, &varname_len, &new_value, &new_value_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss", &varname, &varname_len, &new_value, &new_value_len) == FAILURE) {
 		return;
 	}
 
@@ -5480,7 +5480,7 @@ PHP_FUNCTION(ini_restore)
 	char *varname;
 	php_size_t varname_len;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &varname, &varname_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &varname, &varname_len) == FAILURE) {
 		return;
 	}
 
@@ -5496,7 +5496,7 @@ PHP_FUNCTION(set_include_path)
 	php_size_t new_value_len;
 	char *old_value;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &new_value, &new_value_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &new_value, &new_value_len) == FAILURE) {
 		return;
 	}
 
@@ -5576,7 +5576,7 @@ PHP_FUNCTION(print_r)
    Returns true if client disconnected */
 PHP_FUNCTION(connection_aborted)
 {
-	RETURN_INT(PG(connection_status) & PHP_CONNECTION_ABORTED);
+	RETURN_LONG(PG(connection_status) & PHP_CONNECTION_ABORTED);
 }
 /* }}} */
 
@@ -5584,7 +5584,7 @@ PHP_FUNCTION(connection_aborted)
    Returns the connection status bitfield */
 PHP_FUNCTION(connection_status)
 {
-	RETURN_INT(PG(connection_status));
+	RETURN_LONG(PG(connection_status));
 }
 /* }}} */
 
@@ -5596,7 +5596,7 @@ PHP_FUNCTION(ignore_user_abort)
 	php_size_t arg_len = 0;
 	int old_setting;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|S", &arg, &arg_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|s", &arg, &arg_len) == FAILURE) {
 		return;
 	}
 
@@ -5606,7 +5606,7 @@ PHP_FUNCTION(ignore_user_abort)
 		zend_alter_ini_entry_ex("ignore_user_abort", sizeof("ignore_user_abort"), arg, arg_len, PHP_INI_USER, PHP_INI_STAGE_RUNTIME, 0 TSRMLS_CC);
 	}
 
-	RETURN_INT(old_setting);
+	RETURN_LONG(old_setting);
 }
 /* }}} */
 
@@ -5619,7 +5619,7 @@ PHP_FUNCTION(getservbyname)
 	php_size_t name_len, proto_len;
 	struct servent *serv;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "SS", &name, &name_len, &proto, &proto_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss", &name, &name_len, &proto, &proto_len) == FAILURE) {
 		return;
 	}
 
@@ -5638,7 +5638,7 @@ PHP_FUNCTION(getservbyname)
 		RETURN_FALSE;
 	}
 
-	RETURN_INT(ntohs(serv->s_port));
+	RETURN_LONG(ntohs(serv->s_port));
 }
 /* }}} */
 #endif
@@ -5653,7 +5653,7 @@ PHP_FUNCTION(getservbyport)
 	php_int_t port;
 	struct servent *serv;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "iS", &port, &proto, &proto_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ls", &port, &proto, &proto_len) == FAILURE) {
 		return;
 	}
 
@@ -5677,7 +5677,7 @@ PHP_FUNCTION(getprotobyname)
 	php_size_t name_len;
 	struct protoent *ent;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &name, &name_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &name, &name_len) == FAILURE) {
 		return;
 	}
 
@@ -5687,7 +5687,7 @@ PHP_FUNCTION(getprotobyname)
 		RETURN_FALSE;
 	}
 
-	RETURN_INT(ent->p_proto);
+	RETURN_LONG(ent->p_proto);
 }
 /* }}} */
 #endif
@@ -5700,7 +5700,7 @@ PHP_FUNCTION(getprotobynumber)
 	php_int_t proto;
 	struct protoent *ent;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "i", &proto) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &proto) == FAILURE) {
 		return;
 	}
 
@@ -5806,7 +5806,7 @@ PHP_FUNCTION(is_uploaded_file)
 		RETURN_FALSE;
 	}
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &path, &path_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &path, &path_len) == FAILURE) {
 		return;
 	}
 
@@ -5834,7 +5834,7 @@ PHP_FUNCTION(move_uploaded_file)
 		RETURN_FALSE;
 	}
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "SS", &path, &path_len, &new_path, &new_path_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss", &path, &path_len, &new_path, &new_path_len) == FAILURE) {
 		return;
 	}
 
@@ -5888,7 +5888,7 @@ static void php_simple_ini_parser_cb(zval *arg1, zval *arg2, zval *arg3, int cal
 			}
 			ALLOC_ZVAL(element);
 			MAKE_COPY_ZVAL(&arg2, element);
-			zend_symtable_update(Z_ARRVAL_P(arr), Z_STRVAL_P(arg1), Z_STRSIZE_P(arg1) + 1, &element, sizeof(zval *), NULL);
+			zend_symtable_update(Z_ARRVAL_P(arr), Z_STRVAL_P(arg1), Z_STRLEN_P(arg1) + 1, &element, sizeof(zval *), NULL);
 			break;
 
 		case ZEND_INI_PARSER_POP_ENTRY:
@@ -5900,8 +5900,8 @@ static void php_simple_ini_parser_cb(zval *arg1, zval *arg2, zval *arg3, int cal
 				break;
 			}
 
-			if (!(Z_STRSIZE_P(arg1) > 1 && Z_STRVAL_P(arg1)[0] == '0') && is_numeric_string(Z_STRVAL_P(arg1), Z_STRSIZE_P(arg1), NULL, NULL, 0) == IS_INT) {
-				php_uint_t key = (php_uint_t) zend_atol(Z_STRVAL_P(arg1), Z_STRSIZE_P(arg1));
+			if (!(Z_STRLEN_P(arg1) > 1 && Z_STRVAL_P(arg1)[0] == '0') && is_numeric_string(Z_STRVAL_P(arg1), Z_STRLEN_P(arg1), NULL, NULL, 0) == IS_LONG) {
+				php_uint_t key = (php_uint_t) zend_atol(Z_STRVAL_P(arg1), Z_STRLEN_P(arg1));
 				if (zend_hash_index_find(Z_ARRVAL_P(arr), key, (void **) &find_hash) == FAILURE) {
 					ALLOC_ZVAL(hash);
 					INIT_PZVAL(hash);
@@ -5912,12 +5912,12 @@ static void php_simple_ini_parser_cb(zval *arg1, zval *arg2, zval *arg3, int cal
 					hash = *find_hash;
 				}
 			} else {
-				if (zend_hash_find(Z_ARRVAL_P(arr), Z_STRVAL_P(arg1), Z_STRSIZE_P(arg1) + 1, (void **) &find_hash) == FAILURE) {
+				if (zend_hash_find(Z_ARRVAL_P(arr), Z_STRVAL_P(arg1), Z_STRLEN_P(arg1) + 1, (void **) &find_hash) == FAILURE) {
 					ALLOC_ZVAL(hash);
 					INIT_PZVAL(hash);
 					array_init(hash);
 
-					zend_hash_update(Z_ARRVAL_P(arr), Z_STRVAL_P(arg1), Z_STRSIZE_P(arg1) + 1, &hash, sizeof(zval *), NULL);
+					zend_hash_update(Z_ARRVAL_P(arr), Z_STRVAL_P(arg1), Z_STRLEN_P(arg1) + 1, &hash, sizeof(zval *), NULL);
 				} else {
 					hash = *find_hash;
 				}
@@ -5932,8 +5932,8 @@ static void php_simple_ini_parser_cb(zval *arg1, zval *arg2, zval *arg3, int cal
 			ALLOC_ZVAL(element);
 			MAKE_COPY_ZVAL(&arg2, element);
 
-			if (arg3 && Z_STRSIZE_P(arg3) > 0) {
-				add_assoc_zval_ex(hash, Z_STRVAL_P(arg3), Z_STRSIZE_P(arg3) + 1, element);
+			if (arg3 && Z_STRLEN_P(arg3) > 0) {
+				add_assoc_zval_ex(hash, Z_STRVAL_P(arg3), Z_STRLEN_P(arg3) + 1, element);
 			} else {
 				add_next_index_zval(hash, element);
 			}
@@ -5953,7 +5953,7 @@ static void php_ini_parser_cb_with_sections(zval *arg1, zval *arg2, zval *arg3, 
 	if (callback_type == ZEND_INI_PARSER_SECTION) {
 		MAKE_STD_ZVAL(BG(active_ini_file_section));
 		array_init(BG(active_ini_file_section));
-		zend_symtable_update(Z_ARRVAL_P(arr), Z_STRVAL_P(arg1), Z_STRSIZE_P(arg1) + 1, &BG(active_ini_file_section), sizeof(zval *), NULL);
+		zend_symtable_update(Z_ARRVAL_P(arr), Z_STRVAL_P(arg1), Z_STRLEN_P(arg1) + 1, &BG(active_ini_file_section), sizeof(zval *), NULL);
 	} else if (arg2) {
 		zval *active_arr;
 
@@ -5979,7 +5979,7 @@ PHP_FUNCTION(parse_ini_file)
 	zend_file_handle fh;
 	zend_ini_parser_cb_t ini_parser_cb;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "P|bi", &filename, &filename_len, &process_sections, &scanner_mode) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "p|bl", &filename, &filename_len, &process_sections, &scanner_mode) == FAILURE) {
 		RETURN_FALSE;
 	}
 
@@ -6020,7 +6020,7 @@ PHP_FUNCTION(parse_ini_string)
 	php_int_t scanner_mode = ZEND_INI_SCANNER_NORMAL;
 	zend_ini_parser_cb_t ini_parser_cb;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S|bi", &str, &str_len, &process_sections, &scanner_mode) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|bl", &str, &str_len, &process_sections, &scanner_mode) == FAILURE) {
 		RETURN_FALSE;
 	}
 

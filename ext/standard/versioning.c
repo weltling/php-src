@@ -215,13 +215,13 @@ PHP_FUNCTION(version_compare)
 	int compare, argc;
 
 	argc = ZEND_NUM_ARGS();
-	if (zend_parse_parameters(argc TSRMLS_CC, "SS|S", &v1, &v1_len, &v2,
+	if (zend_parse_parameters(argc TSRMLS_CC, "ss|s", &v1, &v1_len, &v2,
 							  &v2_len, &op, &op_len) == FAILURE) {
 		return;
 	}
 	compare = php_version_compare(v1, v2);
 	if (argc == 2) {
-		RETURN_INT(compare);
+		RETURN_LONG(compare);
 	}
 	if (!strncmp(op, "<", op_len) || !strncmp(op, "lt", op_len)) {
 		RETURN_BOOL(compare == -1);

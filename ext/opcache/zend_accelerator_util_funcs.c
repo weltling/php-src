@@ -238,7 +238,7 @@ static zend_ast *zend_ast_clone(zend_ast *ast TSRMLS_DC)
 			switch ((Z_TYPE_P(ast->u.val) & IS_CONSTANT_TYPE_MASK)) {
 				case IS_STRING:
 			    case IS_CONSTANT:
-					Z_STRVAL_P(node->u.val) = (char *) interned_estrndup(Z_STRVAL_P(ast->u.val), Z_STRSIZE_P(ast->u.val));
+					Z_STRVAL_P(node->u.val) = (char *) interned_estrndup(Z_STRVAL_P(ast->u.val), Z_STRLEN_P(ast->u.val));
 					break;
 				case IS_ARRAY:
 			    case IS_CONSTANT_ARRAY:
@@ -296,7 +296,7 @@ static inline zval* zend_clone_zval(zval *src, int bind TSRMLS_DC)
 #endif
 			case IS_STRING:
 		    case IS_CONSTANT:
-				Z_STRVAL_P(ret) = (char *) interned_estrndup(Z_STRVAL_P(ret), Z_STRSIZE_P(ret));
+				Z_STRVAL_P(ret) = (char *) interned_estrndup(Z_STRVAL_P(ret), Z_STRLEN_P(ret));
 				break;
 			case IS_ARRAY:
 		    case IS_CONSTANT_ARRAY:
@@ -357,7 +357,7 @@ static void zend_hash_clone_zval(HashTable *ht, HashTable *source, int bind)
 		if (!p->nKeyLength) {
 			q = (Bucket *) emalloc(sizeof(Bucket));
 			q->arKey = NULL;
-		} else if (IS_INTERNED(p->arKey)) {
+		} else if (IS_LONGERNED(p->arKey)) {
 			q = (Bucket *) emalloc(sizeof(Bucket));
 			q->arKey = p->arKey;
 		} else {
@@ -418,7 +418,7 @@ static void zend_hash_clone_zval(HashTable *ht, HashTable *source, int bind)
 #endif
 				case IS_STRING:
 			    case IS_CONSTANT:
-					Z_STRVAL_P(ppz) = (char *) interned_estrndup(Z_STRVAL_P((zval*)p->pDataPtr), Z_STRSIZE_P((zval*)p->pDataPtr));
+					Z_STRVAL_P(ppz) = (char *) interned_estrndup(Z_STRVAL_P((zval*)p->pDataPtr), Z_STRLEN_P((zval*)p->pDataPtr));
 					break;
 				case IS_ARRAY:
 			    case IS_CONSTANT_ARRAY:
@@ -482,7 +482,7 @@ static void zend_hash_clone_methods(HashTable *ht, HashTable *source, zend_class
 		if (!p->nKeyLength) {
 			q = (Bucket *) emalloc(sizeof(Bucket));
 			q->arKey = NULL;
-		} else if (IS_INTERNED(p->arKey)) {
+		} else if (IS_LONGERNED(p->arKey)) {
 			q = (Bucket *) emalloc(sizeof(Bucket));
 			q->arKey = p->arKey;
 		} else {
@@ -593,7 +593,7 @@ static void zend_hash_clone_prop_info(HashTable *ht, HashTable *source, zend_cla
 		if (!p->nKeyLength) {
 			q = (Bucket *) emalloc(sizeof(Bucket));
 			q->arKey = NULL;
-		} else if (IS_INTERNED(p->arKey)) {
+		} else if (IS_LONGERNED(p->arKey)) {
 			q = (Bucket *) emalloc(sizeof(Bucket));
 			q->arKey = p->arKey;
 		} else {
@@ -978,7 +978,7 @@ static void zend_do_delayed_early_binding(zend_op_array *op_array, zend_uint ear
 
 		CG(in_compilation) = 1;
 		while ((int)opline_num != -1) {
-			if (zend_lookup_class(Z_STRVAL(op_array->opcodes[opline_num - 1].op2.u.constant), Z_STRSIZE(op_array->opcodes[opline_num - 1].op2.u.constant), &pce TSRMLS_CC) == SUCCESS) {
+			if (zend_lookup_class(Z_STRVAL(op_array->opcodes[opline_num - 1].op2.u.constant), Z_STRLEN(op_array->opcodes[opline_num - 1].op2.u.constant), &pce TSRMLS_CC) == SUCCESS) {
 				do_bind_inherited_class(&op_array->opcodes[opline_num], EG(class_table), *pce, 1 TSRMLS_CC);
 			}
 			opline_num = op_array->opcodes[opline_num].result.u.opline_num;
@@ -1023,7 +1023,7 @@ zend_op_array* zend_accel_load_script(zend_persistent_script *persistent_script,
 			clen = strlen(cfilename);
 			zend_mangle_property_name(&name, &len, haltoff, sizeof(haltoff) - 1, cfilename, clen, 0);
 			if (!zend_hash_exists(EG(zend_constants), name, len + 1)) {
-				zend_register_int_constant(name, len + 1, persistent_script->compiler_halt_offset, CONST_CS, 0 TSRMLS_CC);
+				zend_register_long_constant(name, len + 1, persistent_script->compiler_halt_offset, CONST_CS, 0 TSRMLS_CC);
 			}
 			efree(name);
 		}

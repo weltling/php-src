@@ -48,7 +48,7 @@ PHP_FUNCTION( datefmt_get_datetype )
 
 	INTL_METHOD_CHECK_STATUS(dfo, "Error getting formatter datetype." );
 
-	RETURN_INT(dfo->date_type );
+	RETURN_LONG(dfo->date_type );
 }
 /* }}} */
 
@@ -74,7 +74,7 @@ PHP_FUNCTION( datefmt_get_timetype )
 
 	INTL_METHOD_CHECK_STATUS(dfo, "Error getting formatter timetype." );
 
-	RETURN_INT(dfo->time_type );
+	RETURN_LONG(dfo->time_type );
 }
 /* }}} */
 
@@ -137,7 +137,7 @@ PHP_FUNCTION( datefmt_set_pattern )
 	DATE_FORMAT_METHOD_INIT_VARS;
 
 	/* Parse parameters. */
-	if( zend_parse_method_parameters( ZEND_NUM_ARGS() TSRMLS_CC, getThis(), "OS",
+	if( zend_parse_method_parameters( ZEND_NUM_ARGS() TSRMLS_CC, getThis(), "Os",
 		&object, IntlDateFormatter_ce_ptr,  &value, &value_len ) == FAILURE )
 	{
 		intl_error_set(NULL, U_ILLEGAL_ARGUMENT_ERROR,	
@@ -175,7 +175,7 @@ PHP_FUNCTION( datefmt_get_locale )
 	DATE_FORMAT_METHOD_INIT_VARS;
 
 	/* Parse parameters. */
-	if( zend_parse_method_parameters( ZEND_NUM_ARGS() TSRMLS_CC, getThis(), "O|i",
+	if( zend_parse_method_parameters( ZEND_NUM_ARGS() TSRMLS_CC, getThis(), "O|l",
 		&object, IntlDateFormatter_ce_ptr,&loc_type) == FAILURE )
 	{
 		intl_error_set( NULL, U_ILLEGAL_ARGUMENT_ERROR,

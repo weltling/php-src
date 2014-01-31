@@ -106,7 +106,7 @@ PHP_FUNCTION(getmyuid)
 	if (uid < 0) {
 		RETURN_FALSE;
 	} else {
-		RETURN_INT(uid);
+		RETURN_LONG(uid);
 	}
 }
 /* }}} */
@@ -125,7 +125,7 @@ PHP_FUNCTION(getmygid)
 	if (gid < 0) {
 		RETURN_FALSE;
 	} else {
-		RETURN_INT(gid);
+		RETURN_LONG(gid);
 	}
 }
 /* }}} */
@@ -144,7 +144,7 @@ PHP_FUNCTION(getmypid)
 	if (pid < 0) {
 		RETURN_FALSE;
 	} else {
-		RETURN_INT(pid);
+		RETURN_LONG(pid);
 	}
 }
 /* }}} */
@@ -161,7 +161,7 @@ PHP_FUNCTION(getmyinode)
 	if (BG(page_inode) < 0) {
 		RETURN_FALSE;
 	} else {
-		RETURN_INT(BG(page_inode));
+		RETURN_LONG(BG(page_inode));
 	}
 }
 /* }}} */
@@ -186,7 +186,7 @@ PHP_FUNCTION(getlastmod)
 	if (lm < 0) {
 		RETURN_FALSE;
 	} else {
-		RETURN_INT(lm);
+		RETURN_LONG(lm);
 	}
 }
 /* }}} */

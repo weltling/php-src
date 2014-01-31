@@ -56,7 +56,7 @@ PHPAPI PHP_FUNCTION(dl)
 	char *filename;
 	php_size_t filename_len;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &filename, &filename_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &filename, &filename_len) == FAILURE) {
 		return;
 	}
 
@@ -83,7 +83,7 @@ PHPAPI PHP_FUNCTION(dl)
 	}
 
 	php_dl(filename, MODULE_TEMPORARY, return_value, 0 TSRMLS_CC);
-	if (Z_IVAL_P(return_value) == 1) {
+	if (Z_LVAL_P(return_value) == 1) {
 		EG(full_tables_cleanup) = 1;
 	}
 }

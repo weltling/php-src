@@ -69,7 +69,7 @@ static void _breakiterator_move_forward(zend_object_iterator *iter TSRMLS_DC)
 	int32_t pos = biter->next();
 	if (pos != BreakIterator::DONE) {
 		MAKE_STD_ZVAL(zoi_iter->current);
-		ZVAL_INT(zoi_iter->current, (php_int_t)pos);
+		ZVAL_LONG(zoi_iter->current, (php_int_t)pos);
 	} //else we've reached the end of the enum, nothing more is required
 }
 
@@ -80,7 +80,7 @@ static void _breakiterator_rewind(zend_object_iterator *iter TSRMLS_DC)
 
 	int32_t pos = biter->first();
 	MAKE_STD_ZVAL(zoi_iter->current);
-	ZVAL_INT(zoi_iter->current, (php_int_t)pos);
+	ZVAL_LONG(zoi_iter->current, (php_int_t)pos);
 }
 
 static zend_object_iterator_funcs breakiterator_iterator_funcs = {
@@ -142,7 +142,7 @@ static void _breakiterator_parts_destroy_it(zend_object_iterator *iter TSRMLS_DC
 static void _breakiterator_parts_get_current_key(zend_object_iterator *iter, zval *key TSRMLS_DC)
 {
 	/* the actual work is done in move_forward and rewind */
-	ZVAL_INT(key, iter->index);
+	ZVAL_LONG(key, iter->index);
 }
 
 static void _breakiterator_parts_move_forward(zend_object_iterator *iter TSRMLS_DC)
@@ -173,7 +173,7 @@ static void _breakiterator_parts_move_forward(zend_object_iterator *iter TSRMLS_
 	 * No need to do anything, the engine increments ->index */
 
 	const char	*s = Z_STRVAL_P(bio->text);
-	int32_t		slen = Z_STRSIZE_P(bio->text),
+	int32_t		slen = Z_STRLEN_P(bio->text),
 				len;
 	char		*res;
 
@@ -331,7 +331,7 @@ U_CFUNC void breakiterator_register_IntlPartsIterator_class(TSRMLS_D)
 	IntlPartsIterator_handlers.get_method = IntlPartsIterator_get_method;
 
 #define PARTSITER_DECL_LONG_CONST(name) \
-	zend_declare_class_constant_int(IntlPartsIterator_ce_ptr, #name, \
+	zend_declare_class_constant_long(IntlPartsIterator_ce_ptr, #name, \
 		sizeof(#name) - 1, PARTS_ITERATOR_ ## name TSRMLS_CC)
 
 	PARTSITER_DECL_LONG_CONST(KEY_SEQUENTIAL);

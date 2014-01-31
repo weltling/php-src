@@ -103,7 +103,7 @@ PHP_METHOD(sqlite3, open)
 	db_obj = (php_sqlite3_db_object *)zend_object_store_get_object(object TSRMLS_CC);
 	zend_replace_error_handling(EH_THROW, NULL, &error_handling TSRMLS_CC);
 
-	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "P|iS", &filename, &filename_len, &flags, &encryption_key, &encryption_key_len)) {
+	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "p|ls", &filename, &filename_len, &flags, &encryption_key, &encryption_key_len)) {
 		zend_restore_error_handling(&error_handling TSRMLS_CC);
 		return;
 	}
@@ -216,7 +216,7 @@ PHP_METHOD(sqlite3, exec)
 
 	SQLITE3_CHECK_INITIALIZED(db_obj, db_obj->initialised, SQLite3)
 
-	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &sql, &sql_len)) {
+	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &sql, &sql_len)) {
 		return;
 	}
 
@@ -241,7 +241,7 @@ PHP_METHOD(sqlite3, version)
 	array_init(return_value);
 
 	add_assoc_string(return_value, "versionString", (char*)sqlite3_libversion(), 1);
-	add_assoc_int(return_value, "versionNumber", sqlite3_libversion_number());
+	add_assoc_long(return_value, "versionNumber", sqlite3_libversion_number());
 
 	return;
 }
@@ -261,7 +261,7 @@ PHP_METHOD(sqlite3, lastInsertRowID)
 		return;
 	}
 
-	RETURN_INT(sqlite3_last_insert_rowid(db_obj->db));
+	RETURN_LONG(sqlite3_last_insert_rowid(db_obj->db));
 }
 /* }}} */
 
@@ -279,7 +279,7 @@ PHP_METHOD(sqlite3, lastErrorCode)
 		return;
 	}
 
-	RETURN_INT(sqlite3_errcode(db_obj->db));
+	RETURN_LONG(sqlite3_errcode(db_obj->db));
 }
 /* }}} */
 
@@ -313,7 +313,7 @@ PHP_METHOD(sqlite3, busyTimeout)
 
 	SQLITE3_CHECK_INITIALIZED(db_obj, db_obj->initialised, SQLite3)
 
-	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "i", &ms)) {
+	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &ms)) {
 		return;
 	}
 
@@ -342,7 +342,7 @@ PHP_METHOD(sqlite3, loadExtension)
 
 	SQLITE3_CHECK_INITIALIZED(db_obj, db_obj->initialised, SQLite3)
 
-	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &extension, &extension_len)) {
+	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &extension, &extension_len)) {
 		return;
 	}
 
@@ -416,7 +416,7 @@ PHP_METHOD(sqlite3, changes)
 		return;
 	}
 
-	RETURN_INT(sqlite3_changes(db_obj->db));
+	RETURN_LONG(sqlite3_changes(db_obj->db));
 }
 /* }}} */
 
@@ -427,7 +427,7 @@ PHP_METHOD(sqlite3, escapeString)
 	char *sql, *ret;
 	php_size_t sql_len;
 
-	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &sql, &sql_len)) {
+	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &sql, &sql_len)) {
 		return;
 	}
 
@@ -459,7 +459,7 @@ PHP_METHOD(sqlite3, prepare)
 
 	SQLITE3_CHECK_INITIALIZED(db_obj, db_obj->initialised, SQLite3)
 
-	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &sql, &sql_len)) {
+	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &sql, &sql_len)) {
 		return;
 	}
 
@@ -512,7 +512,7 @@ PHP_METHOD(sqlite3, query)
 
 	SQLITE3_CHECK_INITIALIZED(db_obj, db_obj->initialised, SQLite3)
 
-	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &sql, &sql_len)) {
+	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &sql, &sql_len)) {
 		return;
 	}
 
@@ -591,7 +591,7 @@ static zval* sqlite_value_to_zval(sqlite3_stmt *stmt, int column) /* {{{ */
 			if ((sqlite3_column_int64(stmt, column)) >= INT_MAX || sqlite3_column_int64(stmt, column) <= INT_MIN) {
 				ZVAL_STRINGL(data, (char *)sqlite3_column_text(stmt, column), sqlite3_column_bytes(stmt, column), 1);
 			} else {
-				ZVAL_INT(data, sqlite3_column_int64(stmt, column));
+				ZVAL_LONG(data, sqlite3_column_int64(stmt, column));
 			}
 			break;
 
@@ -630,7 +630,7 @@ PHP_METHOD(sqlite3, querySingle)
 
 	SQLITE3_CHECK_INITIALIZED(db_obj, db_obj->initialised, SQLite3)
 
-	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S|b", &sql, &sql_len, &entire_row)) {
+	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|b", &sql, &sql_len, &entire_row)) {
 		return;
 	}
 
@@ -739,7 +739,7 @@ static int sqlite3_do_callback(struct php_sqlite3_fci *fc, zval *cb, int argc, s
 
 		zargs[1] = emalloc(sizeof(zval*));
 		MAKE_STD_ZVAL(*zargs[1]);
-		ZVAL_INT(*zargs[1], agg_context->row_count);
+		ZVAL_LONG(*zargs[1], agg_context->row_count);
 	}
 
 	for (i = 0; i < argc; i++) {
@@ -749,9 +749,9 @@ static int sqlite3_do_callback(struct php_sqlite3_fci *fc, zval *cb, int argc, s
 		switch (sqlite3_value_type(argv[i])) {
 			case SQLITE_INTEGER:
 #if PHP_INT_MAX > 2147483647
-				ZVAL_INT(*zargs[i + is_agg], sqlite3_value_int64(argv[i]));
+				ZVAL_LONG(*zargs[i + is_agg], sqlite3_value_int64(argv[i]));
 #else
-				ZVAL_INT(*zargs[i + is_agg], sqlite3_value_int(argv[i]));
+				ZVAL_LONG(*zargs[i + is_agg], sqlite3_value_int(argv[i]));
 #endif
 				break;
 
@@ -795,11 +795,11 @@ static int sqlite3_do_callback(struct php_sqlite3_fci *fc, zval *cb, int argc, s
 		 * or if we are finalizing an aggregate */
 		if (retval) {
 			switch (Z_TYPE_P(retval)) {
-				case IS_INT:
+				case IS_LONG:
 #if PHP_INT_MAX > 2147483647
-					sqlite3_result_int64(context, Z_IVAL_P(retval));
+					sqlite3_result_int64(context, Z_LVAL_P(retval));
 #else
-					sqlite3_result_int(context, Z_IVAL_P(retval));
+					sqlite3_result_int(context, Z_LVAL_P(retval));
 #endif
 					break;
 
@@ -813,7 +813,7 @@ static int sqlite3_do_callback(struct php_sqlite3_fci *fc, zval *cb, int argc, s
 
 				default:
 					convert_to_string_ex(&retval);
-					sqlite3_result_text(context, Z_STRVAL_P(retval), Z_STRSIZE_P(retval), SQLITE_TRANSIENT);
+					sqlite3_result_text(context, Z_STRVAL_P(retval), Z_STRLEN_P(retval), SQLITE_TRANSIENT);
 					break;
 			}
 		} else {
@@ -916,13 +916,13 @@ static int php_sqlite3_callback_compare(void *coll, int a_len, const void *a, in
 	efree(zargs[1]);
 	efree(zargs);
 
-	//retval ought to contain a ZVAL_INT by now
+	//retval ought to contain a ZVAL_LONG by now
 	// (the result of a comparison, i.e. most likely -1, 0, or 1)
 	//I suppose we could accept any scalar return type, though.
-	if (Z_TYPE_P(retval) != IS_INT){
+	if (Z_TYPE_P(retval) != IS_LONG){
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "An error occurred while invoking the compare callback (invalid return type).  Collation behaviour is undefined.");
 	}else{
-		ret = Z_IVAL_P(retval);
+		ret = Z_LVAL_P(retval);
 	}
 
 	zval_ptr_dtor(&retval);
@@ -946,7 +946,7 @@ PHP_METHOD(sqlite3, createFunction)
 
 	SQLITE3_CHECK_INITIALIZED(db_obj, db_obj->initialised, SQLite3)
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Sz|i", &sql_func, &sql_func_len, &callback_func, &sql_func_num_args) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sz|l", &sql_func, &sql_func_len, &callback_func, &sql_func_num_args) == FAILURE) {
 		return;
 	}
 
@@ -996,7 +996,7 @@ PHP_METHOD(sqlite3, createAggregate)
 
 	SQLITE3_CHECK_INITIALIZED(db_obj, db_obj->initialised, SQLite3)
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Szz|i", &sql_func, &sql_func_len, &step_callback, &fini_callback, &sql_func_num_args) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "szz|l", &sql_func, &sql_func_len, &step_callback, &fini_callback, &sql_func_num_args) == FAILURE) {
 		return;
 	}
 
@@ -1055,7 +1055,7 @@ PHP_METHOD(sqlite3, createCollation)
 
 	SQLITE3_CHECK_INITIALIZED(db_obj, db_obj->initialised, SQLite3)
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Sz", &collation_name, &collation_name_len, &callback_func) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sz", &collation_name, &collation_name_len, &callback_func) == FAILURE) {
 		RETURN_FALSE;
 	}
 
@@ -1241,7 +1241,7 @@ PHP_METHOD(sqlite3, openBlob)
 
 	SQLITE3_CHECK_INITIALIZED(db_obj, db_obj->initialised, SQLite3)
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "SSi|S", &table, &table_len, &column, &column_len, &rowid, &dbname, &dbname_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ssl|s", &table, &table_len, &column, &column_len, &rowid, &dbname, &dbname_len) == FAILURE) {
 		return;
 	}
 
@@ -1297,7 +1297,7 @@ PHP_METHOD(sqlite3stmt, paramCount)
 		return;
 	}
 
-	RETURN_INT(sqlite3_bind_parameter_count(stmt_obj->stmt));
+	RETURN_LONG(sqlite3_bind_parameter_count(stmt_obj->stmt));
 }
 /* }}} */
 
@@ -1438,8 +1438,8 @@ PHP_METHOD(sqlite3stmt, bindParam)
 	param.param_number = -1;
 	param.type = SQLITE3_TEXT;
 
-	if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS() TSRMLS_CC, "iz|i", &param.param_number, &param.parameter, &param.type) == FAILURE) {
-		if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Sz|i", &param.name, &param.name_len, &param.parameter, &param.type) == FAILURE) {
+	if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS() TSRMLS_CC, "lz|l", &param.param_number, &param.parameter, &param.type) == FAILURE) {
+		if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sz|l", &param.name, &param.name_len, &param.parameter, &param.type) == FAILURE) {
 			return;
 		}
 	}
@@ -1469,8 +1469,8 @@ PHP_METHOD(sqlite3stmt, bindValue)
 	param.param_number = -1;
 	param.type = SQLITE3_TEXT;
 
-	if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS() TSRMLS_CC, "iz/|i", &param.param_number, &param.parameter, &param.type) == FAILURE) {
-		if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Sz/|i", &param.name, &param.name_len, &param.parameter, &param.type) == FAILURE) {
+	if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS() TSRMLS_CC, "lz/|l", &param.param_number, &param.parameter, &param.type) == FAILURE) {
+		if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sz/|l", &param.name, &param.name_len, &param.parameter, &param.type) == FAILURE) {
 			return;
 		}
 	}
@@ -1518,11 +1518,11 @@ PHP_METHOD(sqlite3stmt, execute)
 
 			switch (param->type) {
 				case SQLITE_INTEGER:
-					convert_to_int(param->parameter);
+					convert_to_long(param->parameter);
 #if PHP_INT_MAX > 2147483647
-					sqlite3_bind_int64(stmt_obj->stmt, param->param_number, Z_IVAL_P(param->parameter));
+					sqlite3_bind_int64(stmt_obj->stmt, param->param_number, Z_LVAL_P(param->parameter));
 #else
-					sqlite3_bind_int(stmt_obj->stmt, param->param_number, Z_IVAL_P(param->parameter));
+					sqlite3_bind_int(stmt_obj->stmt, param->param_number, Z_LVAL_P(param->parameter));
 #endif
 					break;
 
@@ -1545,7 +1545,7 @@ PHP_METHOD(sqlite3stmt, execute)
 						blength = php_stream_copy_to_mem(stream, (void *)&buffer, PHP_STREAM_COPY_ALL, 0);
 					} else {
 						convert_to_string(param->parameter);
-						blength =  Z_STRSIZE_P(param->parameter);
+						blength =  Z_STRLEN_P(param->parameter);
 						buffer = Z_STRVAL_P(param->parameter);
 					}
 
@@ -1564,7 +1564,7 @@ PHP_METHOD(sqlite3stmt, execute)
 
 				case SQLITE3_TEXT:
 					convert_to_string(param->parameter);
-					sqlite3_bind_text(stmt_obj->stmt, param->param_number, Z_STRVAL_P(param->parameter), Z_STRSIZE_P(param->parameter), SQLITE_STATIC);
+					sqlite3_bind_text(stmt_obj->stmt, param->param_number, Z_STRVAL_P(param->parameter), Z_STRLEN_P(param->parameter), SQLITE_STATIC);
 					break;
 
 				case SQLITE_NULL:
@@ -1628,7 +1628,7 @@ PHP_METHOD(sqlite3stmt, __construct)
 	stmt_obj = (php_sqlite3_stmt *)zend_object_store_get_object(object TSRMLS_CC);
 	zend_replace_error_handling(EH_THROW, NULL, &error_handling TSRMLS_CC);
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "OS", &db_zval, php_sqlite3_sc_entry, &sql, &sql_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Os", &db_zval, php_sqlite3_sc_entry, &sql, &sql_len) == FAILURE) {
 		zend_restore_error_handling(&error_handling TSRMLS_CC);
 		return;
 	}
@@ -1683,7 +1683,7 @@ PHP_METHOD(sqlite3result, numColumns)
 		return;
 	}
 
-	RETURN_INT(sqlite3_column_count(result_obj->stmt_obj->stmt));
+	RETURN_LONG(sqlite3_column_count(result_obj->stmt_obj->stmt));
 }
 /* }}} */
 
@@ -1699,7 +1699,7 @@ PHP_METHOD(sqlite3result, columnName)
 
 	SQLITE3_CHECK_INITIALIZED(result_obj->db_obj, result_obj->stmt_obj->initialised, SQLite3Result)
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "i", &column) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &column) == FAILURE) {
 		return;
 	}
 	column_name = (char*) sqlite3_column_name(result_obj->stmt_obj->stmt, column);
@@ -1723,7 +1723,7 @@ PHP_METHOD(sqlite3result, columnType)
 
 	SQLITE3_CHECK_INITIALIZED(result_obj->db_obj, result_obj->stmt_obj->initialised, SQLite3Result)
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "i", &column) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &column) == FAILURE) {
 		return;
 	}
 
@@ -1731,7 +1731,7 @@ PHP_METHOD(sqlite3result, columnType)
 		RETURN_FALSE;
 	}
 
-	RETURN_INT(sqlite3_column_type(result_obj->stmt_obj->stmt, column));
+	RETURN_LONG(sqlite3_column_type(result_obj->stmt_obj->stmt, column));
 }
 /* }}} */
 
@@ -1747,7 +1747,7 @@ PHP_METHOD(sqlite3result, fetchArray)
 
 	SQLITE3_CHECK_INITIALIZED(result_obj->db_obj, result_obj->stmt_obj->initialised, SQLite3Result)
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|i", &mode) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|l", &mode) == FAILURE) {
 		return;
 	}
 
@@ -2280,19 +2280,19 @@ PHP_MINIT_FUNCTION(sqlite3)
 
 	REGISTER_INI_ENTRIES();
 
-	REGISTER_INT_CONSTANT("SQLITE3_ASSOC", PHP_SQLITE3_ASSOC, CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("SQLITE3_NUM", PHP_SQLITE3_NUM, CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("SQLITE3_BOTH", PHP_SQLITE3_BOTH, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("SQLITE3_ASSOC", PHP_SQLITE3_ASSOC, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("SQLITE3_NUM", PHP_SQLITE3_NUM, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("SQLITE3_BOTH", PHP_SQLITE3_BOTH, CONST_CS | CONST_PERSISTENT);
 
-	REGISTER_INT_CONSTANT("SQLITE3_INTEGER", SQLITE_INTEGER, CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("SQLITE3_FLOAT", SQLITE_FLOAT, CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("SQLITE3_TEXT", SQLITE3_TEXT, CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("SQLITE3_BLOB", SQLITE_BLOB, CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("SQLITE3_NULL", SQLITE_NULL, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("SQLITE3_INTEGER", SQLITE_INTEGER, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("SQLITE3_FLOAT", SQLITE_FLOAT, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("SQLITE3_TEXT", SQLITE3_TEXT, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("SQLITE3_BLOB", SQLITE_BLOB, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("SQLITE3_NULL", SQLITE_NULL, CONST_CS | CONST_PERSISTENT);
 
-	REGISTER_INT_CONSTANT("SQLITE3_OPEN_READONLY", SQLITE_OPEN_READONLY, CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("SQLITE3_OPEN_READWRITE", SQLITE_OPEN_READWRITE, CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("SQLITE3_OPEN_CREATE", SQLITE_OPEN_CREATE, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("SQLITE3_OPEN_READONLY", SQLITE_OPEN_READONLY, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("SQLITE3_OPEN_READWRITE", SQLITE_OPEN_READWRITE, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("SQLITE3_OPEN_CREATE", SQLITE_OPEN_CREATE, CONST_CS | CONST_PERSISTENT);
 
 	return SUCCESS;
 }

@@ -281,7 +281,7 @@ static zend_always_inline struct _zend_property_info *zend_get_property_info_qui
 
 	if (UNEXPECTED(Z_STRVAL_P(member)[0] == '\0')) {
 		if (!silent) {
-			if (Z_STRSIZE_P(member) == 0) {
+			if (Z_STRLEN_P(member) == 0) {
 				zend_error_noreturn(E_ERROR, "Cannot access empty property");
 			} else {
 				zend_error_noreturn(E_ERROR, "Cannot access property started with '\\0'");
@@ -290,8 +290,8 @@ static zend_always_inline struct _zend_property_info *zend_get_property_info_qui
 		return NULL;
 	}
 	property_info = NULL;
-	h = key ? key->hash_value : zend_get_hash_value(Z_STRVAL_P(member), Z_STRSIZE_P(member) + 1);
-	if (zend_hash_quick_find(&ce->properties_info, Z_STRVAL_P(member), Z_STRSIZE_P(member)+1, h, (void **) &property_info)==SUCCESS) {
+	h = key ? key->hash_value : zend_get_hash_value(Z_STRVAL_P(member), Z_STRLEN_P(member) + 1);
+	if (zend_hash_quick_find(&ce->properties_info, Z_STRVAL_P(member), Z_STRLEN_P(member)+1, h, (void **) &property_info)==SUCCESS) {
 		if (UNEXPECTED((property_info->flags & ZEND_ACC_SHADOW) != 0)) {
 			/* if it's a shadow - go to access it's private */
 			property_info = NULL;
@@ -321,7 +321,7 @@ static zend_always_inline struct _zend_property_info *zend_get_property_info_qui
 	if (EG(scope) != ce
 		&& EG(scope)
 		&& is_derived_class(ce, EG(scope))
-		&& zend_hash_quick_find(&EG(scope)->properties_info, Z_STRVAL_P(member), Z_STRSIZE_P(member)+1, h, (void **) &scope_property_info)==SUCCESS
+		&& zend_hash_quick_find(&EG(scope)->properties_info, Z_STRVAL_P(member), Z_STRLEN_P(member)+1, h, (void **) &scope_property_info)==SUCCESS
 		&& scope_property_info->flags & ZEND_ACC_PRIVATE) {
 		if (key) {
 			CACHE_POLYMORPHIC_PTR(key->cache_slot, ce, scope_property_info);
@@ -343,7 +343,7 @@ static zend_always_inline struct _zend_property_info *zend_get_property_info_qui
 	} else {
 		EG(std_property_info).flags = ZEND_ACC_PUBLIC;
 		EG(std_property_info).name = Z_STRVAL_P(member);
-		EG(std_property_info).name_length = Z_STRSIZE_P(member);
+		EG(std_property_info).name_length = Z_STRLEN_P(member);
 		EG(std_property_info).h = h;
 		EG(std_property_info).ce = ce;
 		EG(std_property_info).offset = -1;
@@ -393,8 +393,8 @@ static int zend_get_property_guard(zend_object *zobj, zend_property_info *proper
 	if (!property_info) {
 		property_info = &info;
 		info.name = Z_STRVAL_P(member);
-		info.name_length = Z_STRSIZE_P(member);
-		info.h = zend_get_hash_value(Z_STRVAL_P(member), Z_STRSIZE_P(member) + 1);
+		info.name_length = Z_STRLEN_P(member);
+		info.h = zend_get_hash_value(Z_STRVAL_P(member), Z_STRLEN_P(member) + 1);
 	} else if(property_info->name[0] == '\0'){
 		const char *class_name = NULL, *prop_name = NULL;
 		zend_unmangle_property_name(property_info->name, property_info->name_length, &class_name, &prop_name);
@@ -499,7 +499,7 @@ zval *zend_std_read_property(zval *object, zval *member, int type, const zend_li
 		} else {
 			if (zobj->ce->__get && guard && guard->in_get == 1) {
 				if (Z_STRVAL_P(member)[0] == '\0') {
-					if (Z_STRSIZE_P(member) == 0) {
+					if (Z_STRLEN_P(member) == 0) {
 						zend_error(E_ERROR, "Cannot access empty property");
 					} else {
 						zend_error(E_ERROR, "Cannot access property started with '\\0'");
@@ -617,7 +617,7 @@ ZEND_API void zend_std_write_property(zval *object, zval *member, zval *value, c
 			}
 		} else if (zobj->ce->__set && guard && guard->in_set == 1) {
 			if (Z_STRVAL_P(member)[0] == '\0') {
-				if (Z_STRSIZE_P(member) == 0) {
+				if (Z_STRLEN_P(member) == 0) {
 					zend_error(E_ERROR, "Cannot access empty property");
 				} else {
 					zend_error(E_ERROR, "Cannot access property started with '\\0'");
@@ -835,7 +835,7 @@ static void zend_std_unset_property(zval *object, zval *member, const zend_liter
 			zval_ptr_dtor(&object);
 		} else if (zobj->ce->__unset && guard && guard->in_unset == 1) {
 			if (Z_STRVAL_P(member)[0] == '\0') {
-				if (Z_STRSIZE_P(member) == 0) {
+				if (Z_STRLEN_P(member) == 0) {
 					zend_error(E_ERROR, "Cannot access empty property");
 				} else {
 					zend_error(E_ERROR, "Cannot access property started with '\\0'");
@@ -1359,10 +1359,10 @@ static int zend_std_compare_objects(zval *o1, zval *o2 TSRMLS_DC) /* {{{ */
 						Z_OBJ_UNPROTECT_RECURSION(o2);
 						return 1;
 					}
-					if (Z_IVAL(result) != 0) {
+					if (Z_LVAL(result) != 0) {
 						Z_OBJ_UNPROTECT_RECURSION(o1);
 						Z_OBJ_UNPROTECT_RECURSION(o2);
-						return Z_IVAL(result);
+						return Z_LVAL(result);
 					}
 				} else {
 					Z_OBJ_UNPROTECT_RECURSION(o1);
@@ -1560,14 +1560,14 @@ ZEND_API int zend_std_cast_object_tostring(zval *readobj, zval *writeobj, int ty
 			INIT_PZVAL(writeobj);
 			ZVAL_BOOL(writeobj, 1);
 			return SUCCESS;
-		case IS_INT:
+		case IS_LONG:
 			ce = Z_OBJCE_P(readobj);
 			zend_error(E_NOTICE, "Object of class %s could not be converted to int", ce->name);
 			INIT_PZVAL(writeobj);
 			if (readobj == writeobj) {
 				zval_dtor(readobj);
 			}
-			ZVAL_INT(writeobj, 1);
+			ZVAL_LONG(writeobj, 1);
 			return SUCCESS;
 		case IS_DOUBLE:
 			ce = Z_OBJCE_P(readobj);

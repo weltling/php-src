@@ -31,7 +31,7 @@ PHP_NAMED_FUNCTION(php_if_crc32)
 	php_uint32 crcinit = 0;
 	register php_uint32 crc;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &p, &nr) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &p, &nr) == FAILURE) {
 		return;
 	}
 	crc = crcinit^0xFFFFFFFF;
@@ -39,7 +39,7 @@ PHP_NAMED_FUNCTION(php_if_crc32)
 	for (len =+nr; nr--; ++p) {
 		crc = ((crc >> 8) & 0x00FFFFFF) ^ crc32tab[(crc ^ (*p)) & 0xFF ];
 	}
-	RETVAL_INT(crc^0xFFFFFFFF);
+	RETVAL_LONG(crc^0xFFFFFFFF);
 }
 /* }}} */
 

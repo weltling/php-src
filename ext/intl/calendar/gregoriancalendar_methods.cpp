@@ -68,14 +68,14 @@ static void _php_intlgregcal_constructor_body(INTERNAL_FUNCTION_PARAMETERS)
 	// argument parsing
 	if (variant <= 2) {
 		if (zend_parse_parameters(MIN(ZEND_NUM_ARGS(), 2) TSRMLS_CC,
-				"|Z!S!", &tz_object, &locale, &locale_len) == FAILURE) {
+				"|Z!s!", &tz_object, &locale, &locale_len) == FAILURE) {
 			intl_error_set(NULL, U_ILLEGAL_ARGUMENT_ERROR,
 				"intlgregcal_create_instance: bad arguments", 0 TSRMLS_CC);
 			RETURN_NULL();
 		}
 	}
 	if (variant > 2 && zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC,
-			"iii|iii", &largs[0], &largs[1], &largs[2], &largs[3], &largs[4],
+			"lll|lll", &largs[0], &largs[1], &largs[2], &largs[3], &largs[4],
 			&largs[5]) == FAILURE) {
 		intl_error_set(NULL, U_ILLEGAL_ARGUMENT_ERROR,
 			"intlgregcal_create_instance: bad arguments", 0 TSRMLS_CC);
@@ -237,7 +237,7 @@ U_CFUNC PHP_FUNCTION(intlgregcal_is_leap_year)
 	CALENDAR_METHOD_INIT_VARS;
 
 	if (zend_parse_method_parameters(ZEND_NUM_ARGS() TSRMLS_CC, getThis(),
-			"Oi", &object, GregorianCalendar_ce_ptr, &year) == FAILURE) {
+			"Ol", &object, GregorianCalendar_ce_ptr, &year) == FAILURE) {
 		intl_error_set(NULL, U_ILLEGAL_ARGUMENT_ERROR,
 			"intlgregcal_is_leap_year: bad arguments", 0 TSRMLS_CC);
 		RETURN_FALSE;

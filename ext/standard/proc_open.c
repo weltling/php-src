@@ -113,7 +113,7 @@ static php_process_env_t _php_array_to_envp(zval *environment, int is_persistent
 			zend_hash_move_forward_ex(target_hash, &pos)) {
 
 		convert_to_string_ex(element);
-		el_len = Z_STRSIZE_PP(element);
+		el_len = Z_STRLEN_PP(element);
 		if (el_len == 0) {
 			continue;
 		}
@@ -140,7 +140,7 @@ static php_process_env_t _php_array_to_envp(zval *environment, int is_persistent
 			zend_hash_move_forward_ex(target_hash, &pos)) {
 
 		convert_to_string_ex(element);
-		el_len = Z_STRSIZE_PP(element);
+		el_len = Z_STRLEN_PP(element);
 
 		if (el_len == 0) {
 			continue;
@@ -164,7 +164,7 @@ static php_process_env_t _php_array_to_envp(zval *environment, int is_persistent
 #endif
 				p += l;
 				break;
-			case HASH_KEY_IS_INT:
+			case HASH_KEY_IS_LONG:
 				memcpy(p,data,el_len);
 #ifndef PHP_WIN32
 				*ep = p;
@@ -275,7 +275,7 @@ PHP_FUNCTION(proc_terminate)
 	struct php_process_handle *proc;
 	php_int_t sig_no = SIGTERM;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r|i", &zproc, &sig_no) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r|l", &zproc, &sig_no) == FAILURE) {
 		RETURN_FALSE;
 	}
 
@@ -311,9 +311,9 @@ PHP_FUNCTION(proc_close)
 	ZEND_FETCH_RESOURCE(proc, struct php_process_handle *, &zproc, -1, "process", le_proc_open);
 
 	FG(pclose_wait) = 1;
-	zend_list_delete(Z_IVAL_P(zproc));
+	zend_list_delete(Z_LVAL_P(zproc));
 	FG(pclose_wait) = 0;
-	RETURN_INT(FG(pclose_ret));
+	RETURN_LONG(FG(pclose_ret));
 }
 /* }}} */
 
@@ -341,7 +341,7 @@ PHP_FUNCTION(proc_get_status)
 	array_init(return_value);
 
 	add_assoc_string(return_value, "command", proc->command, 1);
-	add_assoc_int(return_value, "pid", (php_int_t) proc->child);
+	add_assoc_long(return_value, "pid", (php_int_t) proc->child);
 
 #ifdef PHP_WIN32
 
@@ -381,9 +381,9 @@ PHP_FUNCTION(proc_get_status)
 	add_assoc_bool(return_value, "running", running);
 	add_assoc_bool(return_value, "signaled", signaled);
 	add_assoc_bool(return_value, "stopped", stopped);
-	add_assoc_int(return_value, "exitcode", exitcode);
-	add_assoc_int(return_value, "termsig", termsig);
-	add_assoc_int(return_value, "stopsig", stopsig);
+	add_assoc_long(return_value, "exitcode", exitcode);
+	add_assoc_long(return_value, "termsig", termsig);
+	add_assoc_long(return_value, "stopsig", stopsig);
 }
 /* }}} */
 
@@ -471,7 +471,7 @@ PHP_FUNCTION(proc_open)
 	php_file_descriptor_t slave_pty = -1;
 #endif
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Saz|S!a!a!", &command,
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "saz|s!a!a!", &command,
 				&command_len, &descriptorspec, &pipes, &cwd, &cwd_len, &environment,
 				&other_options) == FAILURE) {
 		RETURN_FALSE;
@@ -483,14 +483,14 @@ PHP_FUNCTION(proc_open)
 	if (other_options) {
 		zval **item;
 		if (SUCCESS == zend_hash_find(Z_ARRVAL_P(other_options), "suppress_errors", sizeof("suppress_errors"), (void**)&item)) {
-			if ((Z_TYPE_PP(item) == IS_BOOL || Z_TYPE_PP(item) == IS_INT) &&
-			    Z_IVAL_PP(item)) {
+			if ((Z_TYPE_PP(item) == IS_BOOL || Z_TYPE_PP(item) == IS_LONG) &&
+			    Z_LVAL_PP(item)) {
 				suppress_errors = 1;
 			}
 		}
 		if (SUCCESS == zend_hash_find(Z_ARRVAL_P(other_options), "bypass_shell", sizeof("bypass_shell"), (void**)&item)) {
-			if ((Z_TYPE_PP(item) == IS_BOOL || Z_TYPE_PP(item) == IS_INT) &&
-			    Z_IVAL_PP(item)) {
+			if ((Z_TYPE_PP(item) == IS_BOOL || Z_TYPE_PP(item) == IS_LONG) &&
+			    Z_LVAL_PP(item)) {
 				bypass_shell = 1;
 			}
 		}
@@ -602,7 +602,7 @@ PHP_FUNCTION(proc_open)
 #endif
 				descriptors[ndesc].mode_flags = descriptors[ndesc].mode & DESC_PARENT_MODE_WRITE ? O_WRONLY : O_RDONLY;
 #ifdef PHP_WIN32
-				if (Z_STRSIZE_PP(zmode) >= 2 && Z_STRVAL_PP(zmode)[1] == 'b')
+				if (Z_STRLEN_PP(zmode) >= 2 && Z_STRVAL_PP(zmode)[1] == 'b')
 					descriptors[ndesc].mode_flags |= O_BINARY;
 #endif
 
@@ -956,7 +956,7 @@ PHP_FUNCTION(proc_open)
 					php_stream_to_zval(stream, retfp);
 					add_index_zval(pipes, descriptors[i].index, retfp);
 
-					proc->pipes[i] = Z_IVAL_P(retfp);
+					proc->pipes[i] = Z_LVAL_P(retfp);
 				}
 				break;
 			default:

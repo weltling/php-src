@@ -225,31 +225,31 @@ static char alef_bet[25] = "0אבגדהוזחטיכלמנסעפצקרשת";
 
 PHP_MINIT_FUNCTION(calendar)
 {
-	REGISTER_INT_CONSTANT("CAL_GREGORIAN", CAL_GREGORIAN, CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("CAL_JULIAN", CAL_JULIAN, CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("CAL_JEWISH", CAL_JEWISH, CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("CAL_FRENCH", CAL_FRENCH, CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("CAL_NUM_CALS", CAL_NUM_CALS, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("CAL_GREGORIAN", CAL_GREGORIAN, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("CAL_JULIAN", CAL_JULIAN, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("CAL_JEWISH", CAL_JEWISH, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("CAL_FRENCH", CAL_FRENCH, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("CAL_NUM_CALS", CAL_NUM_CALS, CONST_CS | CONST_PERSISTENT);
 /* constants for jddayofweek */
-	REGISTER_INT_CONSTANT("CAL_DOW_DAYNO", CAL_DOW_DAYNO, CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("CAL_DOW_SHORT", CAL_DOW_SHORT, CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("CAL_DOW_LONG", CAL_DOW_LONG, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("CAL_DOW_DAYNO", CAL_DOW_DAYNO, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("CAL_DOW_SHORT", CAL_DOW_SHORT, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("CAL_DOW_LONG", CAL_DOW_LONG, CONST_CS | CONST_PERSISTENT);
 /* constants for jdmonthname */
-	REGISTER_INT_CONSTANT("CAL_MONTH_GREGORIAN_SHORT", CAL_MONTH_GREGORIAN_SHORT, CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("CAL_MONTH_GREGORIAN_LONG", CAL_MONTH_GREGORIAN_LONG, CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("CAL_MONTH_JULIAN_SHORT", CAL_MONTH_JULIAN_SHORT, CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("CAL_MONTH_JULIAN_LONG", CAL_MONTH_JULIAN_LONG, CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("CAL_MONTH_JEWISH", CAL_MONTH_JEWISH, CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("CAL_MONTH_FRENCH", CAL_MONTH_FRENCH, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("CAL_MONTH_GREGORIAN_SHORT", CAL_MONTH_GREGORIAN_SHORT, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("CAL_MONTH_GREGORIAN_LONG", CAL_MONTH_GREGORIAN_LONG, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("CAL_MONTH_JULIAN_SHORT", CAL_MONTH_JULIAN_SHORT, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("CAL_MONTH_JULIAN_LONG", CAL_MONTH_JULIAN_LONG, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("CAL_MONTH_JEWISH", CAL_MONTH_JEWISH, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("CAL_MONTH_FRENCH", CAL_MONTH_FRENCH, CONST_CS | CONST_PERSISTENT);
 /* constants for easter calculation */
-	REGISTER_INT_CONSTANT("CAL_EASTER_DEFAULT", CAL_EASTER_DEFAULT, CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("CAL_EASTER_ROMAN", CAL_EASTER_ROMAN, CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("CAL_EASTER_ALWAYS_GREGORIAN", CAL_EASTER_ALWAYS_GREGORIAN, CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("CAL_EASTER_ALWAYS_JULIAN", CAL_EASTER_ALWAYS_JULIAN, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("CAL_EASTER_DEFAULT", CAL_EASTER_DEFAULT, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("CAL_EASTER_ROMAN", CAL_EASTER_ROMAN, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("CAL_EASTER_ALWAYS_GREGORIAN", CAL_EASTER_ALWAYS_GREGORIAN, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("CAL_EASTER_ALWAYS_JULIAN", CAL_EASTER_ALWAYS_JULIAN, CONST_CS | CONST_PERSISTENT);
 /* constants for Jewish date formatting */
-	REGISTER_INT_CONSTANT("CAL_JEWISH_ADD_ALAFIM_GERESH", CAL_JEWISH_ADD_ALAFIM_GERESH, CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("CAL_JEWISH_ADD_ALAFIM", CAL_JEWISH_ADD_ALAFIM, CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("CAL_JEWISH_ADD_GERESHAYIM", CAL_JEWISH_ADD_GERESHAYIM, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("CAL_JEWISH_ADD_ALAFIM_GERESH", CAL_JEWISH_ADD_ALAFIM_GERESH, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("CAL_JEWISH_ADD_ALAFIM", CAL_JEWISH_ADD_ALAFIM, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("CAL_JEWISH_ADD_GERESHAYIM", CAL_JEWISH_ADD_GERESHAYIM, CONST_CS | CONST_PERSISTENT);
 	return SUCCESS;
 }
 
@@ -280,7 +280,7 @@ static void _php_cal_info(int cal, zval **ret)
 	}
 	add_assoc_zval(*ret, "months", months);
 	add_assoc_zval(*ret, "abbrevmonths", smonths);
-	add_assoc_int(*ret, "maxdaysinmonth", calendar->max_days_in_month);
+	add_assoc_long(*ret, "maxdaysinmonth", calendar->max_days_in_month);
 	add_assoc_string(*ret, "calname", calendar->name, 1);
 	add_assoc_string(*ret, "calsymbol", calendar->symbol, 1);
 	
@@ -293,7 +293,7 @@ PHP_FUNCTION(cal_info)
 	php_int_t cal = -1;
 
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|i", &cal) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|l", &cal) == FAILURE) {
 		RETURN_FALSE;
 	}
 
@@ -330,7 +330,7 @@ PHP_FUNCTION(cal_days_in_month)
 	struct cal_entry_t *calendar;
 	php_int_t sdn_start, sdn_next;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "iii", &cal, &month, &year) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "lll", &cal, &month, &year) == FAILURE) {
 		RETURN_FALSE;
 	}
 
@@ -362,7 +362,7 @@ PHP_FUNCTION(cal_days_in_month)
 		}
 	}
 
-	RETURN_INT(sdn_next - sdn_start);
+	RETURN_LONG(sdn_next - sdn_start);
 }
 /* }}} */
 
@@ -372,7 +372,7 @@ PHP_FUNCTION(cal_to_jd)
 {
 	php_int_t cal, month, day, year;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "iiii", &cal, &month, &day, &year) != SUCCESS) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "llll", &cal, &month, &day, &year) != SUCCESS) {
 		RETURN_FALSE;
 	}
 
@@ -381,7 +381,7 @@ PHP_FUNCTION(cal_to_jd)
 		RETURN_FALSE;
 	}
 
-	RETURN_INT(cal_conversion_table[cal].to_jd(year, month, day));
+	RETURN_LONG(cal_conversion_table[cal].to_jd(year, month, day));
 }
 /* }}} */
 
@@ -394,7 +394,7 @@ PHP_FUNCTION(cal_from_jd)
 	char date[16];
 	struct cal_entry_t *calendar;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS()TSRMLS_CC, "ii", &jd, &cal) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS()TSRMLS_CC, "ll", &jd, &cal) == FAILURE) {
 		RETURN_FALSE;
 	}
 
@@ -411,13 +411,13 @@ PHP_FUNCTION(cal_from_jd)
 	snprintf(date, sizeof(date), "%i/%i/%i", month, day, year);
 	add_assoc_string(return_value, "date", date, 1);
 
-	add_assoc_int(return_value, "month", month);
-	add_assoc_int(return_value, "day", day);
-	add_assoc_int(return_value, "year", year);
+	add_assoc_long(return_value, "month", month);
+	add_assoc_long(return_value, "day", day);
+	add_assoc_long(return_value, "year", year);
 
 /* day of week */
 	dow = DayOfWeek(jd);
-	add_assoc_int(return_value, "dow", dow);
+	add_assoc_long(return_value, "dow", dow);
 	add_assoc_string(return_value, "abbrevdayname", DayNameShort[dow], 1);
 	add_assoc_string(return_value, "dayname", DayNameLong[dow], 1);
 /* month name */
@@ -440,7 +440,7 @@ PHP_FUNCTION(jdtogregorian)
 	int year, month, day;
 	char date[16];
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "i", &julday) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &julday) == FAILURE) {
 		RETURN_FALSE;
 	}
 
@@ -457,11 +457,11 @@ PHP_FUNCTION(gregoriantojd)
 {
 	php_int_t year, month, day;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "iii", &month, &day, &year) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "lll", &month, &day, &year) == FAILURE) {
 		RETURN_FALSE;
 	}
 
-	RETURN_INT(GregorianToSdn(year, month, day));
+	RETURN_LONG(GregorianToSdn(year, month, day));
 }
 /* }}} */
 
@@ -473,7 +473,7 @@ PHP_FUNCTION(jdtojulian)
 	int year, month, day;
 	char date[16];
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "i", &julday) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &julday) == FAILURE) {
 		RETURN_FALSE;
 	}
 
@@ -490,11 +490,11 @@ PHP_FUNCTION(juliantojd)
 {
 	php_int_t year, month, day;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "iii", &month, &day, &year) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "lll", &month, &day, &year) == FAILURE) {
 		RETURN_FALSE;
 	}
 
-	RETURN_INT(JulianToSdn(year, month, day));
+	RETURN_LONG(JulianToSdn(year, month, day));
 }
 /* }}} */
 
@@ -603,7 +603,7 @@ PHP_FUNCTION(jdtojewish)
 	char date[16], hebdate[32];
 	char *dayp, *yearp;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "i|bi", &julday, &heb, &fl) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l|bl", &julday, &heb, &fl) == FAILURE) {
 		RETURN_FALSE;
 	}
 
@@ -638,11 +638,11 @@ PHP_FUNCTION(jewishtojd)
 {
 	php_int_t year, month, day;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "iii", &month, &day, &year) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "lll", &month, &day, &year) == FAILURE) {
 		RETURN_FALSE;
 	}
 
-	RETURN_INT(JewishToSdn(year, month, day));
+	RETURN_LONG(JewishToSdn(year, month, day));
 }
 /* }}} */
 
@@ -654,7 +654,7 @@ PHP_FUNCTION(jdtofrench)
 	int year, month, day;
 	char date[16];
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "i", &julday) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &julday) == FAILURE) {
 		RETURN_FALSE;
 	}
 
@@ -671,11 +671,11 @@ PHP_FUNCTION(frenchtojd)
 {
 	php_int_t year, month, day;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "iii", &month, &day, &year) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "lll", &month, &day, &year) == FAILURE) {
 		RETURN_FALSE;
 	}
 
-	RETURN_INT(FrenchToSdn(year, month, day));
+	RETURN_LONG(FrenchToSdn(year, month, day));
 }
 /* }}} */
 
@@ -687,7 +687,7 @@ PHP_FUNCTION(jddayofweek)
 	int day;
 	char *daynamel, *daynames;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "i|i", &julday, &mode) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l|l", &julday, &mode) == FAILURE) {
 		RETURN_FALSE;
 	}
 
@@ -704,7 +704,7 @@ PHP_FUNCTION(jddayofweek)
 		break;
 	case CAL_DOW_DAYNO:
 	default:
-		RETURN_INT(day);
+		RETURN_LONG(day);
 		break;
 	}
 }
@@ -718,7 +718,7 @@ PHP_FUNCTION(jdmonthname)
 	char *monthname = NULL;
 	int month, day, year;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ii", &julday, &mode) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ll", &julday, &mode) == FAILURE) {
 		RETURN_FALSE;
 	}
 

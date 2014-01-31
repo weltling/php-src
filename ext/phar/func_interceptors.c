@@ -38,7 +38,7 @@ PHAR_FUNC(phar_opendir) /* {{{ */
 		goto skip_phar;
 	}
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "P|z", &filename, &filename_len, &zcontext) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "p|z", &filename, &filename_len, &zcontext) == FAILURE) {
 		return;
 	}
 
@@ -113,7 +113,7 @@ PHAR_FUNC(phar_file_get_contents) /* {{{ */
 	}
 
 	/* Parse arguments */
-	if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS() TSRMLS_CC, "P|br!ii", &filename, &filename_len, &use_include_path, &zcontext, &offset, &maxlen) == FAILURE) {
+	if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS() TSRMLS_CC, "p|br!ll", &filename, &filename_len, &use_include_path, &zcontext, &offset, &maxlen) == FAILURE) {
 		goto skip_phar;
 	}
 
@@ -244,7 +244,7 @@ PHAR_FUNC(phar_readfile) /* {{{ */
 		&& !cached_phars.arBuckets) {
 		goto skip_phar;
 	}
-	if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS() TSRMLS_CC, "P|br!", &filename, &filename_len, &use_include_path, &zcontext) == FAILURE) {
+	if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS() TSRMLS_CC, "p|br!", &filename, &filename_len, &use_include_path, &zcontext) == FAILURE) {
 		goto skip_phar;
 	}
 	if (use_include_path || (!IS_ABSOLUTE_PATH(filename, filename_len) && !strstr(filename, "://"))) {
@@ -313,7 +313,7 @@ notfound:
 		}
 		size = php_stream_passthru(stream);
 		php_stream_close(stream);
-		RETURN_INT(size);
+		RETURN_LONG(size);
 	}
 
 skip_phar:
@@ -340,7 +340,7 @@ PHAR_FUNC(phar_fopen) /* {{{ */
 		/* no need to check, include_path not even specified in fopen/ no active phars */
 		goto skip_phar;
 	}
-	if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS() TSRMLS_CC, "PS|br", &filename, &filename_len, &mode, &mode_len, &use_include_path, &zcontext) == FAILURE) {
+	if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS() TSRMLS_CC, "ps|br", &filename, &filename_len, &mode, &mode_len, &use_include_path, &zcontext) == FAILURE) {
 		goto skip_phar;
 	}
 	if (use_include_path || (!IS_ABSOLUTE_PATH(filename, filename_len) && !strstr(filename, "://"))) {
@@ -483,32 +483,32 @@ static void phar_fancy_stat(php_stat_t *stat_sb, int type, zval *return_value TS
 
 	switch (type) {
 	case FS_PERMS:
-		RETURN_INT((php_int_t)stat_sb->st_mode);
+		RETURN_LONG((php_int_t)stat_sb->st_mode);
 	case FS_INODE:
-		RETURN_INT((php_int_t)stat_sb->st_ino);
+		RETURN_LONG((php_int_t)stat_sb->st_ino);
 	case FS_SIZE:
-		RETURN_INT((php_int_t)stat_sb->st_size);
+		RETURN_LONG((php_int_t)stat_sb->st_size);
 	case FS_OWNER:
-		RETURN_INT((php_int_t)stat_sb->st_uid);
+		RETURN_LONG((php_int_t)stat_sb->st_uid);
 	case FS_GROUP:
-		RETURN_INT((php_int_t)stat_sb->st_gid);
+		RETURN_LONG((php_int_t)stat_sb->st_gid);
 	case FS_ATIME:
 #ifdef NETWARE
-		RETURN_INT((php_int_t)stat_sb->st_atime.tv_sec);
+		RETURN_LONG((php_int_t)stat_sb->st_atime.tv_sec);
 #else
-		RETURN_INT((php_int_t)stat_sb->st_atime);
+		RETURN_LONG((php_int_t)stat_sb->st_atime);
 #endif
 	case FS_MTIME:
 #ifdef NETWARE
-		RETURN_INT((php_int_t)stat_sb->st_mtime.tv_sec);
+		RETURN_LONG((php_int_t)stat_sb->st_mtime.tv_sec);
 #else
-		RETURN_INT((php_int_t)stat_sb->st_mtime);
+		RETURN_LONG((php_int_t)stat_sb->st_mtime);
 #endif
 	case FS_CTIME:
 #ifdef NETWARE
-		RETURN_INT((php_int_t)stat_sb->st_ctime.tv_sec);
+		RETURN_LONG((php_int_t)stat_sb->st_ctime.tv_sec);
 #else
-		RETURN_INT((php_int_t)stat_sb->st_ctime);
+		RETURN_LONG((php_int_t)stat_sb->st_ctime);
 #endif
 	case FS_TYPE:
 		if (S_ISLNK(stat_sb->st_mode)) {
@@ -539,36 +539,36 @@ static void phar_fancy_stat(php_stat_t *stat_sb, int type, zval *return_value TS
 	case FS_STAT:
 		array_init(return_value);
 
-		MAKE_INT_ZVAL_INCREF(stat_dev, stat_sb->st_dev);
-		MAKE_INT_ZVAL_INCREF(stat_ino, stat_sb->st_ino);
-		MAKE_INT_ZVAL_INCREF(stat_mode, stat_sb->st_mode);
-		MAKE_INT_ZVAL_INCREF(stat_nlink, stat_sb->st_nlink);
-		MAKE_INT_ZVAL_INCREF(stat_uid, stat_sb->st_uid);
-		MAKE_INT_ZVAL_INCREF(stat_gid, stat_sb->st_gid);
+		MAKE_LONG_ZVAL_INCREF(stat_dev, stat_sb->st_dev);
+		MAKE_LONG_ZVAL_INCREF(stat_ino, stat_sb->st_ino);
+		MAKE_LONG_ZVAL_INCREF(stat_mode, stat_sb->st_mode);
+		MAKE_LONG_ZVAL_INCREF(stat_nlink, stat_sb->st_nlink);
+		MAKE_LONG_ZVAL_INCREF(stat_uid, stat_sb->st_uid);
+		MAKE_LONG_ZVAL_INCREF(stat_gid, stat_sb->st_gid);
 #ifdef HAVE_ST_RDEV
-		MAKE_INT_ZVAL_INCREF(stat_rdev, stat_sb->st_rdev);
+		MAKE_LONG_ZVAL_INCREF(stat_rdev, stat_sb->st_rdev);
 #else
-		MAKE_INT_ZVAL_INCREF(stat_rdev, -1);
+		MAKE_LONG_ZVAL_INCREF(stat_rdev, -1);
 #endif
-		MAKE_INT_ZVAL_INCREF(stat_size, stat_sb->st_size);
+		MAKE_LONG_ZVAL_INCREF(stat_size, stat_sb->st_size);
 #ifdef NETWARE
-		MAKE_INT_ZVAL_INCREF(stat_atime, (stat_sb->st_atime).tv_sec);
-		MAKE_INT_ZVAL_INCREF(stat_mtime, (stat_sb->st_mtime).tv_sec);
-		MAKE_INT_ZVAL_INCREF(stat_ctime, (stat_sb->st_ctime).tv_sec);
+		MAKE_LONG_ZVAL_INCREF(stat_atime, (stat_sb->st_atime).tv_sec);
+		MAKE_LONG_ZVAL_INCREF(stat_mtime, (stat_sb->st_mtime).tv_sec);
+		MAKE_LONG_ZVAL_INCREF(stat_ctime, (stat_sb->st_ctime).tv_sec);
 #else
-		MAKE_INT_ZVAL_INCREF(stat_atime, stat_sb->st_atime);
-		MAKE_INT_ZVAL_INCREF(stat_mtime, stat_sb->st_mtime);
-		MAKE_INT_ZVAL_INCREF(stat_ctime, stat_sb->st_ctime);
+		MAKE_LONG_ZVAL_INCREF(stat_atime, stat_sb->st_atime);
+		MAKE_LONG_ZVAL_INCREF(stat_mtime, stat_sb->st_mtime);
+		MAKE_LONG_ZVAL_INCREF(stat_ctime, stat_sb->st_ctime);
 #endif
 #ifdef HAVE_ST_BLKSIZE
-		MAKE_INT_ZVAL_INCREF(stat_blksize, stat_sb->st_blksize);
+		MAKE_LONG_ZVAL_INCREF(stat_blksize, stat_sb->st_blksize);
 #else
-		MAKE_INT_ZVAL_INCREF(stat_blksize,-1);
+		MAKE_LONG_ZVAL_INCREF(stat_blksize,-1);
 #endif
 #ifdef HAVE_ST_BLOCKS
-		MAKE_INT_ZVAL_INCREF(stat_blocks, stat_sb->st_blocks);
+		MAKE_LONG_ZVAL_INCREF(stat_blocks, stat_sb->st_blocks);
 #else
-		MAKE_INT_ZVAL_INCREF(stat_blocks,-1);
+		MAKE_LONG_ZVAL_INCREF(stat_blocks,-1);
 #endif
 		/* Store numeric indexes in propper order */
 		zend_hash_next_index_insert(HASH_OF(return_value), (void *)&stat_dev, sizeof(zval *), NULL);
@@ -813,7 +813,7 @@ void fname(INTERNAL_FUNCTION_PARAMETERS) { \
 		char *filename; \
 		php_size_t filename_len; \
 		\
-		if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "P", &filename, &filename_len) == FAILURE) { \
+		if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "p", &filename, &filename_len) == FAILURE) { \
 			return; \
 		} \
 		\
@@ -905,7 +905,7 @@ PHAR_FUNC(phar_is_file) /* {{{ */
 		&& !cached_phars.arBuckets) {
 		goto skip_phar;
 	}
-	if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS() TSRMLS_CC, "P", &filename, &filename_len) == FAILURE) {
+	if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS() TSRMLS_CC, "p", &filename, &filename_len) == FAILURE) {
 		goto skip_phar;
 	}
 	if (!IS_ABSOLUTE_PATH(filename, filename_len) && !strstr(filename, "://")) {
@@ -972,7 +972,7 @@ PHAR_FUNC(phar_is_link) /* {{{ */
 		&& !cached_phars.arBuckets) {
 		goto skip_phar;
 	}
-	if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS() TSRMLS_CC, "P", &filename, &filename_len) == FAILURE) {
+	if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS() TSRMLS_CC, "p", &filename, &filename_len) == FAILURE) {
 		goto skip_phar;
 	}
 	if (!IS_ABSOLUTE_PATH(filename, filename_len) && !strstr(filename, "://")) {

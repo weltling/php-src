@@ -223,9 +223,9 @@ PHP_MINIT_FUNCTION(exif)
 {
 	REGISTER_INI_ENTRIES();
 	if (zend_hash_exists(&module_registry, "mbstring", sizeof("mbstring"))) {
-		REGISTER_INT_CONSTANT("EXIF_USE_MBSTRING", 1, CONST_CS | CONST_PERSISTENT); 
+		REGISTER_LONG_CONSTANT("EXIF_USE_MBSTRING", 1, CONST_CS | CONST_PERSISTENT); 
 	} else {
-		REGISTER_INT_CONSTANT("EXIF_USE_MBSTRING", 0, CONST_CS | CONST_PERSISTENT); 
+		REGISTER_LONG_CONSTANT("EXIF_USE_MBSTRING", 0, CONST_CS | CONST_PERSISTENT); 
 	}
 	return SUCCESS;
 }
@@ -2023,16 +2023,16 @@ static void add_assoc_image_info(zval *value, int sub_array, image_info_type *im
 									if (l>1) {
 										info_value = &info_data->value;
 										for (b=0;b<l;b++) {
-											add_index_int(array, b, (int)(info_value->s[b]));
+											add_index_long(array, b, (int)(info_value->s[b]));
 										}
 										break;
 									}
 								case TAG_FMT_USHORT:
 								case TAG_FMT_ULONG:
 									if (l==1) {
-										add_assoc_int(tmpi, name, (int)info_value->u);
+										add_assoc_long(tmpi, name, (int)info_value->u);
 									} else {
-										add_index_int(array, ap, (int)info_value->u);
+										add_index_long(array, ap, (int)info_value->u);
 									}
 									break;
 
@@ -2049,16 +2049,16 @@ static void add_assoc_image_info(zval *value, int sub_array, image_info_type *im
 									if (l>1) {
 										info_value = &info_data->value;
 										for (b=0;b<l;b++) {
-											add_index_int(array, ap, (int)info_value->s[b]);
+											add_index_long(array, ap, (int)info_value->s[b]);
 										}
 										break;
 									}
 								case TAG_FMT_SSHORT:
 								case TAG_FMT_SLONG:
 									if (l==1) {
-										add_assoc_int(tmpi, name, info_value->i);
+										add_assoc_long(tmpi, name, info_value->i);
 									} else {
-										add_index_int(array, ap, info_value->i);
+										add_index_long(array, ap, info_value->i);
 									}
 									break;
 
@@ -2340,7 +2340,7 @@ PHP_FUNCTION(exif_tagname)
 	php_int_t tag;
 	char *szTemp;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "i", &tag) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &tag) == FAILURE) {
 		return;
 	}
 
@@ -3919,7 +3919,7 @@ PHP_FUNCTION(exif_read_data)
 	image_info_type ImageInfo;
 	char tmp[64], *sections_str, *s;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "P|Sbb", &p_name, &p_name_len, &p_sections_needed, &p_sections_needed_len, &sub_arrays, &read_thumbnail) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "p|sbb", &p_name, &p_name_len, &p_sections_needed, &p_sections_needed_len, &sub_arrays, &read_thumbnail) == FAILURE) {
 		return;
 	}
 
@@ -4101,7 +4101,7 @@ PHP_FUNCTION(exif_thumbnail)
 		WRONG_PARAM_COUNT;
 	}
 
-	if (zend_parse_parameters(arg_c TSRMLS_CC, "P|z/z/z/", &p_name, &p_name_len, &p_width, &p_height, &p_imagetype) == FAILURE) {
+	if (zend_parse_parameters(arg_c TSRMLS_CC, "p|z/z/z/", &p_name, &p_name_len, &p_width, &p_height, &p_imagetype) == FAILURE) {
 		return;
 	}
 
@@ -4130,12 +4130,12 @@ PHP_FUNCTION(exif_thumbnail)
 		}
 		zval_dtor(p_width);
 		zval_dtor(p_height);
-		ZVAL_INT(p_width,  ImageInfo.Thumbnail.width);
-		ZVAL_INT(p_height, ImageInfo.Thumbnail.height);
+		ZVAL_LONG(p_width,  ImageInfo.Thumbnail.width);
+		ZVAL_LONG(p_height, ImageInfo.Thumbnail.height);
 	}
 	if (arg_c >= 4)	{
 		zval_dtor(p_imagetype);
-		ZVAL_INT(p_imagetype, ImageInfo.Thumbnail.filetype);
+		ZVAL_LONG(p_imagetype, ImageInfo.Thumbnail.filetype);
 	}
 
 #ifdef EXIF_DEBUG
@@ -4159,7 +4159,7 @@ PHP_FUNCTION(exif_imagetype)
 	php_stream * stream;
  	int itype = 0;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &imagefile, &imagefile_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &imagefile, &imagefile_len) == FAILURE) {
 		return;
 	}
 
@@ -4176,7 +4176,7 @@ PHP_FUNCTION(exif_imagetype)
 	if (itype == IMAGE_FILETYPE_UNKNOWN) {
 		RETURN_FALSE;
 	} else {
-		ZVAL_INT(return_value, itype);
+		ZVAL_LONG(return_value, itype);
 	}
 }
 /* }}} */

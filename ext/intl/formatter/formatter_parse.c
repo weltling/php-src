@@ -50,7 +50,7 @@ PHP_FUNCTION( numfmt_parse )
 	FORMATTER_METHOD_INIT_VARS;
 
 	/* Parse parameters. */
-	if( zend_parse_method_parameters( ZEND_NUM_ARGS() TSRMLS_CC, getThis(), "OS|iz!",
+	if( zend_parse_method_parameters( ZEND_NUM_ARGS() TSRMLS_CC, getThis(), "Os|lz!",
 		&object, NumberFormatter_ce_ptr,  &str, &str_len, &type, &zposition ) == FAILURE )
 	{
 		intl_error_set( NULL, U_ILLEGAL_ARGUMENT_ERROR,
@@ -67,8 +67,8 @@ PHP_FUNCTION( numfmt_parse )
 	INTL_METHOD_CHECK_STATUS( nfo, "String conversion to UTF-16 failed" );
 
 	if(zposition) {
-		convert_to_int(zposition);
-		position = (int32_t)Z_IVAL_P( zposition );
+		convert_to_long(zposition);
+		position = (int32_t)Z_LVAL_P( zposition );
 		position_p = &position;
 	}
 
@@ -79,14 +79,14 @@ PHP_FUNCTION( numfmt_parse )
 	switch(type) {
 		case FORMAT_TYPE_INT32:
 			val32 = unum_parse(FORMATTER_OBJECT(nfo), sstr, sstr_len, position_p, &INTL_DATA_ERROR_CODE(nfo));
-			RETVAL_INT(val32);
+			RETVAL_LONG(val32);
 			break;
 		case FORMAT_TYPE_INT64:
 			val64 = unum_parseInt64(FORMATTER_OBJECT(nfo), sstr, sstr_len, position_p, &INTL_DATA_ERROR_CODE(nfo));
 			if(val64 > ZEND_INT_MAX || val64 < ZEND_INT_MIN) {
 				RETVAL_DOUBLE(val64);
 			} else {
-				RETVAL_INT((php_int_t)val64);
+				RETVAL_LONG((php_int_t)val64);
 			}
 			break;
 		case FORMAT_TYPE_DOUBLE:
@@ -103,7 +103,7 @@ PHP_FUNCTION( numfmt_parse )
 #endif
 	if(zposition) {
 		zval_dtor(zposition);
-		ZVAL_INT(zposition, position);
+		ZVAL_LONG(zposition, position);
 	}
 
 	if (sstr) {
@@ -135,7 +135,7 @@ PHP_FUNCTION( numfmt_parse_currency )
 	FORMATTER_METHOD_INIT_VARS;
 
 	/* Parse parameters. */
-	if( zend_parse_method_parameters( ZEND_NUM_ARGS() TSRMLS_CC, getThis(), "OSz|z!",
+	if( zend_parse_method_parameters( ZEND_NUM_ARGS() TSRMLS_CC, getThis(), "Osz|z!",
 		&object, NumberFormatter_ce_ptr,  &str, &str_len, &zcurrency, &zposition ) == FAILURE )
 	{
 		intl_error_set( NULL, U_ILLEGAL_ARGUMENT_ERROR,
@@ -152,15 +152,15 @@ PHP_FUNCTION( numfmt_parse_currency )
 	INTL_METHOD_CHECK_STATUS( nfo, "String conversion to UTF-16 failed" );
 
 	if(zposition) {
-		convert_to_int(zposition);
-		position = (int32_t)Z_IVAL_P( zposition );
+		convert_to_long(zposition);
+		position = (int32_t)Z_LVAL_P( zposition );
 		position_p = &position;
 	}
 
 	number = unum_parseDoubleCurrency(FORMATTER_OBJECT(nfo), sstr, sstr_len, position_p, currency, &INTL_DATA_ERROR_CODE(nfo));
 	if(zposition) {
 		zval_dtor(zposition);
-		ZVAL_INT(zposition, position);
+		ZVAL_LONG(zposition, position);
 	}
 	if (sstr) {
 		efree(sstr);

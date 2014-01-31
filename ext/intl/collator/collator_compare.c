@@ -46,7 +46,7 @@ PHP_FUNCTION( collator_compare )
 	COLLATOR_METHOD_INIT_VARS
 
 	/* Parse parameters. */
-	if( zend_parse_method_parameters( ZEND_NUM_ARGS() TSRMLS_CC, getThis(), "OSS",
+	if( zend_parse_method_parameters( ZEND_NUM_ARGS() TSRMLS_CC, getThis(), "Oss",
 		&object, Collator_ce_ptr, &str1, &str1_len, &str2, &str2_len ) == FAILURE )
 	{
 		intl_error_set( NULL, U_ILLEGAL_ARGUMENT_ERROR,
@@ -129,7 +129,7 @@ PHP_FUNCTION( collator_compare )
 		efree( ustr2 );
 
 	/* Return result of the comparison. */
-	RETURN_INT( result );
+	RETURN_LONG( result );
 }
 /* }}} */
 

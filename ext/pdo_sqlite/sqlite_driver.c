@@ -92,7 +92,7 @@ static int pdo_sqlite_fetch_error_func(pdo_dbh_t *dbh, pdo_stmt_t *stmt, zval *i
 	pdo_sqlite_error_info *einfo = &H->einfo;
 
 	if (einfo->errcode) {
-		add_next_index_int(info, einfo->errcode);
+		add_next_index_long(info, einfo->errcode);
 		add_next_index_string(info, einfo->errmsg, 1);
 	}
 
@@ -187,7 +187,7 @@ static int sqlite_handle_preparer(pdo_dbh_t *dbh, const char *sql, php_size_t sq
 	stmt->methods = &sqlite_stmt_methods;
 	stmt->supports_placeholders = PDO_PLACEHOLDER_POSITIONAL|PDO_PLACEHOLDER_NAMED;
 
-	if (PDO_CURSOR_FWDONLY != pdo_attr_ival(driver_options, PDO_ATTR_CURSOR, PDO_CURSOR_FWDONLY TSRMLS_CC)) {
+	if (PDO_CURSOR_FWDONLY != pdo_attr_lval(driver_options, PDO_ATTR_CURSOR, PDO_CURSOR_FWDONLY TSRMLS_CC)) {
 		H->einfo.errcode = SQLITE_ERROR;
 		pdo_sqlite_error(dbh);
 		return 0;
@@ -301,8 +301,8 @@ static int pdo_sqlite_set_attr(pdo_dbh_t *dbh, php_int_t attr, zval *val TSRMLS_
 
 	switch (attr) {
 		case PDO_ATTR_TIMEOUT:
-			convert_to_int(val);
-			sqlite3_busy_timeout(H->db, Z_IVAL_P(val) * 1000);
+			convert_to_long(val);
+			sqlite3_busy_timeout(H->db, Z_LVAL_P(val) * 1000);
 			return 1;
 	}
 	return 0;
@@ -350,7 +350,7 @@ static int do_callback(struct pdo_sqlite_fci *fc, zval *cb,
 
 		zargs[1] = emalloc(sizeof(zval*));
 		MAKE_STD_ZVAL(*zargs[1]);
-		ZVAL_INT(*zargs[1], sqlite3_aggregate_count(context));
+		ZVAL_LONG(*zargs[1], sqlite3_aggregate_count(context));
 	}
 	
 	for (i = 0; i < argc; i++) {
@@ -360,7 +360,7 @@ static int do_callback(struct pdo_sqlite_fci *fc, zval *cb,
 		/* get the value */
 		switch (sqlite3_value_type(argv[i])) {
 			case SQLITE_INTEGER:
-				ZVAL_INT(*zargs[i + is_agg], sqlite3_value_int(argv[i]));
+				ZVAL_LONG(*zargs[i + is_agg], sqlite3_value_int(argv[i]));
 				break;
 
 			case SQLITE_FLOAT:
@@ -406,8 +406,8 @@ static int do_callback(struct pdo_sqlite_fci *fc, zval *cb,
 		 * or if we are finalizing an aggregate */
 		if (retval) {
 			switch (Z_TYPE_P(retval)) {
-				case IS_INT:
-					sqlite3_result_int(context, Z_IVAL_P(retval));
+				case IS_LONG:
+					sqlite3_result_int(context, Z_LVAL_P(retval));
 					break;
 
 				case IS_NULL:
@@ -421,7 +421,7 @@ static int do_callback(struct pdo_sqlite_fci *fc, zval *cb,
 				default:
 					convert_to_string_ex(&retval);
 					sqlite3_result_text(context, Z_STRVAL_P(retval),
-						Z_STRSIZE_P(retval), SQLITE_TRANSIENT);
+						Z_STRLEN_P(retval), SQLITE_TRANSIENT);
 					break;
 			}
 		} else {
@@ -510,14 +510,14 @@ static int php_sqlite3_collation_callback(void *context,
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "An error occurred while invoking the callback");
 	}
 	else if (retval) {
-		if (Z_TYPE_P(retval) != IS_INT) {
-			convert_to_int_ex(&retval);
+		if (Z_TYPE_P(retval) != IS_LONG) {
+			convert_to_long_ex(&retval);
 		}
 		ret = 0;
-		if (Z_IVAL_P(retval) > 0) {
+		if (Z_LVAL_P(retval) > 0) {
 			ret = 1;
 		}
-		else if (Z_IVAL_P(retval) < 0) {
+		else if (Z_LVAL_P(retval) < 0) {
 			ret = -1;
 		}
 		zval_ptr_dtor(&retval);
@@ -543,7 +543,7 @@ static PHP_METHOD(SQLite, sqliteCreateFunction)
 	pdo_sqlite_db_handle *H;
 	int ret;
 
-	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Sz|i",
+	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sz|l",
 			&func_name, &func_name_len, &callback, &argc)) {
 		RETURN_FALSE;
 	}
@@ -614,7 +614,7 @@ static PHP_METHOD(SQLite, sqliteCreateAggregate)
 	pdo_sqlite_db_handle *H;
 	int ret;
 
-	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Szz|i",
+	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "szz|l",
 			&func_name, &func_name_len, &step_callback, &fini_callback, &argc)) {
 		RETURN_FALSE;
 	}
@@ -676,7 +676,7 @@ static PHP_METHOD(SQLite, sqliteCreateCollation)
 	pdo_sqlite_db_handle *H;
 	int ret;
 
-	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Sz",
+	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sz",
 		&collation_name, &collation_name_len, &callback)) {
 		RETURN_FALSE;
 	}
@@ -842,7 +842,7 @@ static int pdo_sqlite_handle_factory(pdo_dbh_t *dbh, zval *driver_options TSRMLS
 	}
 
 	if (driver_options) {
-		timeout = pdo_attr_ival(driver_options, PDO_ATTR_TIMEOUT, timeout TSRMLS_CC);
+		timeout = pdo_attr_lval(driver_options, PDO_ATTR_TIMEOUT, timeout TSRMLS_CC);
 	}
 	sqlite3_busy_timeout(H->db, timeout * 1000);
 

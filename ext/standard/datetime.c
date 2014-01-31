@@ -92,7 +92,7 @@ PHP_FUNCTION(strptime)
 	struct tm  parsed_time;
 	char      *unparsed_part;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "SS", &ts, &ts_length, &format, &format_length) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss", &ts, &ts_length, &format, &format_length) == FAILURE) {
 		return;
 	}
 
@@ -104,14 +104,14 @@ PHP_FUNCTION(strptime)
 	}
 
 	array_init(return_value);
-	add_assoc_int(return_value, "tm_sec",   parsed_time.tm_sec);
-	add_assoc_int(return_value, "tm_min",   parsed_time.tm_min);
-	add_assoc_int(return_value, "tm_hour",  parsed_time.tm_hour);
-	add_assoc_int(return_value, "tm_mday",  parsed_time.tm_mday);
-	add_assoc_int(return_value, "tm_mon",   parsed_time.tm_mon);
-	add_assoc_int(return_value, "tm_year",  parsed_time.tm_year);
-	add_assoc_int(return_value, "tm_wday",  parsed_time.tm_wday);
-	add_assoc_int(return_value, "tm_yday",  parsed_time.tm_yday);
+	add_assoc_long(return_value, "tm_sec",   parsed_time.tm_sec);
+	add_assoc_long(return_value, "tm_min",   parsed_time.tm_min);
+	add_assoc_long(return_value, "tm_hour",  parsed_time.tm_hour);
+	add_assoc_long(return_value, "tm_mday",  parsed_time.tm_mday);
+	add_assoc_long(return_value, "tm_mon",   parsed_time.tm_mon);
+	add_assoc_long(return_value, "tm_year",  parsed_time.tm_year);
+	add_assoc_long(return_value, "tm_wday",  parsed_time.tm_wday);
+	add_assoc_long(return_value, "tm_yday",  parsed_time.tm_yday);
 	add_assoc_string(return_value, "unparsed", unparsed_part, 1);
 }
 /* }}} */

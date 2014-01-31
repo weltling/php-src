@@ -61,9 +61,9 @@ PHP_FUNCTION(touch);
 #endif
 PHP_FUNCTION(clearstatcache);
 
-#define MAKE_INT_ZVAL_INCREF(name, val)\
+#define MAKE_LONG_ZVAL_INCREF(name, val)\
 	MAKE_STD_ZVAL(name); \
-	ZVAL_INT(name, val); \
+	ZVAL_LONG(name, val); \
 	Z_ADDREF_P(name); 
 
 #ifdef PHP_WIN32

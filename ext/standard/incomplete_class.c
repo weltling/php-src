@@ -145,10 +145,10 @@ PHPAPI char *php_lookup_class_name(zval *object, php_size_t *nlen)
 	object_properties = Z_OBJPROP_P(object);
 
 	if (zend_hash_find(object_properties, MAGIC_MEMBER, sizeof(MAGIC_MEMBER), (void **) &val) == SUCCESS) {
-		retval = estrndup(Z_STRVAL_PP(val), Z_STRSIZE_PP(val));
+		retval = estrndup(Z_STRVAL_PP(val), Z_STRLEN_PP(val));
 
 		if (nlen) {
-			*nlen = Z_STRSIZE_PP(val);
+			*nlen = Z_STRLEN_PP(val);
 		}
 	}
 
@@ -167,7 +167,7 @@ PHPAPI void php_store_class_name(zval *object, const char *name, php_size_t len)
 
 	Z_TYPE_P(val)   = IS_STRING;
 	Z_STRVAL_P(val) = estrndup(name, len);
-	Z_STRSIZE_P(val) = len;
+	Z_STRLEN_P(val) = len;
 
 	zend_hash_update(Z_OBJPROP_P(object), MAGIC_MEMBER, sizeof(MAGIC_MEMBER), &val, sizeof(val), NULL);
 }

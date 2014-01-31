@@ -92,7 +92,7 @@ int dom_nodelist_length_read(dom_object *obj, zval **retval TSRMLS_DC)
 	}
 
 	MAKE_STD_ZVAL(*retval);
-	ZVAL_INT(*retval, count);
+	ZVAL_LONG(*retval, count);
 	return SUCCESS;
 }
 
@@ -116,7 +116,7 @@ PHP_FUNCTION(dom_nodelist_item)
 	HashTable *nodeht;
 	zval **entry;
 
-	if (zend_parse_method_parameters(ZEND_NUM_ARGS() TSRMLS_CC, getThis(), "Oi", &id, dom_nodelist_class_entry, &index) == FAILURE) {
+	if (zend_parse_method_parameters(ZEND_NUM_ARGS() TSRMLS_CC, getThis(), "Ol", &id, dom_nodelist_class_entry, &index) == FAILURE) {
 		return;
 	}
 

@@ -130,11 +130,11 @@ static void sysvmsg_release(zend_rsrc_list_entry *rsrc TSRMLS_DC)
 PHP_MINIT_FUNCTION(sysvmsg)
 {
 	le_sysvmsg = zend_register_list_destructors_ex(sysvmsg_release, NULL, "sysvmsg queue", module_number);
-	REGISTER_INT_CONSTANT("MSG_IPC_NOWAIT", PHP_MSG_IPC_NOWAIT, CONST_PERSISTENT|CONST_CS);
-	REGISTER_INT_CONSTANT("MSG_EAGAIN",	 EAGAIN, 	     CONST_PERSISTENT|CONST_CS);
-	REGISTER_INT_CONSTANT("MSG_ENOMSG",	 ENOMSG, 	     CONST_PERSISTENT|CONST_CS);
-	REGISTER_INT_CONSTANT("MSG_NOERROR",    PHP_MSG_NOERROR,    CONST_PERSISTENT|CONST_CS);
-	REGISTER_INT_CONSTANT("MSG_EXCEPT",     PHP_MSG_EXCEPT,     CONST_PERSISTENT|CONST_CS);
+	REGISTER_LONG_CONSTANT("MSG_IPC_NOWAIT", PHP_MSG_IPC_NOWAIT, CONST_PERSISTENT|CONST_CS);
+	REGISTER_LONG_CONSTANT("MSG_EAGAIN",	 EAGAIN, 	     CONST_PERSISTENT|CONST_CS);
+	REGISTER_LONG_CONSTANT("MSG_ENOMSG",	 ENOMSG, 	     CONST_PERSISTENT|CONST_CS);
+	REGISTER_LONG_CONSTANT("MSG_NOERROR",    PHP_MSG_NOERROR,    CONST_PERSISTENT|CONST_CS);
+	REGISTER_LONG_CONSTANT("MSG_EXCEPT",     PHP_MSG_EXCEPT,     CONST_PERSISTENT|CONST_CS);
 	return SUCCESS;
 }
 /* }}} */
@@ -171,20 +171,20 @@ PHP_FUNCTION(msg_set_queue)
 
 		/* now pull out members of data and set them in the stat buffer */
 		if (zend_hash_find(Z_ARRVAL_P(data), "msg_perm.uid", sizeof("msg_perm.uid"), (void **) &item) == SUCCESS) {
-			convert_to_int_ex(item);
-			stat.msg_perm.uid = Z_IVAL_PP(item);
+			convert_to_long_ex(item);
+			stat.msg_perm.uid = Z_LVAL_PP(item);
 		}
 		if (zend_hash_find(Z_ARRVAL_P(data), "msg_perm.gid", sizeof("msg_perm.gid"), (void **) &item) == SUCCESS) {
-			convert_to_int_ex(item);
-			stat.msg_perm.gid = Z_IVAL_PP(item);
+			convert_to_long_ex(item);
+			stat.msg_perm.gid = Z_LVAL_PP(item);
 		}
 		if (zend_hash_find(Z_ARRVAL_P(data), "msg_perm.mode", sizeof("msg_perm.mode"), (void **) &item) == SUCCESS) {
-			convert_to_int_ex(item);
-			stat.msg_perm.mode = Z_IVAL_PP(item);
+			convert_to_long_ex(item);
+			stat.msg_perm.mode = Z_LVAL_PP(item);
 		}
 		if (zend_hash_find(Z_ARRVAL_P(data), "msg_qbytes", sizeof("msg_qbytes"), (void **) &item) == SUCCESS) {
-			convert_to_int_ex(item);
-			stat.msg_qbytes = Z_IVAL_PP(item);
+			convert_to_long_ex(item);
+			stat.msg_qbytes = Z_LVAL_PP(item);
 		}
 		if (msgctl(mq->id, IPC_SET, &stat) == 0) {
 			RETVAL_TRUE;
@@ -212,16 +212,16 @@ PHP_FUNCTION(msg_stat_queue)
 	if (msgctl(mq->id, IPC_STAT, &stat) == 0) {
 		array_init(return_value);
 
-		add_assoc_int(return_value, "msg_perm.uid", stat.msg_perm.uid);
-		add_assoc_int(return_value, "msg_perm.gid", stat.msg_perm.gid);
-		add_assoc_int(return_value, "msg_perm.mode", stat.msg_perm.mode);
-		add_assoc_int(return_value, "msg_stime",  stat.msg_stime);
-		add_assoc_int(return_value, "msg_rtime",  stat.msg_rtime);
-		add_assoc_int(return_value, "msg_ctime",  stat.msg_ctime);
-		add_assoc_int(return_value, "msg_qnum",   stat.msg_qnum);
-		add_assoc_int(return_value, "msg_qbytes", stat.msg_qbytes);
-		add_assoc_int(return_value, "msg_lspid",  stat.msg_lspid);
-		add_assoc_int(return_value, "msg_lrpid",  stat.msg_lrpid);
+		add_assoc_long(return_value, "msg_perm.uid", stat.msg_perm.uid);
+		add_assoc_long(return_value, "msg_perm.gid", stat.msg_perm.gid);
+		add_assoc_long(return_value, "msg_perm.mode", stat.msg_perm.mode);
+		add_assoc_long(return_value, "msg_stime",  stat.msg_stime);
+		add_assoc_long(return_value, "msg_rtime",  stat.msg_rtime);
+		add_assoc_long(return_value, "msg_ctime",  stat.msg_ctime);
+		add_assoc_long(return_value, "msg_qnum",   stat.msg_qnum);
+		add_assoc_long(return_value, "msg_qbytes", stat.msg_qbytes);
+		add_assoc_long(return_value, "msg_lspid",  stat.msg_lspid);
+		add_assoc_long(return_value, "msg_lrpid",  stat.msg_lrpid);
 	}
 }
 /* }}} */
@@ -233,7 +233,7 @@ PHP_FUNCTION(msg_queue_exists)
 {
 	php_int_t key;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "i", &key) == FAILURE)	{
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &key) == FAILURE)	{
 		return;
 	}
 
@@ -254,7 +254,7 @@ PHP_FUNCTION(msg_get_queue)
 	php_int_t perms = 0666;
 	sysvmsg_queue_t *mq;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "i|i", &key, &perms) == FAILURE)	{
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l|l", &key, &perms) == FAILURE)	{
 		return;
 	}
 
@@ -310,7 +310,7 @@ PHP_FUNCTION(msg_receive)
 
 	RETVAL_FALSE;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "riziz|biz",
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rlzlz|blz",
 				&queue, &desiredmsgtype, &out_msgtype, &maxsize,
 				&out_message, &do_unserialize, &flags, &zerrcode) == FAILURE) {
 		return;
@@ -346,17 +346,17 @@ PHP_FUNCTION(msg_receive)
 
 	zval_dtor(out_msgtype);
 	zval_dtor(out_message);
-	ZVAL_INT(out_msgtype, 0);
+	ZVAL_LONG(out_msgtype, 0);
 	ZVAL_FALSE(out_message);
 
 	if (zerrcode) {
 		zval_dtor(zerrcode);
-		ZVAL_INT(zerrcode, 0);
+		ZVAL_LONG(zerrcode, 0);
 	}
 
 	if (result >= 0) {
 		/* got it! */
-		ZVAL_INT(out_msgtype, messagebuffer->mtype);
+		ZVAL_LONG(out_msgtype, messagebuffer->mtype);
 
 		RETVAL_TRUE;
 		if (do_unserialize)	{
@@ -378,7 +378,7 @@ PHP_FUNCTION(msg_receive)
 			ZVAL_STRINGL(out_message, messagebuffer->mtext, result, 1);
 		}
 	} else if (zerrcode) {
-		ZVAL_INT(zerrcode, errno);
+		ZVAL_LONG(zerrcode, errno);
 	}
 	efree(messagebuffer);
 }
@@ -424,12 +424,12 @@ PHP_FUNCTION(msg_send)
 		switch (Z_TYPE_P(message)) {
 			case IS_STRING:
 				p = Z_STRVAL_P(message);
-				message_len = Z_STRSIZE_P(message);
+				message_len = Z_STRLEN_P(message);
 				break;
 
-			case IS_INT:
+			case IS_LONG:
 			case IS_BOOL:
-				message_len = spprintf(&p, 0, "%pd", Z_IVAL_P(message));
+				message_len = spprintf(&p, 0, "%pd", Z_LVAL_P(message));
 				break;
 
 			case IS_DOUBLE:
@@ -459,7 +459,7 @@ PHP_FUNCTION(msg_send)
 	if (result == -1) {
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "msgsnd failed: %s", strerror(errno));
 		if (zerror) {
-			ZVAL_INT(zerror, errno);
+			ZVAL_LONG(zerror, errno);
 		}
 	} else {
 		RETVAL_TRUE;

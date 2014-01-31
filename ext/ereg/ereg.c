@@ -302,7 +302,7 @@ static void php_ereg(INTERNAL_FUNCTION_PARAMETERS, int icase)
 	char *string = NULL;
 	int   argc = ZEND_NUM_ARGS();
 
-	if (zend_parse_parameters(argc TSRMLS_CC, "ZS|Z", &regex, &findin, &findin_len, &array) == FAILURE) {
+	if (zend_parse_parameters(argc TSRMLS_CC, "Zs|Z", &regex, &findin, &findin_len, &array) == FAILURE) {
 		return;
 	}
 
@@ -320,7 +320,7 @@ static void php_ereg(INTERNAL_FUNCTION_PARAMETERS, int icase)
 	} else {
 		/* we convert numbers to integers and treat them as a string */
 		if (Z_TYPE_PP(regex) == IS_DOUBLE) {
-			convert_to_int_ex(regex);	/* get rid of decimal places */
+			convert_to_long_ex(regex);	/* get rid of decimal places */
 		}
 		convert_to_string_ex(regex);
 		/* don't bother doing an extended regex with just a number */
@@ -376,7 +376,7 @@ static void php_ereg(INTERNAL_FUNCTION_PARAMETERS, int icase)
 	} else {
 		if (match_len == 0)
 			match_len = 1;
-		RETVAL_INT(match_len);
+		RETVAL_LONG(match_len);
 	}
 	regfree(&re);
 }
@@ -557,33 +557,33 @@ static void php_do_ereg_replace(INTERNAL_FUNCTION_PARAMETERS, int icase)
 	char *ret;
 	php_size_t arg_string_len;
 	
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ZZS", &arg_pattern, &arg_replace, &arg_string, &arg_string_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ZZs", &arg_pattern, &arg_replace, &arg_string, &arg_string_len) == FAILURE) {
 		return;
 	}
 
 	if (Z_TYPE_PP(arg_pattern) == IS_STRING) {
-		if (Z_STRVAL_PP(arg_pattern) && Z_STRSIZE_PP(arg_pattern)) {
-			pattern = estrndup(Z_STRVAL_PP(arg_pattern), Z_STRSIZE_PP(arg_pattern));
+		if (Z_STRVAL_PP(arg_pattern) && Z_STRLEN_PP(arg_pattern)) {
+			pattern = estrndup(Z_STRVAL_PP(arg_pattern), Z_STRLEN_PP(arg_pattern));
 		} else {
 			pattern = STR_EMPTY_ALLOC();
 		}
 	} else {
-		convert_to_int_ex(arg_pattern);
+		convert_to_long_ex(arg_pattern);
 		pattern = emalloc(2);
-		pattern[0] = (char) Z_IVAL_PP(arg_pattern);
+		pattern[0] = (char) Z_LVAL_PP(arg_pattern);
 		pattern[1] = '\0';
 	}
 
 	if (Z_TYPE_PP(arg_replace) == IS_STRING) {
-		if (Z_STRVAL_PP(arg_replace) && Z_STRSIZE_PP(arg_replace)) {
-			replace = estrndup(Z_STRVAL_PP(arg_replace), Z_STRSIZE_PP(arg_replace));
+		if (Z_STRVAL_PP(arg_replace) && Z_STRLEN_PP(arg_replace)) {
+			replace = estrndup(Z_STRVAL_PP(arg_replace), Z_STRLEN_PP(arg_replace));
 		} else {
 			replace = STR_EMPTY_ALLOC();
 		}
 	} else {
-		convert_to_int_ex(arg_replace);
+		convert_to_long_ex(arg_replace);
 		replace = emalloc(2);
-		replace[0] = (char) Z_IVAL_PP(arg_replace);
+		replace[0] = (char) Z_LVAL_PP(arg_replace);
 		replace[1] = '\0';
 	}
 
@@ -635,7 +635,7 @@ static void php_split(INTERNAL_FUNCTION_PARAMETERS, int icase)
 	php_size_t spliton_len, str_len;
 	int err, size, copts = 0;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "SS|i", &spliton, &spliton_len, &str, &str_len, &count) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss|l", &spliton, &spliton_len, &str, &str_len, &count) == FAILURE) {
 		return;
 	}
 
@@ -735,7 +735,7 @@ PHP_EREG_API PHP_FUNCTION(sql_regcase)
 	unsigned char c;
 	register int i, j;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &string, &string_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &string, &string_len) == FAILURE) {
 		return;
 	}
 	

@@ -112,7 +112,7 @@ PHP_NAMED_FUNCTION(php_if_md5)
 	PHP_MD5_CTX context;
 	unsigned char digest[16];
 	
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S|b", &arg, &arg_len, &raw_output) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|b", &arg, &arg_len, &raw_output) == FAILURE) {
 		return;
 	}
 	
@@ -144,7 +144,7 @@ PHP_NAMED_FUNCTION(php_if_md5_file)
 	php_size_t           n;
 	php_stream    *stream;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "P|b", &arg, &arg_len, &raw_output) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "p|b", &arg, &arg_len, &raw_output) == FAILURE) {
 		return;
 	}
 	

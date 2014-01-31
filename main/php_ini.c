@@ -229,17 +229,17 @@ static void php_ini_parser_cb(zval *arg1, zval *arg2, zval *arg3, int callback_t
 
 				/* PHP and Zend extensions are not added into configuration hash! */
 				if (!is_special_section && !strcasecmp(Z_STRVAL_P(arg1), PHP_EXTENSION_TOKEN)) { /* load PHP extension */
-					extension_name = estrndup(Z_STRVAL_P(arg2), Z_STRSIZE_P(arg2));
+					extension_name = estrndup(Z_STRVAL_P(arg2), Z_STRLEN_P(arg2));
 					zend_llist_add_element(&extension_lists.functions, &extension_name);
 				} else if (!is_special_section && !strcasecmp(Z_STRVAL_P(arg1), ZEND_EXTENSION_TOKEN)) { /* load Zend extension */
-					extension_name = estrndup(Z_STRVAL_P(arg2), Z_STRSIZE_P(arg2));
+					extension_name = estrndup(Z_STRVAL_P(arg2), Z_STRLEN_P(arg2));
 					zend_llist_add_element(&extension_lists.engine, &extension_name);
 
 				/* All other entries are added into either configuration_hash or active ini section array */
 				} else {
 					/* Store in active hash */
-					zend_hash_update(active_hash, Z_STRVAL_P(arg1), Z_STRSIZE_P(arg1) + 1, arg2, sizeof(zval), (void **) &entry);
-					Z_STRVAL_P(entry) = zend_strndup(Z_STRVAL_P(entry), Z_STRSIZE_P(entry));
+					zend_hash_update(active_hash, Z_STRVAL_P(arg1), Z_STRLEN_P(arg1) + 1, arg2, sizeof(zval), (void **) &entry);
+					Z_STRVAL_P(entry) = zend_strndup(Z_STRVAL_P(entry), Z_STRLEN_P(entry));
 				}
 			}
 			break;
@@ -256,23 +256,23 @@ static void php_ini_parser_cb(zval *arg1, zval *arg2, zval *arg3, int callback_t
 /* fprintf(stdout, "ZEND_INI_PARSER_POP_ENTRY: %s[%s] = %s\n",Z_STRVAL_P(arg1), Z_STRVAL_P(arg3), Z_STRVAL_P(arg2)); */
 
 				/* If option not found in hash or is not an array -> create array, otherwise add to existing array */
-				if (zend_hash_find(active_hash, Z_STRVAL_P(arg1), Z_STRSIZE_P(arg1) + 1, (void **) &find_arr) == FAILURE || Z_TYPE_P(find_arr) != IS_ARRAY) {
+				if (zend_hash_find(active_hash, Z_STRVAL_P(arg1), Z_STRLEN_P(arg1) + 1, (void **) &find_arr) == FAILURE || Z_TYPE_P(find_arr) != IS_ARRAY) {
 					option_arr = (zval *) pemalloc(sizeof(zval), 1);
 					INIT_PZVAL(option_arr);
 					Z_TYPE_P(option_arr) = IS_ARRAY;
 					Z_ARRVAL_P(option_arr) = (HashTable *) pemalloc(sizeof(HashTable), 1);
 					zend_hash_init(Z_ARRVAL_P(option_arr), 0, NULL, (dtor_func_t) config_zval_dtor, 1);
-					zend_hash_update(active_hash, Z_STRVAL_P(arg1), Z_STRSIZE_P(arg1) + 1, option_arr, sizeof(zval), (void **) &find_arr);
+					zend_hash_update(active_hash, Z_STRVAL_P(arg1), Z_STRLEN_P(arg1) + 1, option_arr, sizeof(zval), (void **) &find_arr);
 					free(option_arr);
 				}
 
 				/* arg3 is possible option offset name */
-				if (arg3 && Z_STRSIZE_P(arg3) > 0) {
-					zend_symtable_update(Z_ARRVAL_P(find_arr), Z_STRVAL_P(arg3), Z_STRSIZE_P(arg3) + 1, arg2, sizeof(zval), (void **) &entry);
+				if (arg3 && Z_STRLEN_P(arg3) > 0) {
+					zend_symtable_update(Z_ARRVAL_P(find_arr), Z_STRVAL_P(arg3), Z_STRLEN_P(arg3) + 1, arg2, sizeof(zval), (void **) &entry);
 				} else {
 					zend_hash_next_index_insert(Z_ARRVAL_P(find_arr), arg2, sizeof(zval), (void **) &entry);
 				}
-				Z_STRVAL_P(entry) = zend_strndup(Z_STRVAL_P(entry), Z_STRSIZE_P(entry));
+				Z_STRVAL_P(entry) = zend_strndup(Z_STRVAL_P(entry), Z_STRLEN_P(entry));
 			}
 			break;
 
@@ -287,7 +287,7 @@ static void php_ini_parser_cb(zval *arg1, zval *arg2, zval *arg3, int callback_t
 				if (!strncasecmp(Z_STRVAL_P(arg1), "PATH", sizeof("PATH") - 1)) {
 					key = Z_STRVAL_P(arg1);
 					key = key + sizeof("PATH") - 1;
-					key_len = Z_STRSIZE_P(arg1) - sizeof("PATH") + 1;
+					key_len = Z_STRLEN_P(arg1) - sizeof("PATH") + 1;
 					is_special_section = 1;
 					has_per_dir_config = 1;
 
@@ -298,7 +298,7 @@ static void php_ini_parser_cb(zval *arg1, zval *arg2, zval *arg3, int callback_t
 				} else if (!strncasecmp(Z_STRVAL_P(arg1), "HOST", sizeof("HOST") - 1)) {
 					key = Z_STRVAL_P(arg1);
 					key = key + sizeof("HOST") - 1;
-					key_len = Z_STRSIZE_P(arg1) - sizeof("HOST") + 1;
+					key_len = Z_STRLEN_P(arg1) - sizeof("HOST") + 1;
 					is_special_section = 1;
 					has_per_host_config = 1;
 					zend_str_tolower(key, key_len); /* host names are case-insensitive. */
@@ -599,8 +599,8 @@ int php_init_config(TSRMLS_D)
 		{
 			zval tmp;
 
-			Z_STRSIZE(tmp) = strlen(fh.filename);
-			Z_STRVAL(tmp) = zend_strndup(fh.filename, Z_STRSIZE(tmp));
+			Z_STRLEN(tmp) = strlen(fh.filename);
+			Z_STRVAL(tmp) = zend_strndup(fh.filename, Z_STRLEN(tmp));
 			Z_TYPE(tmp) = IS_STRING;
 			Z_SET_REFCOUNT(tmp, 0);
 
@@ -608,7 +608,7 @@ int php_init_config(TSRMLS_D)
 			if (php_ini_opened_path) {
 				efree(php_ini_opened_path);
 			}
-			php_ini_opened_path = zend_strndup(Z_STRVAL(tmp), Z_STRSIZE(tmp));
+			php_ini_opened_path = zend_strndup(Z_STRVAL(tmp), Z_STRLEN(tmp));
 		}
 	}
 
@@ -797,7 +797,7 @@ PHPAPI void php_ini_activate_config(HashTable *source_hash, int modify_type, int
 		zend_hash_move_forward(source_hash)
 	) {
 		zend_hash_get_current_data(source_hash, (void **) &data);
-		zend_alter_ini_entry_ex(str, str_len, Z_STRVAL_P(data), Z_STRSIZE_P(data), modify_type, stage, 0 TSRMLS_CC);
+		zend_alter_ini_entry_ex(str, str_len, Z_STRVAL_P(data), Z_STRLEN_P(data), modify_type, stage, 0 TSRMLS_CC);
 	}
 }
 /* }}} */
@@ -890,9 +890,9 @@ PHPAPI zval *cfg_get_entry(const char *name, php_size_t name_length)
 }
 /* }}} */
 
-/* {{{ cfg_get_int
+/* {{{ cfg_get_long
  */
-PHPAPI int cfg_get_int(const char *varname, zend_int_t *result)
+PHPAPI int cfg_get_long(const char *varname, zend_int_t *result)
 {
 	zval *tmp, var;
 
@@ -902,8 +902,8 @@ PHPAPI int cfg_get_int(const char *varname, zend_int_t *result)
 	}
 	var = *tmp;
 	zval_copy_ctor(&var);
-	convert_to_int(&var);
-	*result = Z_IVAL(var);
+	convert_to_long(&var);
+	*result = Z_LVAL(var);
 	return SUCCESS;
 }
 /* }}} */

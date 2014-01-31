@@ -232,7 +232,7 @@ PHP_FUNCTION(srand)
 {
 	php_int_t seed = 0;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|i", &seed) == FAILURE)
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|l", &seed) == FAILURE)
 		return;
 
 	if (ZEND_NUM_ARGS() == 0)
@@ -248,7 +248,7 @@ PHP_FUNCTION(mt_srand)
 {
 	php_int_t seed = 0;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|i", &seed) == FAILURE) 
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|l", &seed) == FAILURE) 
 		return;
 
 	if (ZEND_NUM_ARGS() == 0)
@@ -294,7 +294,7 @@ PHP_FUNCTION(rand)
 	php_int_t number;
 	int  argc = ZEND_NUM_ARGS();
 
-	if (argc != 0 && zend_parse_parameters(argc TSRMLS_CC, "ii", &min, &max) == FAILURE)
+	if (argc != 0 && zend_parse_parameters(argc TSRMLS_CC, "ll", &min, &max) == FAILURE)
 		return;
 
 	number = php_rand(TSRMLS_C);
@@ -302,7 +302,7 @@ PHP_FUNCTION(rand)
 		RAND_RANGE(number, min, max, PHP_RAND_MAX);
 	}
 
-	RETURN_INT(number);
+	RETURN_LONG(number);
 }
 /* }}} */
 
@@ -316,7 +316,7 @@ PHP_FUNCTION(mt_rand)
 	int  argc = ZEND_NUM_ARGS();
 
 	if (argc != 0) {
-		if (zend_parse_parameters(argc TSRMLS_CC, "ii", &min, &max) == FAILURE) {
+		if (zend_parse_parameters(argc TSRMLS_CC, "ll", &min, &max) == FAILURE) {
 			return;
 		} else if (max < min) {
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "max(" ZEND_INT_FMT ") is smaller than min(" ZEND_INT_FMT ")", max, min);
@@ -341,7 +341,7 @@ PHP_FUNCTION(mt_rand)
 		RAND_RANGE(number, min, max, PHP_MT_RAND_MAX);
 	}
 
-	RETURN_INT(number);
+	RETURN_LONG(number);
 }
 /* }}} */
 
@@ -353,7 +353,7 @@ PHP_FUNCTION(getrandmax)
 		return;
 	}
 
-	RETURN_INT(PHP_RAND_MAX);
+	RETURN_LONG(PHP_RAND_MAX);
 }
 /* }}} */
 
@@ -369,7 +369,7 @@ PHP_FUNCTION(mt_getrandmax)
 	 * Melo: it could be 2^^32 but we only use 2^^31 to maintain
 	 * compatibility with the previous php_rand
 	 */
-  	RETURN_INT(PHP_MT_RAND_MAX); /* 2^^31 */
+  	RETURN_LONG(PHP_MT_RAND_MAX); /* 2^^31 */
 }
 /* }}} */
 

@@ -95,26 +95,26 @@ int zend_startup_constants(TSRMLS_D)
 
 void zend_register_standard_constants(TSRMLS_D)
 {
-	REGISTER_MAIN_INT_CONSTANT("E_ERROR", E_ERROR, CONST_PERSISTENT | CONST_CS);
-	REGISTER_MAIN_INT_CONSTANT("E_RECOVERABLE_ERROR", E_RECOVERABLE_ERROR, CONST_PERSISTENT | CONST_CS);
-	REGISTER_MAIN_INT_CONSTANT("E_WARNING", E_WARNING, CONST_PERSISTENT | CONST_CS);
-	REGISTER_MAIN_INT_CONSTANT("E_PARSE", E_PARSE, CONST_PERSISTENT | CONST_CS);
-	REGISTER_MAIN_INT_CONSTANT("E_NOTICE", E_NOTICE, CONST_PERSISTENT | CONST_CS);
-	REGISTER_MAIN_INT_CONSTANT("E_STRICT", E_STRICT, CONST_PERSISTENT | CONST_CS);
-	REGISTER_MAIN_INT_CONSTANT("E_DEPRECATED", E_DEPRECATED, CONST_PERSISTENT | CONST_CS);
-	REGISTER_MAIN_INT_CONSTANT("E_CORE_ERROR", E_CORE_ERROR, CONST_PERSISTENT | CONST_CS);
-	REGISTER_MAIN_INT_CONSTANT("E_CORE_WARNING", E_CORE_WARNING, CONST_PERSISTENT | CONST_CS);
-	REGISTER_MAIN_INT_CONSTANT("E_COMPILE_ERROR", E_COMPILE_ERROR, CONST_PERSISTENT | CONST_CS);
-	REGISTER_MAIN_INT_CONSTANT("E_COMPILE_WARNING", E_COMPILE_WARNING, CONST_PERSISTENT | CONST_CS);
-	REGISTER_MAIN_INT_CONSTANT("E_USER_ERROR", E_USER_ERROR, CONST_PERSISTENT | CONST_CS);
-	REGISTER_MAIN_INT_CONSTANT("E_USER_WARNING", E_USER_WARNING, CONST_PERSISTENT | CONST_CS);
-	REGISTER_MAIN_INT_CONSTANT("E_USER_NOTICE", E_USER_NOTICE, CONST_PERSISTENT | CONST_CS);
-	REGISTER_MAIN_INT_CONSTANT("E_USER_DEPRECATED", E_USER_DEPRECATED, CONST_PERSISTENT | CONST_CS);
+	REGISTER_MAIN_LONG_CONSTANT("E_ERROR", E_ERROR, CONST_PERSISTENT | CONST_CS);
+	REGISTER_MAIN_LONG_CONSTANT("E_RECOVERABLE_ERROR", E_RECOVERABLE_ERROR, CONST_PERSISTENT | CONST_CS);
+	REGISTER_MAIN_LONG_CONSTANT("E_WARNING", E_WARNING, CONST_PERSISTENT | CONST_CS);
+	REGISTER_MAIN_LONG_CONSTANT("E_PARSE", E_PARSE, CONST_PERSISTENT | CONST_CS);
+	REGISTER_MAIN_LONG_CONSTANT("E_NOTICE", E_NOTICE, CONST_PERSISTENT | CONST_CS);
+	REGISTER_MAIN_LONG_CONSTANT("E_STRICT", E_STRICT, CONST_PERSISTENT | CONST_CS);
+	REGISTER_MAIN_LONG_CONSTANT("E_DEPRECATED", E_DEPRECATED, CONST_PERSISTENT | CONST_CS);
+	REGISTER_MAIN_LONG_CONSTANT("E_CORE_ERROR", E_CORE_ERROR, CONST_PERSISTENT | CONST_CS);
+	REGISTER_MAIN_LONG_CONSTANT("E_CORE_WARNING", E_CORE_WARNING, CONST_PERSISTENT | CONST_CS);
+	REGISTER_MAIN_LONG_CONSTANT("E_COMPILE_ERROR", E_COMPILE_ERROR, CONST_PERSISTENT | CONST_CS);
+	REGISTER_MAIN_LONG_CONSTANT("E_COMPILE_WARNING", E_COMPILE_WARNING, CONST_PERSISTENT | CONST_CS);
+	REGISTER_MAIN_LONG_CONSTANT("E_USER_ERROR", E_USER_ERROR, CONST_PERSISTENT | CONST_CS);
+	REGISTER_MAIN_LONG_CONSTANT("E_USER_WARNING", E_USER_WARNING, CONST_PERSISTENT | CONST_CS);
+	REGISTER_MAIN_LONG_CONSTANT("E_USER_NOTICE", E_USER_NOTICE, CONST_PERSISTENT | CONST_CS);
+	REGISTER_MAIN_LONG_CONSTANT("E_USER_DEPRECATED", E_USER_DEPRECATED, CONST_PERSISTENT | CONST_CS);
 
-	REGISTER_MAIN_INT_CONSTANT("E_ALL", E_ALL, CONST_PERSISTENT | CONST_CS);
+	REGISTER_MAIN_LONG_CONSTANT("E_ALL", E_ALL, CONST_PERSISTENT | CONST_CS);
 
-	REGISTER_MAIN_INT_CONSTANT("DEBUG_BACKTRACE_PROVIDE_OBJECT", DEBUG_BACKTRACE_PROVIDE_OBJECT, CONST_PERSISTENT | CONST_CS);
-	REGISTER_MAIN_INT_CONSTANT("DEBUG_BACKTRACE_IGNORE_ARGS", DEBUG_BACKTRACE_IGNORE_ARGS, CONST_PERSISTENT | CONST_CS);
+	REGISTER_MAIN_LONG_CONSTANT("DEBUG_BACKTRACE_PROVIDE_OBJECT", DEBUG_BACKTRACE_PROVIDE_OBJECT, CONST_PERSISTENT | CONST_CS);
+	REGISTER_MAIN_LONG_CONSTANT("DEBUG_BACKTRACE_IGNORE_ARGS", DEBUG_BACKTRACE_IGNORE_ARGS, CONST_PERSISTENT | CONST_CS);
 	/* true/false constants */
 	{
 		REGISTER_MAIN_BOOL_CONSTANT("TRUE", 1, CONST_PERSISTENT | CONST_CT_SUBST);
@@ -167,11 +167,11 @@ ZEND_API void zend_register_bool_constant(const char *name, zend_size_t name_len
 	zend_register_constant(&c TSRMLS_CC);
 }
 
-ZEND_API void zend_register_int_constant(const char *name, zend_size_t name_len, zend_int_t lval, int flags, int module_number TSRMLS_DC)
+ZEND_API void zend_register_long_constant(const char *name, zend_size_t name_len, zend_int_t lval, int flags, int module_number TSRMLS_DC)
 {
 	zend_constant c;
 	
-	ZVAL_INT(&c.value, lval);
+	ZVAL_LONG(&c.value, lval);
 	c.flags = flags;
 	c.name = zend_strndup(name, name_len-1);
 	c.name_len = name_len;
@@ -236,7 +236,7 @@ static int zend_get_special_constant(const char *name, zend_size_t name_len, zen
 				zend_hash_add(EG(zend_constants), const_name, const_name_len, (void*)&tmp, sizeof(zend_constant), (void**)c);
 				memset(*c, 0, sizeof(zend_constant));
 				Z_STRVAL((**c).value) = estrndup(EG(scope)->name, EG(scope)->name_length);
-				Z_STRSIZE((**c).value) = EG(scope)->name_length;
+				Z_STRLEN((**c).value) = EG(scope)->name_length;
 				Z_TYPE((**c).value) = IS_STRING;
 			}
 			free_alloca(const_name, use_heap);
@@ -245,7 +245,7 @@ static int zend_get_special_constant(const char *name, zend_size_t name_len, zen
 				zend_hash_add(EG(zend_constants), "\0__CLASS__", sizeof("\0__CLASS__"), (void*)&tmp, sizeof(zend_constant), (void**)c);
 				memset(*c, 0, sizeof(zend_constant));
 				Z_STRVAL((**c).value) = estrndup("", 0);
-				Z_STRSIZE((**c).value) = 0;
+				Z_STRLEN((**c).value) = 0;
 				Z_TYPE((**c).value) = IS_STRING;
 			}
 		}
@@ -439,26 +439,26 @@ zend_constant *zend_quick_get_constant(const zend_literal *key, zend_uint_t flag
 {
 	zend_constant *c;
 
-	if (zend_hash_quick_find(EG(zend_constants), Z_STRVAL(key->constant), Z_STRSIZE(key->constant) + 1, key->hash_value, (void **) &c) == FAILURE) {
+	if (zend_hash_quick_find(EG(zend_constants), Z_STRVAL(key->constant), Z_STRLEN(key->constant) + 1, key->hash_value, (void **) &c) == FAILURE) {
 		key++;
-		if (zend_hash_quick_find(EG(zend_constants), Z_STRVAL(key->constant), Z_STRSIZE(key->constant) + 1, key->hash_value, (void **) &c) == FAILURE ||
+		if (zend_hash_quick_find(EG(zend_constants), Z_STRVAL(key->constant), Z_STRLEN(key->constant) + 1, key->hash_value, (void **) &c) == FAILURE ||
 		    (c->flags & CONST_CS) != 0) {
 			if ((flags & (IS_CONSTANT_IN_NAMESPACE|IS_CONSTANT_UNQUALIFIED)) == (IS_CONSTANT_IN_NAMESPACE|IS_CONSTANT_UNQUALIFIED)) {
 				key++;
-				if (zend_hash_quick_find(EG(zend_constants), Z_STRVAL(key->constant), Z_STRSIZE(key->constant) + 1, key->hash_value, (void **) &c) == FAILURE) {
+				if (zend_hash_quick_find(EG(zend_constants), Z_STRVAL(key->constant), Z_STRLEN(key->constant) + 1, key->hash_value, (void **) &c) == FAILURE) {
 				    key++;
-					if (zend_hash_quick_find(EG(zend_constants), Z_STRVAL(key->constant), Z_STRSIZE(key->constant) + 1, key->hash_value, (void **) &c) == FAILURE ||
+					if (zend_hash_quick_find(EG(zend_constants), Z_STRVAL(key->constant), Z_STRLEN(key->constant) + 1, key->hash_value, (void **) &c) == FAILURE ||
 					    (c->flags & CONST_CS) != 0) {
 
 						key--;
-						if (!zend_get_special_constant(Z_STRVAL(key->constant), Z_STRSIZE(key->constant), &c TSRMLS_CC)) {
+						if (!zend_get_special_constant(Z_STRVAL(key->constant), Z_STRLEN(key->constant), &c TSRMLS_CC)) {
 							return NULL;
 						}
 					}
 				}
 			} else {
 				key--;
-				if (!zend_get_special_constant(Z_STRVAL(key->constant), Z_STRSIZE(key->constant), &c TSRMLS_CC)) {
+				if (!zend_get_special_constant(Z_STRVAL(key->constant), Z_STRLEN(key->constant), &c TSRMLS_CC)) {
 					return NULL;
 				}
 			}

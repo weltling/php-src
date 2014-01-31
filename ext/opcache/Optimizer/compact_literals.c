@@ -271,7 +271,7 @@ static void optimizer_compact_literals(zend_op_array *op_array TSRMLS_DC)
 			for (i = 0; i < op_array->last_literal; i++) {
 				zval zv = op_array->literals[i].constant;
 				zend_make_printable_zval(&op_array->literals[i].constant, &zv, &use_copy);
-				fprintf(stderr, "Literal %d, val (%d):%s\n", i, Z_STRSIZE(zv), Z_STRVAL(zv));
+				fprintf(stderr, "Literal %d, val (%d):%s\n", i, Z_STRLEN(zv), Z_STRVAL(zv));
 				if (use_copy) {
 					zval_dtor(&zv);
 				}
@@ -303,7 +303,7 @@ static void optimizer_compact_literals(zend_op_array *op_array TSRMLS_DC)
 					map[i] = l_null;
 					break;
 				case IS_BOOL:
-					if (Z_IVAL(op_array->literals[i].constant)) {
+					if (Z_LVAL(op_array->literals[i].constant)) {
 						if (l_true < 0) {
 							l_true = j;
 							if (i != j) {
@@ -325,12 +325,12 @@ static void optimizer_compact_literals(zend_op_array *op_array TSRMLS_DC)
 						map[i] = l_false;
 					}
 					break;
-				case IS_INT:
-					if (zend_hash_index_find(&hash, Z_IVAL(op_array->literals[i].constant), (void**)&pos) == SUCCESS) {
+				case IS_LONG:
+					if (zend_hash_index_find(&hash, Z_LVAL(op_array->literals[i].constant), (void**)&pos) == SUCCESS) {
 						map[i] = *pos;
 					} else {
 						map[i] = j;
-						zend_hash_index_update(&hash, Z_IVAL(op_array->literals[i].constant), (void**)&j, sizeof(int), NULL);
+						zend_hash_index_update(&hash, Z_LVAL(op_array->literals[i].constant), (void**)&j, sizeof(int), NULL);
 						if (i != j) {
 							op_array->literals[j] = op_array->literals[i];
 							info[j] = info[i];
@@ -355,21 +355,21 @@ static void optimizer_compact_literals(zend_op_array *op_array TSRMLS_DC)
 				case IS_CONSTANT:
 					if (info[i].flags & LITERAL_MAY_MERGE) {
 						if (info[i].flags & LITERAL_EX_OBJ) {
-							key_len = MAX_LENGTH_OF_ZEND_INT + sizeof("->") + Z_STRSIZE(op_array->literals[i].constant);
+							key_len = MAX_LENGTH_OF_LONG + sizeof("->") + Z_STRLEN(op_array->literals[i].constant);
 							key = emalloc(key_len);
 							key_len = snprintf(key, key_len-1, "%d->%s", info[i].u.num, Z_STRVAL(op_array->literals[i].constant));
 						} else if (info[i].flags & LITERAL_EX_CLASS) {
 							zval *class_name = &op_array->literals[(info[i].u.num < i) ? map[info[i].u.num] : info[i].u.num].constant;
-							key_len = Z_STRSIZE_P(class_name) + sizeof("::") + Z_STRSIZE(op_array->literals[i].constant);
+							key_len = Z_STRLEN_P(class_name) + sizeof("::") + Z_STRLEN(op_array->literals[i].constant);
 							key = emalloc(key_len);
-							memcpy(key, Z_STRVAL_P(class_name), Z_STRSIZE_P(class_name));
-							memcpy(key + Z_STRSIZE_P(class_name), "::", sizeof("::") - 1);
-							memcpy(key + Z_STRSIZE_P(class_name) + sizeof("::") - 1,
+							memcpy(key, Z_STRVAL_P(class_name), Z_STRLEN_P(class_name));
+							memcpy(key + Z_STRLEN_P(class_name), "::", sizeof("::") - 1);
+							memcpy(key + Z_STRLEN_P(class_name) + sizeof("::") - 1,
 								Z_STRVAL(op_array->literals[i].constant),
-								Z_STRSIZE(op_array->literals[i].constant) + 1);
+								Z_STRLEN(op_array->literals[i].constant) + 1);
 						} else {
 							key = Z_STRVAL(op_array->literals[i].constant);
-							key_len = Z_STRSIZE(op_array->literals[i].constant)+1;
+							key_len = Z_STRLEN(op_array->literals[i].constant)+1;
 						}
 						h = zend_hash_func(key, key_len);
 						h += info[i].flags;
@@ -403,10 +403,10 @@ static void optimizer_compact_literals(zend_op_array *op_array TSRMLS_DC)
 							info[j] = info[i];
 						}
 						if (!op_array->literals[j].hash_value) {
-							if (IS_INTERNED(Z_STRVAL(op_array->literals[j].constant))) {
+							if (IS_LONGERNED(Z_STRVAL(op_array->literals[j].constant))) {
 								op_array->literals[j].hash_value = INTERNED_HASH(Z_STRVAL(op_array->literals[j].constant));
 							} else {
-								op_array->literals[j].hash_value = zend_hash_func(Z_STRVAL(op_array->literals[j].constant), Z_STRSIZE(op_array->literals[j].constant)+1);
+								op_array->literals[j].hash_value = zend_hash_func(Z_STRVAL(op_array->literals[j].constant), Z_STRLEN(op_array->literals[j].constant)+1);
 							}
 						}
 						if (LITERAL_NUM_SLOTS(info[i].flags)) {
@@ -419,10 +419,10 @@ static void optimizer_compact_literals(zend_op_array *op_array TSRMLS_DC)
 							i++;
 							if (i != j) op_array->literals[j] = op_array->literals[i];
 							if (!op_array->literals[j].hash_value) {
-								if (IS_INTERNED(Z_STRVAL(op_array->literals[j].constant))) {
+								if (IS_LONGERNED(Z_STRVAL(op_array->literals[j].constant))) {
 									op_array->literals[j].hash_value = INTERNED_HASH(Z_STRVAL(op_array->literals[j].constant));
 								} else {
-									op_array->literals[j].hash_value = zend_hash_func(Z_STRVAL(op_array->literals[j].constant), Z_STRSIZE(op_array->literals[j].constant)+1);
+									op_array->literals[j].hash_value = zend_hash_func(Z_STRVAL(op_array->literals[j].constant), Z_STRLEN(op_array->literals[j].constant)+1);
 								}
 							}
 							j++;
@@ -468,7 +468,7 @@ static void optimizer_compact_literals(zend_op_array *op_array TSRMLS_DC)
 			for (i = 0; i < op_array->last_literal; i++) {
 				zval zv = op_array->literals[i].constant;
 				zend_make_printable_zval(&op_array->literals[i].constant, &zv, &use_copy);
-				fprintf(stderr, "Literal %d, val (%d):%s\n", i, Z_STRSIZE(zv), Z_STRVAL(zv));
+				fprintf(stderr, "Literal %d, val (%d):%s\n", i, Z_STRLEN(zv), Z_STRVAL(zv));
 				if (use_copy) {
 					zval_dtor(&zv);
 				}

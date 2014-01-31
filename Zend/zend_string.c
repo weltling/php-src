@@ -88,7 +88,7 @@ static const char *zend_new_interned_string_int(const char *arKey, zend_size_t n
 	uint nIndex;
 	Bucket *p;
 
-	if (IS_INTERNED(arKey)) {
+	if (IS_LONGERNED(arKey)) {
 		return arKey;
 	}
 

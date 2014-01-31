@@ -238,12 +238,12 @@ safe:
 							break;
 
 						case IS_BOOL:
-							convert_to_int(&tmp_param);
+							convert_to_long(&tmp_param);
 							/* fall through */
-						case IS_INT:
+						case IS_LONG:
 						case IS_DOUBLE:
 							convert_to_string(&tmp_param);
-							plc->qlen = Z_STRSIZE(tmp_param);
+							plc->qlen = Z_STRLEN(tmp_param);
 							plc->quoted = estrdup(Z_STRVAL(tmp_param));
 							plc->freeq = 1;
 							break;
@@ -251,7 +251,7 @@ safe:
 						default:
 							convert_to_string(&tmp_param);
 							if (!stmt->dbh->methods->quoter(stmt->dbh, Z_STRVAL(tmp_param),
-									Z_STRSIZE(tmp_param), &plc->quoted, &plc->qlen,
+									Z_STRLEN(tmp_param), &plc->quoted, &plc->qlen,
 									param->param_type TSRMLS_CC)) {
 								/* bork */
 								ret = -1;
@@ -264,7 +264,7 @@ safe:
 				}
 			} else {
 				plc->quoted = Z_STRVAL_P(param->parameter);
-				plc->qlen = Z_STRSIZE_P(param->parameter);
+				plc->qlen = Z_STRLEN_P(param->parameter);
 			}
 			newbuffer_len += plc->qlen;
 		}
@@ -415,7 +415,7 @@ int old_pdo_parse_params(pdo_stmt_t *stmt, char *inquery, int inquery_len, char 
                    bind placeholders are at least 2 characters, so
                    the accommodate their own "'s
                 */
-				newbuffer_len += padding * Z_STRSIZE_P(param->parameter);
+				newbuffer_len += padding * Z_STRLEN_P(param->parameter);
 			}
 			zend_hash_move_forward(params);
 		}
@@ -451,16 +451,16 @@ int old_pdo_parse_params(pdo_stmt_t *stmt, char *inquery, int inquery_len, char 
 				
 				/* quote the bind value if necessary */
 				if(stmt->dbh->methods->quoter(stmt->dbh, Z_STRVAL_P(param->parameter), 
-					Z_STRSIZE_P(param->parameter), &quotedstr, &quotedstrlen TSRMLS_CC))
+					Z_STRLEN_P(param->parameter), &quotedstr, &quotedstrlen TSRMLS_CC))
 				{
 					memcpy(ptr, quotedstr, quotedstrlen);
 					ptr += quotedstrlen;
 					*outquery_len += quotedstrlen;
 					efree(quotedstr);
 				} else {
-					memcpy(ptr, Z_STRVAL_P(param->parameter), Z_STRSIZE_P(param->parameter));
-					ptr += Z_STRSIZE_P(param->parameter);
-					*outquery_len += (Z_STRSIZE_P(param->parameter));
+					memcpy(ptr, Z_STRVAL_P(param->parameter), Z_STRLEN_P(param->parameter));
+					ptr += Z_STRLEN_P(param->parameter);
+					*outquery_len += (Z_STRLEN_P(param->parameter));
 				}
 			}
 			else {
@@ -487,16 +487,16 @@ int old_pdo_parse_params(pdo_stmt_t *stmt, char *inquery, int inquery_len, char 
 				
 				/* quote the bind value if necessary */
 				if(stmt->dbh->methods->quoter(stmt->dbh, Z_STRVAL_P(param->parameter), 
-					Z_STRSIZE_P(param->parameter), &quotedstr, &quotedstrlen TSRMLS_CC))
+					Z_STRLEN_P(param->parameter), &quotedstr, &quotedstrlen TSRMLS_CC))
 				{
 					memcpy(ptr, quotedstr, quotedstrlen);
 					ptr += quotedstrlen;
 					*outquery_len += quotedstrlen;
 					efree(quotedstr);
 				} else {
-					memcpy(ptr, Z_STRVAL_P(param->parameter), Z_STRSIZE_P(param->parameter));
-					ptr += Z_STRSIZE_P(param->parameter);
-					*outquery_len += (Z_STRSIZE_P(param->parameter));
+					memcpy(ptr, Z_STRVAL_P(param->parameter), Z_STRLEN_P(param->parameter));
+					ptr += Z_STRLEN_P(param->parameter);
+					*outquery_len += (Z_STRLEN_P(param->parameter));
 				}
 			}
 			else {

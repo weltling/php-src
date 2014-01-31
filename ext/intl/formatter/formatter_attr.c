@@ -36,7 +36,7 @@ PHP_FUNCTION( numfmt_get_attribute )
 	FORMATTER_METHOD_INIT_VARS;
 
 	/* Parse parameters. */
-	if( zend_parse_method_parameters( ZEND_NUM_ARGS() TSRMLS_CC, getThis(), "Oi",
+	if( zend_parse_method_parameters( ZEND_NUM_ARGS() TSRMLS_CC, getThis(), "Ol",
 		&object, NumberFormatter_ce_ptr, &attribute ) == FAILURE )
 	{
 		intl_error_set( NULL, U_ILLEGAL_ARGUMENT_ERROR,
@@ -72,7 +72,7 @@ PHP_FUNCTION( numfmt_get_attribute )
 			if(value == -1) {
 				INTL_DATA_ERROR_CODE(nfo) = U_UNSUPPORTED_ERROR;
 			} else {
-				RETVAL_INT(value);
+				RETVAL_LONG(value);
 			}
 			break;
 		case UNUM_ROUNDING_INCREMENT:
@@ -109,7 +109,7 @@ PHP_FUNCTION( numfmt_get_text_attribute )
 	FORMATTER_METHOD_INIT_VARS;
 
 	/* Parse parameters. */
-	if( zend_parse_method_parameters( ZEND_NUM_ARGS() TSRMLS_CC, getThis(), "Oi",
+	if( zend_parse_method_parameters( ZEND_NUM_ARGS() TSRMLS_CC, getThis(), "Ol",
 		&object, NumberFormatter_ce_ptr, &attribute ) == FAILURE )
 	{
 		intl_error_set( NULL, U_ILLEGAL_ARGUMENT_ERROR,
@@ -150,7 +150,7 @@ PHP_FUNCTION( numfmt_set_attribute )
 	FORMATTER_METHOD_INIT_VARS;
 
 	/* Parse parameters. */
-	if( zend_parse_method_parameters( ZEND_NUM_ARGS() TSRMLS_CC, getThis(), "OiZ",
+	if( zend_parse_method_parameters( ZEND_NUM_ARGS() TSRMLS_CC, getThis(), "OlZ",
 		&object, NumberFormatter_ce_ptr, &attribute, &value ) == FAILURE)
 	{
 		intl_error_set( NULL, U_ILLEGAL_ARGUMENT_ERROR,
@@ -182,8 +182,8 @@ PHP_FUNCTION( numfmt_set_attribute )
 		case UNUM_MIN_SIGNIFICANT_DIGITS:
 		case UNUM_MAX_SIGNIFICANT_DIGITS:
 		case UNUM_LENIENT_PARSE:
-			convert_to_int_ex(value);
-			unum_setAttribute(FORMATTER_OBJECT(nfo), attribute, Z_IVAL_PP(value));
+			convert_to_long_ex(value);
+			unum_setAttribute(FORMATTER_OBJECT(nfo), attribute, Z_LVAL_PP(value));
 			break;
 		case UNUM_ROUNDING_INCREMENT:
 			convert_to_double_ex(value);
@@ -215,7 +215,7 @@ PHP_FUNCTION( numfmt_set_text_attribute )
 	FORMATTER_METHOD_INIT_VARS;
 
 	/* Parse parameters. */
-	if( zend_parse_method_parameters( ZEND_NUM_ARGS() TSRMLS_CC, getThis(), "OiS",
+	if( zend_parse_method_parameters( ZEND_NUM_ARGS() TSRMLS_CC, getThis(), "Ols",
 		&object, NumberFormatter_ce_ptr, &attribute, &value, &len ) == FAILURE)
 	{
 		intl_error_set( NULL, U_ILLEGAL_ARGUMENT_ERROR,
@@ -256,7 +256,7 @@ PHP_FUNCTION( numfmt_get_symbol )
 	FORMATTER_METHOD_INIT_VARS;
 
 	/* Parse parameters. */
-	if( zend_parse_method_parameters( ZEND_NUM_ARGS() TSRMLS_CC, getThis(), "Oi",
+	if( zend_parse_method_parameters( ZEND_NUM_ARGS() TSRMLS_CC, getThis(), "Ol",
 		&object, NumberFormatter_ce_ptr, &symbol ) == FAILURE )
 	{
 		intl_error_set( NULL, U_ILLEGAL_ARGUMENT_ERROR,
@@ -305,7 +305,7 @@ PHP_FUNCTION( numfmt_set_symbol )
 	FORMATTER_METHOD_INIT_VARS;
 
 	/* Parse parameters. */
-	if( zend_parse_method_parameters( ZEND_NUM_ARGS() TSRMLS_CC, getThis(), "OiS",
+	if( zend_parse_method_parameters( ZEND_NUM_ARGS() TSRMLS_CC, getThis(), "Ols",
 		&object, NumberFormatter_ce_ptr, &symbol, &value, &value_len ) == FAILURE )
 	{
 		intl_error_set( NULL, U_ILLEGAL_ARGUMENT_ERROR,
@@ -393,7 +393,7 @@ PHP_FUNCTION( numfmt_set_pattern )
 	FORMATTER_METHOD_INIT_VARS;
 
 	/* Parse parameters. */
-	if( zend_parse_method_parameters( ZEND_NUM_ARGS() TSRMLS_CC, getThis(), "OS",
+	if( zend_parse_method_parameters( ZEND_NUM_ARGS() TSRMLS_CC, getThis(), "Os",
 		&object, NumberFormatter_ce_ptr, &value, &value_len ) == FAILURE )
 	{
 		intl_error_set( NULL, U_ILLEGAL_ARGUMENT_ERROR,
@@ -431,7 +431,7 @@ PHP_FUNCTION( numfmt_get_locale )
 	FORMATTER_METHOD_INIT_VARS;
 
 	/* Parse parameters. */
-	if( zend_parse_method_parameters( ZEND_NUM_ARGS() TSRMLS_CC, getThis(), "O|i",
+	if( zend_parse_method_parameters( ZEND_NUM_ARGS() TSRMLS_CC, getThis(), "O|l",
 		&object, NumberFormatter_ce_ptr, &type ) == FAILURE )
 	{
 		intl_error_set( NULL, U_ILLEGAL_ARGUMENT_ERROR,

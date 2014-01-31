@@ -105,7 +105,7 @@ PHP_FUNCTION(class_parents)
 	}
 	
 	if (Z_TYPE_P(obj) == IS_STRING) {
-		if (NULL == (ce = spl_find_ce_by_name(Z_STRVAL_P(obj), Z_STRSIZE_P(obj), autoload TSRMLS_CC))) {
+		if (NULL == (ce = spl_find_ce_by_name(Z_STRVAL_P(obj), Z_STRLEN_P(obj), autoload TSRMLS_CC))) {
 			RETURN_FALSE;
 		}
 	} else {
@@ -138,7 +138,7 @@ PHP_FUNCTION(class_implements)
 	}
 	
 	if (Z_TYPE_P(obj) == IS_STRING) {
-		if (NULL == (ce = spl_find_ce_by_name(Z_STRVAL_P(obj), Z_STRSIZE_P(obj), autoload TSRMLS_CC))) {
+		if (NULL == (ce = spl_find_ce_by_name(Z_STRVAL_P(obj), Z_STRLEN_P(obj), autoload TSRMLS_CC))) {
 			RETURN_FALSE;
 		}
 	} else {
@@ -167,7 +167,7 @@ PHP_FUNCTION(class_uses)
 	}
 	
 	if (Z_TYPE_P(obj) == IS_STRING) {
-		if (NULL == (ce = spl_find_ce_by_name(Z_STRVAL_P(obj), Z_STRSIZE_P(obj), autoload TSRMLS_CC))) {
+		if (NULL == (ce = spl_find_ce_by_name(Z_STRVAL_P(obj), Z_STRLEN_P(obj), autoload TSRMLS_CC))) {
 			RETURN_FALSE;
 		}
 	} else {
@@ -323,7 +323,7 @@ PHP_FUNCTION(spl_autoload)
 	zend_op **original_opline_ptr = EG(opline_ptr);
 	zend_op_array *original_active_op_array = EG(active_op_array);
 	
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S|S", &class_name, &class_name_len, &file_exts, &file_exts_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|s", &class_name, &class_name_len, &file_exts, &file_exts_len) == FAILURE) {
 		RETURN_FALSE;
 	}
 
@@ -374,7 +374,7 @@ PHP_FUNCTION(spl_autoload_extensions)
 	char *file_exts = NULL;
 	php_size_t file_exts_len;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|S", &file_exts, &file_exts_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|s", &file_exts, &file_exts_len) == FAILURE) {
 		return;
 	}
 	if (file_exts) {
@@ -428,7 +428,7 @@ PHP_FUNCTION(spl_autoload_call)
 	if (SPL_G(autoload_functions)) {
 		int l_autoload_running = SPL_G(autoload_running);
 		SPL_G(autoload_running) = 1;
-		class_name_len = Z_STRSIZE_P(class_name);
+		class_name_len = Z_STRLEN_P(class_name);
 		lc_name = zend_str_tolower_dup(Z_STRVAL_P(class_name), class_name_len);
 		zend_hash_internal_pointer_reset_ex(SPL_G(autoload_functions), &function_pos);
 		while(zend_hash_has_more_elements_ex(SPL_G(autoload_functions), &function_pos) == SUCCESS) {
@@ -483,7 +483,7 @@ PHP_FUNCTION(spl_autoload_register)
 
 	if (ZEND_NUM_ARGS()) {
 		if (Z_TYPE_P(zcallable) == IS_STRING) {
-			if (Z_STRSIZE_P(zcallable) == sizeof("spl_autoload_call") - 1) {
+			if (Z_STRLEN_P(zcallable) == sizeof("spl_autoload_call") - 1) {
 				if (!zend_binary_strcasecmp(Z_STRVAL_P(zcallable), sizeof("spl_autoload_call"), "spl_autoload_call", sizeof("spl_autoload_call"))) {
 					if (do_throw) {
 						zend_throw_exception_ex(spl_ce_LogicException, 0 TSRMLS_CC, "Function spl_autoload_call() cannot be registered");

@@ -235,7 +235,7 @@ PHP_FUNCTION(disk_total_space)
 	char *path;
 	php_size_t path_len;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "P", &path, &path_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "p", &path, &path_len) == FAILURE) {
 		return;
 	}
 
@@ -370,7 +370,7 @@ PHP_FUNCTION(disk_free_space)
 	char *path;
 	php_size_t path_len;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "P", &path, &path_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "p", &path, &path_len) == FAILURE) {
 		return;
 	}
 
@@ -428,7 +428,7 @@ static void php_do_chgrp(INTERNAL_FUNCTION_PARAMETERS, int do_lchgrp) /* {{{ */
 #endif
 	php_stream_wrapper *wrapper;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Pz/", &filename, &filename_len, &group) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "pz/", &filename, &filename_len, &group) == FAILURE) {
 		RETURN_FALSE;
 	}
 
@@ -437,9 +437,9 @@ static void php_do_chgrp(INTERNAL_FUNCTION_PARAMETERS, int do_lchgrp) /* {{{ */
 		if(wrapper && wrapper->wops->stream_metadata) {
 			int option;
 			void *value;
-			if (Z_TYPE_P(group) == IS_INT) {
+			if (Z_TYPE_P(group) == IS_LONG) {
 				option = PHP_STREAM_META_GROUP;
-				value = &Z_IVAL_P(group);
+				value = &Z_LVAL_P(group);
 			} else if (Z_TYPE_P(group) == IS_STRING) {
 				option = PHP_STREAM_META_GROUP_NAME;
 				value = Z_STRVAL_P(group);
@@ -465,8 +465,8 @@ static void php_do_chgrp(INTERNAL_FUNCTION_PARAMETERS, int do_lchgrp) /* {{{ */
 	/* We have no native chgrp on Windows, nothing left to do if stream doesn't have own implementation */
 	RETURN_FALSE;
 #else
-	if (Z_TYPE_P(group) == IS_INT) {
-		gid = (gid_t)Z_IVAL_P(group);
+	if (Z_TYPE_P(group) == IS_LONG) {
+		gid = (gid_t)Z_LVAL_P(group);
 	} else if (Z_TYPE_P(group) == IS_STRING) {
 		if(php_get_gid_by_name(Z_STRVAL_P(group), &gid TSRMLS_CC) != SUCCESS) {
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to find gid for %s", Z_STRVAL_P(group));
@@ -565,7 +565,7 @@ static void php_do_chown(INTERNAL_FUNCTION_PARAMETERS, int do_lchown) /* {{{ */
 #endif
 	php_stream_wrapper *wrapper;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Pz/", &filename, &filename_len, &user) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "pz/", &filename, &filename_len, &user) == FAILURE) {
 		return;
 	}
 
@@ -574,9 +574,9 @@ static void php_do_chown(INTERNAL_FUNCTION_PARAMETERS, int do_lchown) /* {{{ */
 		if(wrapper && wrapper->wops->stream_metadata) {
 			int option;
 			void *value;
-			if (Z_TYPE_P(user) == IS_INT) {
+			if (Z_TYPE_P(user) == IS_LONG) {
 				option = PHP_STREAM_META_OWNER;
-				value = &Z_IVAL_P(user);
+				value = &Z_LVAL_P(user);
 			} else if (Z_TYPE_P(user) == IS_STRING) {
 				option = PHP_STREAM_META_OWNER_NAME;
 				value = Z_STRVAL_P(user);
@@ -603,8 +603,8 @@ static void php_do_chown(INTERNAL_FUNCTION_PARAMETERS, int do_lchown) /* {{{ */
 	RETURN_FALSE;
 #else
 
-	if (Z_TYPE_P(user) == IS_INT) {
-		uid = (uid_t)Z_IVAL_P(user);
+	if (Z_TYPE_P(user) == IS_LONG) {
+		uid = (uid_t)Z_LVAL_P(user);
 	} else if (Z_TYPE_P(user) == IS_STRING) {
 		if(php_get_uid_by_name(Z_STRVAL_P(user), &uid TSRMLS_CC) != SUCCESS) {
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to find uid for %s", Z_STRVAL_P(user));
@@ -673,7 +673,7 @@ PHP_FUNCTION(chmod)
 	mode_t imode;
 	php_stream_wrapper *wrapper;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Pi", &filename, &filename_len, &mode) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "pl", &filename, &filename_len, &mode) == FAILURE) {
 		return;
 	}
 
@@ -721,7 +721,7 @@ PHP_FUNCTION(touch)
 	struct utimbuf *newtime = &newtimebuf;
 	php_stream_wrapper *wrapper;
 
-	if (zend_parse_parameters(argc TSRMLS_CC, "P|ii", &filename, &filename_len, &filetime, &fileatime) == FAILURE) {
+	if (zend_parse_parameters(argc TSRMLS_CC, "p|ll", &filename, &filename_len, &filetime, &fileatime) == FAILURE) {
 		return;
 	}
 
@@ -831,7 +831,7 @@ PHP_FUNCTION(clearstatcache)
 	char      *filename             = NULL;
 	php_size_t        filename_len         = 0;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|bP", &clear_realpath_cache, &filename, &filename_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|bp", &clear_realpath_cache, &filename, &filename_len) == FAILURE) {
 		return;
 	}
 
@@ -962,21 +962,21 @@ PHPAPI void php_stat(const char *filename, php_stat_len filename_length, int typ
 
 	switch (type) {
 	case FS_PERMS:
-		RETURN_INT((php_int_t)ssb.sb.st_mode);
+		RETURN_LONG((php_int_t)ssb.sb.st_mode);
 	case FS_INODE:
-		RETURN_INT((php_int_t)ssb.sb.st_ino);
+		RETURN_LONG((php_int_t)ssb.sb.st_ino);
 	case FS_SIZE:
-		RETURN_INT((php_int_t)ssb.sb.st_size);
+		RETURN_LONG((php_int_t)ssb.sb.st_size);
 	case FS_OWNER:
-		RETURN_INT((php_int_t)ssb.sb.st_uid);
+		RETURN_LONG((php_int_t)ssb.sb.st_uid);
 	case FS_GROUP:
-		RETURN_INT((php_int_t)ssb.sb.st_gid);
+		RETURN_LONG((php_int_t)ssb.sb.st_gid);
 	case FS_ATIME:
-		RETURN_INT((php_int_t)ssb.sb.st_atime);
+		RETURN_LONG((php_int_t)ssb.sb.st_atime);
 	case FS_MTIME:
-		RETURN_INT((php_int_t)ssb.sb.st_mtime);
+		RETURN_LONG((php_int_t)ssb.sb.st_mtime);
 	case FS_CTIME:
-		RETURN_INT((php_int_t)ssb.sb.st_ctime);
+		RETURN_LONG((php_int_t)ssb.sb.st_ctime);
 	case FS_TYPE:
 		if (S_ISLNK(ssb.sb.st_mode)) {
 			RETURN_STRING("link", 1);
@@ -1012,38 +1012,38 @@ PHPAPI void php_stat(const char *filename, php_stat_len filename_length, int typ
 	case FS_STAT:
 		array_init(return_value);
 
-		MAKE_INT_ZVAL_INCREF(stat_dev, stat_sb->st_dev);
-		MAKE_INT_ZVAL_INCREF(stat_ino, stat_sb->st_ino);
-		MAKE_INT_ZVAL_INCREF(stat_mode, stat_sb->st_mode);
-		MAKE_INT_ZVAL_INCREF(stat_nlink, stat_sb->st_nlink);
-		MAKE_INT_ZVAL_INCREF(stat_uid, stat_sb->st_uid);
-		MAKE_INT_ZVAL_INCREF(stat_gid, stat_sb->st_gid);
+		MAKE_LONG_ZVAL_INCREF(stat_dev, stat_sb->st_dev);
+		MAKE_LONG_ZVAL_INCREF(stat_ino, stat_sb->st_ino);
+		MAKE_LONG_ZVAL_INCREF(stat_mode, stat_sb->st_mode);
+		MAKE_LONG_ZVAL_INCREF(stat_nlink, stat_sb->st_nlink);
+		MAKE_LONG_ZVAL_INCREF(stat_uid, stat_sb->st_uid);
+		MAKE_LONG_ZVAL_INCREF(stat_gid, stat_sb->st_gid);
 #ifdef HAVE_ST_RDEV
 # ifdef _WIN64
 		if (stat_sb->st_rdev < ((_dev_t)-1)) {
-			MAKE_INT_ZVAL_INCREF(stat_rdev, stat_sb->st_rdev);
+			MAKE_LONG_ZVAL_INCREF(stat_rdev, stat_sb->st_rdev);
 		} else {
-			MAKE_INT_ZVAL_INCREF(stat_rdev, -1);
+			MAKE_LONG_ZVAL_INCREF(stat_rdev, -1);
 		}
 # else
-		MAKE_INT_ZVAL_INCREF(stat_rdev, stat_sb->st_rdev);
+		MAKE_LONG_ZVAL_INCREF(stat_rdev, stat_sb->st_rdev);
 # endif
 #else
-		MAKE_INT_ZVAL_INCREF(stat_rdev, -1);
+		MAKE_LONG_ZVAL_INCREF(stat_rdev, -1);
 #endif
-		MAKE_INT_ZVAL_INCREF(stat_size, stat_sb->st_size);
-		MAKE_INT_ZVAL_INCREF(stat_atime, stat_sb->st_atime);
-		MAKE_INT_ZVAL_INCREF(stat_mtime, stat_sb->st_mtime);
-		MAKE_INT_ZVAL_INCREF(stat_ctime, stat_sb->st_ctime);
+		MAKE_LONG_ZVAL_INCREF(stat_size, stat_sb->st_size);
+		MAKE_LONG_ZVAL_INCREF(stat_atime, stat_sb->st_atime);
+		MAKE_LONG_ZVAL_INCREF(stat_mtime, stat_sb->st_mtime);
+		MAKE_LONG_ZVAL_INCREF(stat_ctime, stat_sb->st_ctime);
 #ifdef HAVE_ST_BLKSIZE
-		MAKE_INT_ZVAL_INCREF(stat_blksize, stat_sb->st_blksize);
+		MAKE_LONG_ZVAL_INCREF(stat_blksize, stat_sb->st_blksize);
 #else
-		MAKE_INT_ZVAL_INCREF(stat_blksize,-1);
+		MAKE_LONG_ZVAL_INCREF(stat_blksize,-1);
 #endif
 #ifdef HAVE_ST_BLOCKS
-		MAKE_INT_ZVAL_INCREF(stat_blocks, stat_sb->st_blocks);
+		MAKE_LONG_ZVAL_INCREF(stat_blocks, stat_sb->st_blocks);
 #else
-		MAKE_INT_ZVAL_INCREF(stat_blocks,-1);
+		MAKE_LONG_ZVAL_INCREF(stat_blocks,-1);
 #endif
 		/* Store numeric indexes in propper order */
 		zend_hash_next_index_insert(HASH_OF(return_value), (void *)&stat_dev, sizeof(zval *), NULL);
@@ -1090,7 +1090,7 @@ void name(INTERNAL_FUNCTION_PARAMETERS) { \
 	char *filename; \
 	php_size_t filename_len; \
 	\
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "P", &filename, &filename_len) == FAILURE) { \
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "p", &filename, &filename_len) == FAILURE) { \
 		return; \
 	} \
 	\
@@ -1195,7 +1195,7 @@ PHP_FUNCTION(realpath_cache_size)
 	if (zend_parse_parameters_none() == FAILURE) {
 		return;
 	}
-	RETURN_INT(realpath_cache_size(TSRMLS_C));
+	RETURN_LONG(realpath_cache_size(TSRMLS_C));
 }
 
 /* {{{ proto bool realpath_cache_get()
@@ -1218,13 +1218,13 @@ PHP_FUNCTION(realpath_cache_get)
 
 			/* bucket->key is unsigned long */
 			if (ZEND_INT_MAX >= bucket->key) {
-				add_assoc_int(entry, "key", bucket->key);
+				add_assoc_long(entry, "key", bucket->key);
 			} else {
 				add_assoc_double(entry, "key", (double)bucket->key);
 			}
 			add_assoc_bool(entry, "is_dir", bucket->is_dir);
 			add_assoc_stringl(entry, "realpath", bucket->realpath, bucket->realpath_len, 1);
-			add_assoc_int(entry, "expires", bucket->expires);
+			add_assoc_long(entry, "expires", bucket->expires);
 #ifdef PHP_WIN32
 			add_assoc_bool(entry, "is_rvalid", bucket->is_rvalid);
 			add_assoc_bool(entry, "is_wvalid", bucket->is_wvalid);

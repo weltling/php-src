@@ -34,12 +34,12 @@ END_EXTERN_C()
 
 #ifndef ZTS
 
-#define IS_INTERNED(s) \
+#define IS_LONGERNED(s) \
 	(((s) >= CG(interned_strings_start)) && ((s) < CG(interned_strings_end)))
 
 #else
 
-#define IS_INTERNED(s) \
+#define IS_LONGERNED(s) \
 	(0)
 
 #endif
@@ -51,25 +51,25 @@ END_EXTERN_C()
 	(((Bucket*)(((char*)(s))-sizeof(Bucket)))->h)
 
 #define str_efree(s) do { \
-		if (!IS_INTERNED(s)) { \
+		if (!IS_LONGERNED(s)) { \
 			efree((char*)s); \
 		} \
 	} while (0)
 
 #define str_efree_rel(s) do { \
-		if (!IS_INTERNED(s)) { \
+		if (!IS_LONGERNED(s)) { \
 			efree_rel((char *)s); \
 		} \
 	} while (0)
 
 #define str_free(s) do { \
-		if (!IS_INTERNED(s)) { \
+		if (!IS_LONGERNED(s)) { \
 			free((char*)s); \
 		} \
 	} while (0)
 
 #define str_erealloc(str, new_len) \
-	(IS_INTERNED(str) \
+	(IS_LONGERNED(str) \
 	 ? _str_erealloc(str, new_len, INTERNED_LEN(str)) \
 	 : erealloc(str, new_len))
 
@@ -80,13 +80,13 @@ static inline char *_str_erealloc(char *str, size_t new_len, size_t old_len) {
 }
 
 #define str_estrndup(str, len) \
-	(IS_INTERNED(str) ? (str) : estrndup((str), (len)))
+	(IS_LONGERNED(str) ? (str) : estrndup((str), (len)))
 
 #define str_strndup(str, len) \
-	(IS_INTERNED(str) ? (str) : zend_strndup((str), (len)));
+	(IS_LONGERNED(str) ? (str) : zend_strndup((str), (len)));
 
 #define str_hash(str, len) \
-	(IS_INTERNED(str) ? INTERNED_HASH(str) : zend_hash_func((str), (len)+1))
+	(IS_LONGERNED(str) ? INTERNED_HASH(str) : zend_hash_func((str), (len)+1))
 
 
 #endif /* ZEND_STRING_H */

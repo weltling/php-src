@@ -47,7 +47,7 @@ static void _cal_easter(INTERNAL_FUNCTION_PARAMETERS, php_int_t gm)
 	}
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC,
-		"|ii", &year, &method) == FAILURE) {
+		"|ll", &year, &method) == FAILURE) {
 			return;
 	}
  
@@ -112,12 +112,12 @@ static void _cal_easter(INTERNAL_FUNCTION_PARAMETERS, php_int_t gm)
 			te.tm_mday = easter-10;
 		}
 
-	        Z_IVAL_P(return_value) = mktime(&te);
+	        Z_LVAL_P(return_value) = mktime(&te);
 	} else {							/* return the days after March 21 */	
-	        Z_IVAL_P(return_value) = easter;
+	        Z_LVAL_P(return_value) = easter;
 	}
 
-        Z_TYPE_P(return_value) = IS_INT;
+        Z_TYPE_P(return_value) = IS_LONG;
 
 }
 

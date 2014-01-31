@@ -293,10 +293,10 @@ void sdl_set_uri_credentials(sdlCtx *ctx, char *uri TSRMLS_DC)
 				    	
 						rest += 2;
 						Z_TYPE(new_header) = IS_STRING;
-						Z_STRSIZE(new_header) = Z_STRSIZE_PP(header) - (rest - s);
-						Z_STRVAL(new_header) = emalloc(Z_STRSIZE_PP(header) + 1);
+						Z_STRLEN(new_header) = Z_STRLEN_PP(header) - (rest - s);
+						Z_STRVAL(new_header) = emalloc(Z_STRLEN_PP(header) + 1);
 						memcpy(Z_STRVAL(new_header), Z_STRVAL_PP(header), s - Z_STRVAL_PP(header));
-						memcpy(Z_STRVAL(new_header) + (s - Z_STRVAL_PP(header)), rest, Z_STRSIZE_PP(header) - (rest - Z_STRVAL_PP(header)) + 1);
+						memcpy(Z_STRVAL(new_header) + (s - Z_STRVAL_PP(header)), rest, Z_STRLEN_PP(header) - (rest - Z_STRVAL_PP(header)) + 1);
 						ctx->old_header = *header;
 						Z_ADDREF_P(ctx->old_header);
 						php_stream_context_set_option(ctx->context, "http", "header", &new_header);
@@ -3263,7 +3263,7 @@ sdlPtr get_sdl(zval *this_ptr, char *uri, php_int_t cache_wsdl TSRMLS_DC)
 	}
 
 	if (zend_hash_find(Z_OBJPROP_P(this_ptr), "_user_agent", sizeof("_user_agent"), (void **) &tmp) == SUCCESS &&
-	    Z_TYPE_PP(tmp) == IS_STRING && Z_STRSIZE_PP(tmp) > 0) {	
+	    Z_TYPE_PP(tmp) == IS_STRING && Z_STRLEN_PP(tmp) > 0) {	
 		smart_str_appends(&headers, "User-Agent: ");
 		smart_str_appends(&headers, Z_STRVAL_PP(tmp));
 		smart_str_appends(&headers, "\r\n");
@@ -3272,7 +3272,7 @@ sdlPtr get_sdl(zval *this_ptr, char *uri, php_int_t cache_wsdl TSRMLS_DC)
 	if (zend_hash_find(Z_OBJPROP_P(this_ptr), "_proxy_host", sizeof("_proxy_host"), (void **) &proxy_host) == SUCCESS &&
 	    Z_TYPE_PP(proxy_host) == IS_STRING &&
 	    zend_hash_find(Z_OBJPROP_P(this_ptr), "_proxy_port", sizeof("_proxy_port"), (void **) &proxy_port) == SUCCESS &&
-	    Z_TYPE_PP(proxy_port) == IS_INT) {
+	    Z_TYPE_PP(proxy_port) == IS_LONG) {
 	    	zval str_port, *str_proxy;
 	    	smart_str proxy = {0};
 		str_port = **proxy_port;

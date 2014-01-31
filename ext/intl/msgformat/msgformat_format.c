@@ -109,7 +109,7 @@ PHP_FUNCTION( msgfmt_format_message )
 	MessageFormatter_object *mfo = &mf;
 
 	/* Parse parameters. */
-	if( zend_parse_method_parameters( ZEND_NUM_ARGS() TSRMLS_CC, getThis(), "SSa",
+	if( zend_parse_method_parameters( ZEND_NUM_ARGS() TSRMLS_CC, getThis(), "ssa",
 		  &slocale, &slocale_len, &pattern, &pattern_len, &args ) == FAILURE )
 	{
 		intl_error_set( NULL, U_ILLEGAL_ARGUMENT_ERROR,

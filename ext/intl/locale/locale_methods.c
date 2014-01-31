@@ -226,7 +226,7 @@ PHP_NAMED_FUNCTION(zif_locale_set_default)
 	char* locale_name = NULL;
 	php_size_t   len=0;	
 
-	if(zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC,  "S",
+	if(zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC,  "s",
 		&locale_name ,&len ) == FAILURE)
 	{
 		intl_error_set( NULL, U_ILLEGAL_ARGUMENT_ERROR,
@@ -383,7 +383,7 @@ static void get_icu_value_src_php( char* tag_name, INTERNAL_FUNCTION_PARAMETERS)
 
 	intl_error_reset( NULL TSRMLS_CC );
 
-	if(zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "S",
+	if(zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "s",
 	&loc_name ,&loc_name_len ) == FAILURE) {
 		spprintf(&msg , 0, "locale_get_%s : unable to parse input params", tag_name );
 		intl_error_set( NULL, U_ILLEGAL_ARGUMENT_ERROR,  msg , 1 TSRMLS_CC );
@@ -488,7 +488,7 @@ static void get_icu_disp_value_src_php( char* tag_name, INTERNAL_FUNCTION_PARAME
 
 	intl_error_reset( NULL TSRMLS_CC );
 
-	if(zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "S|S",
+	if(zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "s|s",
 		&loc_name, &loc_name_len , 
 		&disp_loc_name ,&disp_loc_name_len ) == FAILURE)
 	{
@@ -683,7 +683,7 @@ PHP_FUNCTION( locale_get_keywords )
 
     intl_error_reset( NULL TSRMLS_CC );
 
-    if(zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "S",
+    if(zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "s",
         &loc_name, &loc_name_len ) == FAILURE)
     {
         intl_error_set( NULL, U_ILLEGAL_ARGUMENT_ERROR,
@@ -765,7 +765,7 @@ static int append_key_value(smart_str* loc_name, HashTable* hash_arr, char* key_
 			/* not lang or grandfathered tag */
 			smart_str_appendl(loc_name, SEPARATOR , sizeof(SEPARATOR)-1);
 		}
-		smart_str_appendl(loc_name, Z_STRVAL_PP(ele_value) , Z_STRSIZE_PP(ele_value));
+		smart_str_appendl(loc_name, Z_STRVAL_PP(ele_value) , Z_STRLEN_PP(ele_value));
 		return SUCCESS;
 	}
 
@@ -805,7 +805,7 @@ static int append_multiple_key_values(smart_str* loc_name, HashTable* hash_arr, 
 			add_prefix( loc_name , key_name);
 
 			smart_str_appendl(loc_name, SEPARATOR , sizeof(SEPARATOR)-1);
-			smart_str_appendl(loc_name, Z_STRVAL_PP(ele_value) , Z_STRSIZE_PP(ele_value));
+			smart_str_appendl(loc_name, Z_STRVAL_PP(ele_value) , Z_STRLEN_PP(ele_value));
 			return SUCCESS;
 		} else if(Z_TYPE_PP(ele_value) == IS_ARRAY ) {
 			HashPosition pos;
@@ -821,7 +821,7 @@ static int append_multiple_key_values(smart_str* loc_name, HashTable* hash_arr, 
 					add_prefix(loc_name , key_name);
 				}
 				smart_str_appendl(loc_name, SEPARATOR , sizeof(SEPARATOR)-1);
-				smart_str_appendl(loc_name, Z_STRVAL_PP(data) , Z_STRSIZE_PP(data));
+				smart_str_appendl(loc_name, Z_STRVAL_PP(data) , Z_STRLEN_PP(data));
 				zend_hash_move_forward_ex(arr, &pos);
 			}
 			return SUCCESS;
@@ -855,7 +855,7 @@ static int append_multiple_key_values(smart_str* loc_name, HashTable* hash_arr, 
 					add_prefix(loc_name , cur_key_name);
 				}
 				smart_str_appendl(loc_name, SEPARATOR , sizeof(SEPARATOR)-1);
-				smart_str_appendl(loc_name, Z_STRVAL_PP(ele_value) , Z_STRSIZE_PP(ele_value));
+				smart_str_appendl(loc_name, Z_STRVAL_PP(ele_value) , Z_STRLEN_PP(ele_value));
 			}
 		} /* end of for */
 	} /* end of else */
@@ -1090,7 +1090,7 @@ PHP_FUNCTION(locale_parse)
 
     intl_error_reset( NULL TSRMLS_CC );
 
-    if(zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "S",
+    if(zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "s",
         &loc_name, &loc_name_len ) == FAILURE)
     {
         intl_error_set( NULL, U_ILLEGAL_ARGUMENT_ERROR,
@@ -1138,7 +1138,7 @@ PHP_FUNCTION(locale_get_all_variants)
 
 	intl_error_reset( NULL TSRMLS_CC );
 	
-	if(zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "S",
+	if(zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "s",
 	&loc_name, &loc_name_len ) == FAILURE)
 	{
 		intl_error_set( NULL, U_ILLEGAL_ARGUMENT_ERROR,
@@ -1243,7 +1243,7 @@ PHP_FUNCTION(locale_filter_matches)
 
 	intl_error_reset( NULL TSRMLS_CC );
 	
-	if(zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "SS|b",
+	if(zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "ss|b",
 		&lang_tag, &lang_tag_len , &loc_range , &loc_range_len , 
 		&boolCanonical) == FAILURE)
 	{
@@ -1432,7 +1432,7 @@ static char* lookup_loc_range(const char* loc_range, HashTable* hash_arr, int ca
 			intl_error_set(NULL, U_ILLEGAL_ARGUMENT_ERROR, "lookup_loc_range: locale array element is not a string", 0 TSRMLS_CC);
 			LOOKUP_CLEAN_RETURN(NULL);
 		} 
-		cur_arr[cur_arr_len*2] = estrndup(Z_STRVAL_PP(ele_value), Z_STRSIZE_PP(ele_value));
+		cur_arr[cur_arr_len*2] = estrndup(Z_STRVAL_PP(ele_value), Z_STRLEN_PP(ele_value));
 		result = strToMatch(Z_STRVAL_PP(ele_value), cur_arr[cur_arr_len*2]);
 		if(result == 0) {
 			intl_error_set(NULL, U_ILLEGAL_ARGUMENT_ERROR, "lookup_loc_range: unable to canonicalize lang_tag", 0 TSRMLS_CC);
@@ -1533,7 +1533,7 @@ PHP_FUNCTION(locale_lookup)
 
 	intl_error_reset( NULL TSRMLS_CC );
 
-	if(zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "aS|bS", &arr, &loc_range, &loc_range_len,
+	if(zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "as|bs", &arr, &loc_range, &loc_range_len,
 		&boolCanonical,	&fallback_loc, &fallback_loc_len) == FAILURE) {
 		intl_error_set( NULL, U_ILLEGAL_ARGUMENT_ERROR,	"locale_lookup: unable to parse input params", 0 TSRMLS_CC );
 		RETURN_FALSE;
@@ -1579,7 +1579,7 @@ PHP_FUNCTION(locale_accept_from_http)
 	char resultLocale[INTL_MAX_LOCALE_LEN+1];
 	UAcceptResult outResult;
 
-	if(zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "S", &http_accept, &http_accept_len) == FAILURE)
+	if(zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "s", &http_accept, &http_accept_len) == FAILURE)
 	{
 		intl_error_set( NULL, U_ILLEGAL_ARGUMENT_ERROR,
 		"locale_accept_from_http: unable to parse input parameters", 0 TSRMLS_CC );

@@ -33,7 +33,7 @@
 
 #if ZEND_EXTENSION_API_NO > PHP_5_3_X_API_NO
 # define ADD_INTERNED_STRING(str, len) do { \
-		if (!IS_INTERNED(str)) { \
+		if (!IS_LONGERNED(str)) { \
 			const char *tmp = accel_new_interned_string((str), (len), 1 TSRMLS_CC); \
 			if (tmp != (str)) { \
 				(str) = (char*)tmp; \
@@ -126,7 +126,7 @@ static uint zend_persist_zval_calc(zval *z TSRMLS_DC)
 #endif
 		case IS_STRING:
 		case IS_CONSTANT:
-			ADD_INTERNED_STRING(Z_STRVAL_P(z), Z_STRSIZE_P(z) + 1);
+			ADD_INTERNED_STRING(Z_STRVAL_P(z), Z_STRLEN_P(z) + 1);
 			break;
 		case IS_ARRAY:
 		case IS_CONSTANT_ARRAY:

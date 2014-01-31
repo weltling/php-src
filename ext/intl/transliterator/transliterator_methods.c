@@ -112,7 +112,7 @@ PHP_FUNCTION( transliterator_create )
 	
 	(void) to; /* unused */
 
-	if( zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "S|i",
+	if( zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "s|l",
 		&str_id, &str_id_len, &direction ) == FAILURE )
 	{
 		intl_error_set( NULL, U_ILLEGAL_ARGUMENT_ERROR,
@@ -146,7 +146,7 @@ PHP_FUNCTION( transliterator_create_from_rules )
 					       0x61, 0x6E, 0x73, 0x50, 0x48, 0x50, 0}; /* RulesTransPHP */
 	TRANSLITERATOR_METHOD_INIT_VARS;
 
-	if( zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "S|i",
+	if( zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "s|l",
 		&str_rules, &str_rules_len, &direction ) == FAILURE )
 	{
 		intl_error_set( NULL, U_ILLEGAL_ARGUMENT_ERROR,
@@ -317,7 +317,7 @@ PHP_FUNCTION( transliterator_transliterate )
 	{
 		/* in non-OOP version, accept both a transliterator and a string */
 		zval **arg1;
-		if( zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "ZS|ii",
+		if( zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "Zs|ll",
 			&arg1, &str, &str_len, &start, &limit ) == FAILURE )
 		{
 			intl_error_set( NULL, U_ILLEGAL_ARGUMENT_ERROR,
@@ -340,7 +340,7 @@ PHP_FUNCTION( transliterator_transliterate )
 			}
 			ALLOC_INIT_ZVAL( object );
 			temp_trans = 1;
-			res = create_transliterator( Z_STRVAL_PP( arg1 ), Z_STRSIZE_PP( arg1 ),
+			res = create_transliterator( Z_STRVAL_PP( arg1 ), Z_STRLEN_PP( arg1 ),
 					TRANSLITERATOR_FORWARD, object TSRMLS_CC );
 			if( res == FAILURE )
 			{
@@ -353,7 +353,7 @@ PHP_FUNCTION( transliterator_transliterate )
 			}
 		}
 	}
-	else if( zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "S|ii",
+	else if( zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "s|ll",
 		&str, &str_len, &start, &limit ) == FAILURE )
 	{
 		intl_error_set( NULL, U_ILLEGAL_ARGUMENT_ERROR,
@@ -496,7 +496,7 @@ PHP_FUNCTION( transliterator_get_error_code )
 	if (to == NULL )
 		RETURN_FALSE;
 
-	RETURN_INT( (php_int_t) TRANSLITERATOR_ERROR_CODE( to ) );
+	RETURN_LONG( (php_int_t) TRANSLITERATOR_ERROR_CODE( to ) );
 }
 /* }}} */
 

@@ -192,13 +192,13 @@ enum pdo_null_handling {
 };
 
 /* {{{ utils for reading attributes set as driver_options */
-static inline php_int_t pdo_attr_ival(zval *options, enum pdo_attribute_type option_name, php_int_t defval TSRMLS_DC)
+static inline php_int_t pdo_attr_lval(zval *options, enum pdo_attribute_type option_name, php_int_t defval TSRMLS_DC)
 {
 	zval **v;
 
 	if (options && SUCCESS == zend_hash_index_find(Z_ARRVAL_P(options), option_name, (void**)&v)) {
-		convert_to_int_ex(v);
-		return Z_IVAL_PP(v);
+		convert_to_long_ex(v);
+		return Z_LVAL_PP(v);
 	}
 	return defval;
 }
@@ -208,7 +208,7 @@ static inline char *pdo_attr_strval(zval *options, enum pdo_attribute_type optio
 
 	if (options && SUCCESS == zend_hash_index_find(Z_ARRVAL_P(options), option_name, (void**)&v)) {
 		convert_to_string_ex(v);
-		return estrndup(Z_STRVAL_PP(v), Z_STRSIZE_PP(v));
+		return estrndup(Z_STRVAL_PP(v), Z_STRLEN_PP(v));
 	}
 	return defval ? estrdup(defval) : NULL;
 }

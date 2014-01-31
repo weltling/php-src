@@ -26,10 +26,10 @@ ps_module ps_mod_user = {
 	PS_MOD_SID(user)
 };
 
-#define SESS_ZVAL_INT(val, a)						\
+#define SESS_ZVAL_LONG(val, a)						\
 {													\
 	MAKE_STD_ZVAL(a);								\
-	ZVAL_INT(a, val);								\
+	ZVAL_LONG(a, val);								\
 }
 
 #define SESS_ZVAL_STRING(vl, a)						\
@@ -70,8 +70,8 @@ static zval *ps_call_handler(zval *func, int argc, zval **argv TSRMLS_DC)
 
 #define FINISH								\
 	if (retval) {							\
-		convert_to_int(retval);			\
-		ret = Z_IVAL_P(retval);				\
+		convert_to_long(retval);			\
+		ret = Z_LVAL_P(retval);				\
 		zval_ptr_dtor(&retval);				\
 	}										\
 	return ret
@@ -136,8 +136,8 @@ PS_READ_FUNC(user)
 
 	if (retval) {
 		if (Z_TYPE_P(retval) == IS_STRING) {
-			*val = estrndup(Z_STRVAL_P(retval), Z_STRSIZE_P(retval));
-			*vallen = Z_STRSIZE_P(retval);
+			*val = estrndup(Z_STRVAL_P(retval), Z_STRLEN_P(retval));
+			*vallen = Z_STRLEN_P(retval);
 			ret = SUCCESS;
 		}
 		zval_ptr_dtor(&retval);
@@ -176,7 +176,7 @@ PS_GC_FUNC(user)
 	zval *args[1];
 	STDVARS;
 
-	SESS_ZVAL_INT(maxlifetime, args[0]);
+	SESS_ZVAL_LONG(maxlifetime, args[0]);
 
 	retval = ps_call_handler(PSF(gc), 1, args TSRMLS_CC);
 
@@ -194,7 +194,7 @@ PS_CREATE_SID_FUNC(user)
 
 		if (retval) {
 			if (Z_TYPE_P(retval) == IS_STRING) {
-				id = estrndup(Z_STRVAL_P(retval), Z_STRSIZE_P(retval));
+				id = estrndup(Z_STRVAL_P(retval), Z_STRLEN_P(retval));
 			}
 			zval_ptr_dtor(&retval);
 		}

@@ -172,7 +172,7 @@ static void print_hash(zend_write_func_t write_func, HashTable *ht, int indent, 
 					ZEND_WRITE_EX(string_key, str_len-1);
 				}
 				break;
-			case HASH_KEY_IS_INT:
+			case HASH_KEY_IS_LONG:
 				{
 					char key[25];
 					snprintf(key, sizeof(key), ZEND_INT_FMT, num_key);
@@ -212,7 +212,7 @@ static void print_flat_hash(HashTable *ht TSRMLS_DC) /* {{{ */
 			case HASH_KEY_IS_STRING:
 				ZEND_PUTS(string_key);
 				break;
-			case HASH_KEY_IS_INT:
+			case HASH_KEY_IS_LONG:
 				zend_printf(ZEND_INT_FMT, num_key);
 				break;
 		}
@@ -231,26 +231,26 @@ ZEND_API void zend_make_printable_zval(zval *expr, zval *expr_copy, int *use_cop
 	}
 	switch (Z_TYPE_P(expr)) {
 		case IS_NULL:
-			Z_STRSIZE_P(expr_copy) = 0;
+			Z_STRLEN_P(expr_copy) = 0;
 			Z_STRVAL_P(expr_copy) = STR_EMPTY_ALLOC();
 			break;
 		case IS_BOOL:
-			if (Z_IVAL_P(expr)) {
-				Z_STRSIZE_P(expr_copy) = 1;
+			if (Z_LVAL_P(expr)) {
+				Z_STRLEN_P(expr_copy) = 1;
 				Z_STRVAL_P(expr_copy) = estrndup("1", 1);
 			} else {
-				Z_STRSIZE_P(expr_copy) = 0;
+				Z_STRLEN_P(expr_copy) = 0;
 				Z_STRVAL_P(expr_copy) = STR_EMPTY_ALLOC();
 			}
 			break;
 		case IS_RESOURCE:
-			Z_STRVAL_P(expr_copy) = (char *) emalloc(sizeof("Resource id #") - 1 + MAX_LENGTH_OF_ZEND_INT);
-			Z_STRSIZE_P(expr_copy) = snprintf(Z_STRVAL_P(expr_copy), sizeof("Resource id #") - 1 + MAX_LENGTH_OF_ZEND_INT, "Resource id #" ZEND_INT_FMT, Z_IVAL_P(expr));
+			Z_STRVAL_P(expr_copy) = (char *) emalloc(sizeof("Resource id #") - 1 + MAX_LENGTH_OF_LONG);
+			Z_STRLEN_P(expr_copy) = snprintf(Z_STRVAL_P(expr_copy), sizeof("Resource id #") - 1 + MAX_LENGTH_OF_LONG, "Resource id #" ZEND_INT_FMT, Z_LVAL_P(expr));
 			break;
 		case IS_ARRAY:
 			zend_error(E_NOTICE, "Array to string conversion");
-			Z_STRSIZE_P(expr_copy) = sizeof("Array") - 1;
-			Z_STRVAL_P(expr_copy) = estrndup("Array", Z_STRSIZE_P(expr_copy));
+			Z_STRLEN_P(expr_copy) = sizeof("Array") - 1;
+			Z_STRVAL_P(expr_copy) = estrndup("Array", Z_STRLEN_P(expr_copy));
 			break;
 		case IS_OBJECT:
 			{
@@ -288,7 +288,7 @@ ZEND_API void zend_make_printable_zval(zval *expr, zval *expr_copy, int *use_cop
 					zval_ptr_dtor(&z);
 				}
 				zend_error(EG(exception) ? E_ERROR : E_RECOVERABLE_ERROR, "Object of class %s could not be converted to string", Z_OBJCE_P(expr)->name);
-				Z_STRSIZE_P(expr_copy) = 0;
+				Z_STRLEN_P(expr_copy) = 0;
 				Z_STRVAL_P(expr_copy) = STR_EMPTY_ALLOC();
 			}
 			break;
@@ -323,17 +323,17 @@ ZEND_API zend_size_t zend_print_zval_ex(zend_write_func_t write_func, zval *expr
 	if (use_copy) {
 		expr = &expr_copy;
 	}
-	if (Z_STRSIZE_P(expr) == 0) { /* optimize away empty strings */
+	if (Z_STRLEN_P(expr) == 0) { /* optimize away empty strings */
 		if (use_copy) {
 			zval_dtor(expr);
 		}
 		return 0;
 	}
-	write_func(Z_STRVAL_P(expr), Z_STRSIZE_P(expr));
+	write_func(Z_STRVAL_P(expr), Z_STRLEN_P(expr));
 	if (use_copy) {
 		zval_dtor(expr);
 	}
-	return Z_STRSIZE_P(expr);
+	return Z_STRLEN_P(expr);
 }
 /* }}} */
 
@@ -1150,21 +1150,21 @@ ZEND_API void zend_error(int type, const char *format, ...) /* {{{ */
 # endif
 #endif
 			va_copy(usr_copy, args);
-			Z_STRSIZE_P(z_error_message) = zend_vspprintf(&Z_STRVAL_P(z_error_message), 0, format, usr_copy);
+			Z_STRLEN_P(z_error_message) = zend_vspprintf(&Z_STRVAL_P(z_error_message), 0, format, usr_copy);
 #ifdef va_copy
 			va_end(usr_copy);
 #endif
 			Z_TYPE_P(z_error_message) = IS_STRING;
 
-			Z_IVAL_P(z_error_type) = type;
-			Z_TYPE_P(z_error_type) = IS_INT;
+			Z_LVAL_P(z_error_type) = type;
+			Z_TYPE_P(z_error_type) = IS_LONG;
 
 			if (error_filename) {
 				ZVAL_STRING(z_error_filename, error_filename, 1);
 			}
 
-			Z_IVAL_P(z_error_lineno) = error_lineno;
-			Z_TYPE_P(z_error_lineno) = IS_INT;
+			Z_LVAL_P(z_error_lineno) = error_lineno;
+			Z_TYPE_P(z_error_lineno) = IS_LONG;
 
 			if (!EG(active_symbol_table)) {
 				zend_rebuild_symbol_table(TSRMLS_C);
@@ -1211,7 +1211,7 @@ ZEND_API void zend_error(int type, const char *format, ...) /* {{{ */
 
 			if (call_user_function_ex(CG(function_table), NULL, orig_user_error_handler, &retval, 5, params, 1, NULL TSRMLS_CC) == SUCCESS) {
 				if (retval) {
-					if (Z_TYPE_P(retval) == IS_BOOL && Z_IVAL_P(retval) == 0) {
+					if (Z_TYPE_P(retval) == IS_BOOL && Z_LVAL_P(retval) == 0) {
 						zend_error_cb(type, error_filename, error_lineno, format, args);
 					}
 					zval_ptr_dtor(&retval);

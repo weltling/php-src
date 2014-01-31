@@ -99,11 +99,11 @@ PHP_MINIT_FUNCTION(assert) /* {{{ */
 
 	REGISTER_INI_ENTRIES();
 
-	REGISTER_INT_CONSTANT("ASSERT_ACTIVE", ASSERT_ACTIVE, CONST_CS|CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("ASSERT_CALLBACK", ASSERT_CALLBACK, CONST_CS|CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("ASSERT_BAIL", ASSERT_BAIL, CONST_CS|CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("ASSERT_WARNING", ASSERT_WARNING, CONST_CS|CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("ASSERT_QUIET_EVAL", ASSERT_QUIET_EVAL, CONST_CS|CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("ASSERT_ACTIVE", ASSERT_ACTIVE, CONST_CS|CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("ASSERT_CALLBACK", ASSERT_CALLBACK, CONST_CS|CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("ASSERT_BAIL", ASSERT_BAIL, CONST_CS|CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("ASSERT_WARNING", ASSERT_WARNING, CONST_CS|CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("ASSERT_QUIET_EVAL", ASSERT_QUIET_EVAL, CONST_CS|CONST_PERSISTENT);
 
 	return SUCCESS;
 }
@@ -150,7 +150,7 @@ PHP_FUNCTION(assert)
 		RETURN_TRUE;
 	}
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Z|S", &assertion, &description, &description_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Z|s", &assertion, &description, &description_len) == FAILURE) {
 		return;
 	}
 
@@ -166,7 +166,7 @@ PHP_FUNCTION(assert)
 		}
 
 		compiled_string_description = zend_make_compiled_string_description("assert code" TSRMLS_CC);
-		if (zend_eval_stringl(myeval, Z_STRSIZE_PP(assertion), &retval, compiled_string_description TSRMLS_CC) == FAILURE) {
+		if (zend_eval_stringl(myeval, Z_STRLEN_PP(assertion), &retval, compiled_string_description TSRMLS_CC) == FAILURE) {
 			efree(compiled_string_description);
 			if (description_len == 0) {
 				php_error_docref(NULL TSRMLS_CC, E_RECOVERABLE_ERROR, "Failure evaluating code: %s%s", PHP_EOL, myeval);
@@ -185,10 +185,10 @@ PHP_FUNCTION(assert)
 		}
 
 		convert_to_boolean(&retval);
-		val = Z_IVAL(retval);
+		val = Z_LVAL(retval);
 	} else {
 		convert_to_boolean_ex(assertion);
-		val = Z_IVAL_PP(assertion);
+		val = Z_LVAL_PP(assertion);
 	}
 
 	if (val) {
@@ -212,7 +212,7 @@ PHP_FUNCTION(assert)
 		MAKE_STD_ZVAL(args[2]);
 
 		ZVAL_STRING(args[0], SAFE_STRING(filename), 1);
-		ZVAL_INT (args[1], lineno);
+		ZVAL_LONG (args[1], lineno);
 		ZVAL_STRING(args[2], SAFE_STRING(myeval), 1);
 
 		MAKE_STD_ZVAL(retval);
@@ -269,7 +269,7 @@ PHP_FUNCTION(assert_options)
 	php_int_t oldint;
 	int ac = ZEND_NUM_ARGS();
 
-	if (zend_parse_parameters(ac TSRMLS_CC, "i|Z", &what, &value) == FAILURE) {
+	if (zend_parse_parameters(ac TSRMLS_CC, "l|Z", &what, &value) == FAILURE) {
 		return;
 	}
 
@@ -278,36 +278,36 @@ PHP_FUNCTION(assert_options)
 		oldint = ASSERTG(active);
 		if (ac == 2) {
 			convert_to_string_ex(value);
-			zend_alter_ini_entry_ex("assert.active", sizeof("assert.active"), Z_STRVAL_PP(value), Z_STRSIZE_PP(value), PHP_INI_USER, PHP_INI_STAGE_RUNTIME, 0 TSRMLS_CC);
+			zend_alter_ini_entry_ex("assert.active", sizeof("assert.active"), Z_STRVAL_PP(value), Z_STRLEN_PP(value), PHP_INI_USER, PHP_INI_STAGE_RUNTIME, 0 TSRMLS_CC);
 		}
-		RETURN_INT(oldint);
+		RETURN_LONG(oldint);
 		break;
 
 	case ASSERT_BAIL:
 		oldint = ASSERTG(bail);
 		if (ac == 2) {
 			convert_to_string_ex(value);
-			zend_alter_ini_entry_ex("assert.bail", sizeof("assert.bail"), Z_STRVAL_PP(value), Z_STRSIZE_PP(value), PHP_INI_USER, PHP_INI_STAGE_RUNTIME, 0 TSRMLS_CC);
+			zend_alter_ini_entry_ex("assert.bail", sizeof("assert.bail"), Z_STRVAL_PP(value), Z_STRLEN_PP(value), PHP_INI_USER, PHP_INI_STAGE_RUNTIME, 0 TSRMLS_CC);
 		}
-		RETURN_INT(oldint);
+		RETURN_LONG(oldint);
 		break;
 
 	case ASSERT_QUIET_EVAL:
 		oldint = ASSERTG(quiet_eval);
 		if (ac == 2) {
 			convert_to_string_ex(value);
-			zend_alter_ini_entry_ex("assert.quiet_eval", sizeof("assert.quiet_eval"), Z_STRVAL_PP(value), Z_STRSIZE_PP(value), PHP_INI_USER, PHP_INI_STAGE_RUNTIME, 0 TSRMLS_CC);
+			zend_alter_ini_entry_ex("assert.quiet_eval", sizeof("assert.quiet_eval"), Z_STRVAL_PP(value), Z_STRLEN_PP(value), PHP_INI_USER, PHP_INI_STAGE_RUNTIME, 0 TSRMLS_CC);
 		}
-		RETURN_INT(oldint);
+		RETURN_LONG(oldint);
 		break;
 
 	case ASSERT_WARNING:
 		oldint = ASSERTG(warning);
 		if (ac == 2) {
 			convert_to_string_ex(value);
-			zend_alter_ini_entry_ex("assert.warning", sizeof("assert.warning"), Z_STRVAL_PP(value), Z_STRSIZE_PP(value), PHP_INI_USER, PHP_INI_STAGE_RUNTIME, 0 TSRMLS_CC);
+			zend_alter_ini_entry_ex("assert.warning", sizeof("assert.warning"), Z_STRVAL_PP(value), Z_STRLEN_PP(value), PHP_INI_USER, PHP_INI_STAGE_RUNTIME, 0 TSRMLS_CC);
 		}
-		RETURN_INT(oldint);
+		RETURN_LONG(oldint);
 		break;
 
 	case ASSERT_CALLBACK:

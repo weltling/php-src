@@ -306,7 +306,7 @@ static inline int process_nested_data(UNSERIALIZE_PARAMETER, HashTable *ht, php_
 			return 0;
 		}
 
-		if (Z_TYPE_P(key) != IS_INT && Z_TYPE_P(key) != IS_STRING) {
+		if (Z_TYPE_P(key) != IS_LONG && Z_TYPE_P(key) != IS_STRING) {
 			zval_dtor(key);
 			FREE_ZVAL(key);
 			return 0;
@@ -324,23 +324,23 @@ static inline int process_nested_data(UNSERIALIZE_PARAMETER, HashTable *ht, php_
 
 		if (!objprops) {
 			switch (Z_TYPE_P(key)) {
-			case IS_INT:
-				if (zend_hash_index_find(ht, Z_IVAL_P(key), (void **)&old_data)==SUCCESS) {
+			case IS_LONG:
+				if (zend_hash_index_find(ht, Z_LVAL_P(key), (void **)&old_data)==SUCCESS) {
 					var_push_dtor(var_hash, old_data);
 				}
-				zend_hash_index_update(ht, Z_IVAL_P(key), &data, sizeof(data), NULL);
+				zend_hash_index_update(ht, Z_LVAL_P(key), &data, sizeof(data), NULL);
 				break;
 			case IS_STRING:
-				if (zend_symtable_find(ht, Z_STRVAL_P(key), Z_STRSIZE_P(key) + 1, (void **)&old_data)==SUCCESS) {
+				if (zend_symtable_find(ht, Z_STRVAL_P(key), Z_STRLEN_P(key) + 1, (void **)&old_data)==SUCCESS) {
 					var_push_dtor(var_hash, old_data);
 				}
-				zend_symtable_update(ht, Z_STRVAL_P(key), Z_STRSIZE_P(key) + 1, &data, sizeof(data), NULL);
+				zend_symtable_update(ht, Z_STRVAL_P(key), Z_STRLEN_P(key) + 1, &data, sizeof(data), NULL);
 				break;
 			}
 		} else {
 			/* object properties should include no integers */
 			convert_to_string(key);
-			zend_hash_update(ht, Z_STRVAL_P(key), Z_STRSIZE_P(key) + 1, &data,
+			zend_hash_update(ht, Z_STRVAL_P(key), Z_STRLEN_P(key) + 1, &data,
 					sizeof data, NULL);
 		}
 		
@@ -529,9 +529,9 @@ PHPAPI int php_var_unserialize(UNSERIALIZE_PARAMETER)
 	}
 
 	/* Use double for large long values that were serialized on a 64-bit system */
-	if (digits >= MAX_LENGTH_OF_ZEND_INT - 1) {
-		if (digits == MAX_LENGTH_OF_ZEND_INT - 1) {
-			int cmp = strncmp(YYCURSOR - MAX_LENGTH_OF_ZEND_INT, int_min_digits, MAX_LENGTH_OF_ZEND_INT - 1);
+	if (digits >= MAX_LENGTH_OF_LONG - 1) {
+		if (digits == MAX_LENGTH_OF_LONG - 1) {
+			int cmp = strncmp(YYCURSOR - MAX_LENGTH_OF_LONG, long_min_digits, MAX_LENGTH_OF_LONG - 1);
 
 			if (!(cmp < 0 || (cmp == 0 && start[2] == '-'))) {
 				goto use_double;
@@ -543,7 +543,7 @@ PHPAPI int php_var_unserialize(UNSERIALIZE_PARAMETER)
 #endif
 	*p = YYCURSOR;
 	INIT_PZVAL(*rval);
-	ZVAL_INT(*rval, parse_iv(start + 2));
+	ZVAL_LONG(*rval, parse_iv(start + 2));
 	return 1;
 }
 

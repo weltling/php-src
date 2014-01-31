@@ -318,9 +318,9 @@ static zval **spl_array_get_dimension_ptr_ptr(int check_inherited, zval *object,
 	switch(Z_TYPE_P(offset)) {
 	case IS_NULL:
 		Z_STRVAL_P(offset) = "";
-		Z_STRSIZE_P(offset) = 0;
+		Z_STRLEN_P(offset) = 0;
 	case IS_STRING:
-		if (zend_symtable_find(ht, Z_STRVAL_P(offset), Z_STRSIZE_P(offset)+1, (void **) &retval) == FAILURE) {
+		if (zend_symtable_find(ht, Z_STRVAL_P(offset), Z_STRLEN_P(offset)+1, (void **) &retval) == FAILURE) {
 			switch (type) {
 				case BP_VAR_R:
 					zend_error(E_NOTICE, "Undefined index: %s", Z_STRVAL_P(offset));
@@ -333,20 +333,20 @@ static zval **spl_array_get_dimension_ptr_ptr(int check_inherited, zval *object,
 				case BP_VAR_W: {
 				    zval *value;
 				    ALLOC_INIT_ZVAL(value);
-				    zend_symtable_update(ht, Z_STRVAL_P(offset), Z_STRSIZE_P(offset)+1, (void**)&value, sizeof(void*), (void **)&retval);
+				    zend_symtable_update(ht, Z_STRVAL_P(offset), Z_STRLEN_P(offset)+1, (void**)&value, sizeof(void*), (void **)&retval);
 				}
 			}
 		}
 		return retval;
 	case IS_RESOURCE:
-		zend_error(E_STRICT, "Resource ID#%pd used as offset, casting to integer (%pd)", Z_IVAL_P(offset), Z_IVAL_P(offset));
+		zend_error(E_STRICT, "Resource ID#%pd used as offset, casting to integer (%pd)", Z_LVAL_P(offset), Z_LVAL_P(offset));
 	case IS_DOUBLE:
 	case IS_BOOL:
-	case IS_INT:
+	case IS_LONG:
 		if (offset->type == IS_DOUBLE) {
 			index = (php_int_t)Z_DVAL_P(offset);
 		} else {
-			index = Z_IVAL_P(offset);
+			index = Z_LVAL_P(offset);
 		}
 		if (zend_hash_index_find(ht, index, (void **) &retval) == FAILURE) {
 			switch (type) {
@@ -463,12 +463,12 @@ static void spl_array_write_dimension_ex(int check_inherited, zval *object, zval
 			return;
 		}
 		Z_ADDREF_P(value);
-		zend_symtable_update(ht, Z_STRVAL_P(offset), Z_STRSIZE_P(offset)+1, (void**)&value, sizeof(void*), NULL);
+		zend_symtable_update(ht, Z_STRVAL_P(offset), Z_STRLEN_P(offset)+1, (void**)&value, sizeof(void*), NULL);
 		return;
 	case IS_DOUBLE:
 	case IS_RESOURCE:
 	case IS_BOOL:
-	case IS_INT:
+	case IS_LONG:
 		ht = spl_array_get_hash_table(intern, 0 TSRMLS_CC);
 		if (ht->nApplyCount > 0) {
 			zend_error(E_WARNING, "Modification of ArrayObject during sorting is prohibited");
@@ -477,7 +477,7 @@ static void spl_array_write_dimension_ex(int check_inherited, zval *object, zval
 		if (offset->type == IS_DOUBLE) {
 			index = (php_int_t)Z_DVAL_P(offset);
 		} else {
-			index = Z_IVAL_P(offset);
+			index = Z_LVAL_P(offset);
 		}
 		Z_ADDREF_P(value);
 		zend_hash_index_update(ht, index, (void**)&value, sizeof(void*), NULL);
@@ -523,11 +523,11 @@ static void spl_array_unset_dimension_ex(int check_inherited, zval *object, zval
 			return;
 		}
 		if (ht == &EG(symbol_table)) {
-			if (zend_delete_global_variable(Z_STRVAL_P(offset), Z_STRSIZE_P(offset) TSRMLS_CC)) {
+			if (zend_delete_global_variable(Z_STRVAL_P(offset), Z_STRLEN_P(offset) TSRMLS_CC)) {
 				zend_error(E_NOTICE,"Undefined index: %s", Z_STRVAL_P(offset));
 			}
 		} else {
-			if (zend_symtable_del(ht, Z_STRVAL_P(offset), Z_STRSIZE_P(offset)+1) == FAILURE) {
+			if (zend_symtable_del(ht, Z_STRVAL_P(offset), Z_STRLEN_P(offset)+1) == FAILURE) {
 				zend_error(E_NOTICE,"Undefined index: %s", Z_STRVAL_P(offset));
 			} else {
 				spl_array_object *obj = intern;
@@ -562,11 +562,11 @@ static void spl_array_unset_dimension_ex(int check_inherited, zval *object, zval
 	case IS_DOUBLE:
 	case IS_RESOURCE:
 	case IS_BOOL:
-	case IS_INT:
+	case IS_LONG:
 		if (offset->type == IS_DOUBLE) {
 			index = (php_int_t)Z_DVAL_P(offset);
 		} else {
-			index = Z_IVAL_P(offset);
+			index = Z_LVAL_P(offset);
 		}
 		ht = spl_array_get_hash_table(intern, 0 TSRMLS_CC);
 		if (ht->nApplyCount > 0) {
@@ -574,7 +574,7 @@ static void spl_array_unset_dimension_ex(int check_inherited, zval *object, zval
 			return;
 		}
 		if (zend_hash_index_del(ht, index) == FAILURE) {
-			zend_error(E_NOTICE,"Undefined offset: %pd", Z_IVAL_P(offset));
+			zend_error(E_NOTICE,"Undefined offset: %pd", Z_LVAL_P(offset));
 		}
 		break;
 	default:
@@ -613,7 +613,7 @@ static int spl_array_has_dimension_ex(int check_inherited, zval *object, zval *o
 		case IS_STRING:
 			{
 				HashTable *ht = spl_array_get_hash_table(intern, 0 TSRMLS_CC);
-				if (zend_symtable_find(ht, Z_STRVAL_P(offset), Z_STRSIZE_P(offset)+1, (void **) &tmp) != FAILURE) {
+				if (zend_symtable_find(ht, Z_STRVAL_P(offset), Z_STRLEN_P(offset)+1, (void **) &tmp) != FAILURE) {
 					switch (check_empty) {
 						case 0:
 							return Z_TYPE_PP(tmp) != IS_NULL;
@@ -628,13 +628,13 @@ static int spl_array_has_dimension_ex(int check_inherited, zval *object, zval *o
 		case IS_DOUBLE:
 		case IS_RESOURCE:
 		case IS_BOOL:
-		case IS_INT:
+		case IS_LONG:
 			{
 				HashTable *ht = spl_array_get_hash_table(intern, 0 TSRMLS_CC);
 				if (offset->type == IS_DOUBLE) {
 					index = (php_int_t)Z_DVAL_P(offset);
 				} else {
-					index = Z_IVAL_P(offset);
+					index = Z_LVAL_P(offset);
 				}
 				if (zend_hash_index_find(ht, index, (void **)&tmp) != FAILURE) {
 					switch (check_empty) {
@@ -904,7 +904,7 @@ static int spl_array_compare_objects(zval *o1, zval *o2 TSRMLS_DC) /* {{{ */
 	ht2		= spl_array_get_hash_table(intern2, 0 TSRMLS_CC);
 
 	zend_compare_symbol_tables(&temp_zv, ht1, ht2 TSRMLS_CC);
-	result = (int)Z_IVAL(temp_zv);
+	result = (int)Z_LVAL(temp_zv);
 	/* if we just compared std.properties, don't do it again */
 	if (result == 0 &&
 			!(ht1 == intern1->std.properties && ht2 == intern2->std.properties)) {
@@ -1191,7 +1191,7 @@ SPL_METHOD(Array, __construct)
 
 	intern = (spl_array_object*)zend_object_store_get_object(object TSRMLS_CC);
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Z|iC", &array, &ar_flags, &ce_get_iterator) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Z|lC", &array, &ar_flags, &ce_get_iterator) == FAILURE) {
 		zend_restore_error_handling(&error_handling TSRMLS_CC);
 		return;
 	}
@@ -1251,7 +1251,7 @@ SPL_METHOD(Array, getFlags)
 		return;
 	}
 
-	RETURN_INT(intern->ar_flags & ~SPL_ARRAY_INT_MASK);
+	RETURN_LONG(intern->ar_flags & ~SPL_ARRAY_INT_MASK);
 }
 /* }}} */
 
@@ -1263,7 +1263,7 @@ SPL_METHOD(Array, setFlags)
 	spl_array_object *intern = (spl_array_object*)zend_object_store_get_object(object TSRMLS_CC);
 	php_int_t ar_flags = 0;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "i", &ar_flags) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &ar_flags) == FAILURE) {
 		return;
 	}
 
@@ -1340,7 +1340,7 @@ SPL_METHOD(Array, seek)
 	HashTable *aht = spl_array_get_hash_table(intern, 0 TSRMLS_CC);
 	int result;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "i", &position) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &position) == FAILURE) {
 		return;
 	}
 
@@ -1403,8 +1403,8 @@ int spl_array_object_count_elements(zval *object, php_int_t *count TSRMLS_DC) /*
 			zval_ptr_dtor(&intern->retval);
 			MAKE_STD_ZVAL(intern->retval);
 			ZVAL_ZVAL(intern->retval, rv, 1, 1);
-			convert_to_int(intern->retval);
-			*count = (php_int_t) Z_IVAL_P(intern->retval);
+			convert_to_long(intern->retval);
+			*count = (php_int_t) Z_LVAL_P(intern->retval);
 			return SUCCESS;
 		}
 		*count = 0;
@@ -1427,7 +1427,7 @@ SPL_METHOD(Array, count)
 
 	spl_array_object_count_elements_helper(intern, &count TSRMLS_CC);
 
-	RETURN_INT(count);
+	RETURN_LONG(count);
 } /* }}} */
 
 static void spl_array_method(INTERNAL_FUNCTION_PARAMETERS, char *fname, php_size_t fname_len, int use_arg) /* {{{ */
@@ -1651,7 +1651,7 @@ SPL_METHOD(Array, getChildren)
 	}
 
 	MAKE_STD_ZVAL(flags);
-	ZVAL_INT(flags, SPL_ARRAY_USE_OTHER | intern->ar_flags);
+	ZVAL_LONG(flags, SPL_ARRAY_USE_OTHER | intern->ar_flags);
 	spl_instantiate_arg_ex2(Z_OBJCE_P(getThis()), &return_value, 0, *entry, flags TSRMLS_CC);
 	zval_ptr_dtor(&flags);
 }
@@ -1681,7 +1681,7 @@ SPL_METHOD(Array, serialize)
 	PHP_VAR_SERIALIZE_INIT(var_hash);
 
 	MAKE_STD_ZVAL(flags);
-	ZVAL_INT(flags, (intern->ar_flags & SPL_ARRAY_CLONE_MASK));
+	ZVAL_LONG(flags, (intern->ar_flags & SPL_ARRAY_CLONE_MASK));
 
 	/* storage */
 	smart_str_appendl(&buf, "x:", 2);
@@ -1728,7 +1728,7 @@ SPL_METHOD(Array, unserialize)
 	zval *pmembers, *pflags = NULL;
 	php_int_t flags;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &buf, &buf_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &buf, &buf_len) == FAILURE) {
 		return;
 	}
 
@@ -1747,13 +1747,13 @@ SPL_METHOD(Array, unserialize)
 	++p;
 
 	ALLOC_INIT_ZVAL(pflags);
-	if (!php_var_unserialize(&pflags, &p, s + buf_len, &var_hash TSRMLS_CC) || Z_TYPE_P(pflags) != IS_INT) {
+	if (!php_var_unserialize(&pflags, &p, s + buf_len, &var_hash TSRMLS_CC) || Z_TYPE_P(pflags) != IS_LONG) {
 		zval_ptr_dtor(&pflags);
 		goto outexcept;
 	}
 
 	--p; /* for ';' */
-	flags = Z_IVAL_P(pflags);
+	flags = Z_LVAL_P(pflags);
 	zval_ptr_dtor(&pflags);
 	/* flags needs to be verified and we also need to verify whether the next
 	 * thing we get is ';'. After that we require an 'm' or somethign else
@@ -1961,13 +1961,13 @@ PHP_MINIT_FUNCTION(spl_array)
 	REGISTER_SPL_IMPLEMENTS(RecursiveArrayIterator, RecursiveIterator);
 	spl_ce_RecursiveArrayIterator->get_iterator = spl_array_get_iterator;
 
-	REGISTER_SPL_CLASS_CONST_INT(ArrayObject,   "STD_PROP_LIST",    SPL_ARRAY_STD_PROP_LIST);
-	REGISTER_SPL_CLASS_CONST_INT(ArrayObject,   "ARRAY_AS_PROPS",   SPL_ARRAY_ARRAY_AS_PROPS);
+	REGISTER_SPL_CLASS_CONST_LONG(ArrayObject,   "STD_PROP_LIST",    SPL_ARRAY_STD_PROP_LIST);
+	REGISTER_SPL_CLASS_CONST_LONG(ArrayObject,   "ARRAY_AS_PROPS",   SPL_ARRAY_ARRAY_AS_PROPS);
 
-	REGISTER_SPL_CLASS_CONST_INT(ArrayIterator, "STD_PROP_LIST",    SPL_ARRAY_STD_PROP_LIST);
-	REGISTER_SPL_CLASS_CONST_INT(ArrayIterator, "ARRAY_AS_PROPS",   SPL_ARRAY_ARRAY_AS_PROPS);
+	REGISTER_SPL_CLASS_CONST_LONG(ArrayIterator, "STD_PROP_LIST",    SPL_ARRAY_STD_PROP_LIST);
+	REGISTER_SPL_CLASS_CONST_LONG(ArrayIterator, "ARRAY_AS_PROPS",   SPL_ARRAY_ARRAY_AS_PROPS);
 
-	REGISTER_SPL_CLASS_CONST_INT(RecursiveArrayIterator, "CHILD_ARRAYS_ONLY", SPL_ARRAY_CHILD_ARRAYS_ONLY);
+	REGISTER_SPL_CLASS_CONST_LONG(RecursiveArrayIterator, "CHILD_ARRAYS_ONLY", SPL_ARRAY_CHILD_ARRAYS_ONLY);
 
 	return SUCCESS;
 }

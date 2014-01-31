@@ -1418,7 +1418,7 @@ static int phar_call_openssl_signverify(int is_sign, php_stream *fp, zend_off_t 
 
 	php_stream_rewind(fp);
 	Z_TYPE_P(zdata) = IS_STRING;
-	Z_STRSIZE_P(zdata) = end;
+	Z_STRLEN_P(zdata) = end;
 
 	if (end != (zend_off_t) php_stream_copy_to_mem(fp, &(Z_STRVAL_P(zdata)), (size_t) end, 0)) {
 		zval_dtor(zdata);
@@ -1486,10 +1486,10 @@ static int phar_call_openssl_signverify(int is_sign, php_stream *fp, zend_off_t 
 
 	switch (Z_TYPE_P(retval_ptr)) {
 		default:
-		case IS_INT:
+		case IS_LONG:
 			zval_dtor(zsig);
 			efree(zsig);
-			if (1 == Z_IVAL_P(retval_ptr)) {
+			if (1 == Z_LVAL_P(retval_ptr)) {
 				efree(retval_ptr);
 				return SUCCESS;
 			}
@@ -1498,8 +1498,8 @@ static int phar_call_openssl_signverify(int is_sign, php_stream *fp, zend_off_t 
 		case IS_BOOL:
 			efree(retval_ptr);
 			if (Z_BVAL_P(retval_ptr)) {
-				*signature = estrndup(Z_STRVAL_P(zsig), Z_STRSIZE_P(zsig));
-				*signature_len = Z_STRSIZE_P(zsig);
+				*signature = estrndup(Z_STRVAL_P(zsig), Z_STRLEN_P(zsig));
+				*signature_len = Z_STRLEN_P(zsig);
 				zval_dtor(zsig);
 				efree(zsig);
 				return SUCCESS;

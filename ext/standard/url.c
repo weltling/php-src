@@ -379,7 +379,7 @@ PHP_FUNCTION(parse_url)
 	php_url *resource;
 	php_int_t key = -1;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S|i", &str, &str_len, &key) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|l", &str, &str_len, &key) == FAILURE) {
 		return;
 	}
 
@@ -398,7 +398,7 @@ PHP_FUNCTION(parse_url)
 				if (resource->host != NULL) RETVAL_STRING(resource->host, 1);
 				break;
 			case PHP_URL_PORT:
-				if (resource->port != 0) RETVAL_INT(resource->port);
+				if (resource->port != 0) RETVAL_LONG(resource->port);
 				break;
 			case PHP_URL_USER:
 				if (resource->user != NULL) RETVAL_STRING(resource->user, 1);
@@ -431,7 +431,7 @@ PHP_FUNCTION(parse_url)
 	if (resource->host != NULL)
 		add_assoc_string(return_value, "host", resource->host, 1);
 	if (resource->port != 0)
-		add_assoc_int(return_value, "port", resource->port);
+		add_assoc_long(return_value, "port", resource->port);
 	if (resource->user != NULL)
 		add_assoc_string(return_value, "user", resource->user, 1);
 	if (resource->pass != NULL)
@@ -536,7 +536,7 @@ PHP_FUNCTION(urlencode)
 	char *in_str, *out_str;
 	php_size_t in_str_len, out_str_len;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &in_str,
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &in_str,
 							  &in_str_len) == FAILURE) {
 		return;
 	}
@@ -553,7 +553,7 @@ PHP_FUNCTION(urldecode)
 	char *in_str, *out_str;
 	php_size_t in_str_len, out_str_len;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &in_str,
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &in_str,
 							  &in_str_len) == FAILURE) {
 		return;
 	}
@@ -637,7 +637,7 @@ PHP_FUNCTION(rawurlencode)
 	char *in_str, *out_str;
 	php_size_t in_str_len, out_str_len;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &in_str,
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &in_str,
 							  &in_str_len) == FAILURE) {
 		return;
 	}
@@ -654,7 +654,7 @@ PHP_FUNCTION(rawurldecode)
 	char *in_str, *out_str;
 	php_size_t in_str_len, out_str_len;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &in_str,
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &in_str,
 							  &in_str_len) == FAILURE) {
 		return;
 	}
@@ -707,7 +707,7 @@ PHP_FUNCTION(get_headers)
 	HashTable *hashT;
 	php_int_t format = 0;
                 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S|i", &url, &url_len, &format) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|l", &url, &url_len, &format) == FAILURE) {
 		return;
 	}
 	context = FG(default_context) ? FG(default_context) : (FG(default_context) = php_stream_context_alloc(TSRMLS_C));
@@ -743,7 +743,7 @@ PHP_FUNCTION(get_headers)
 		}
 		if (!format) {
 no_name_header:
-			add_next_index_stringl(return_value, Z_STRVAL_PP(hdr), Z_STRSIZE_PP(hdr), 1);
+			add_next_index_stringl(return_value, Z_STRVAL_PP(hdr), Z_STRLEN_PP(hdr), 1);
 		} else {
 			char c;
 			char *s, *p;
@@ -757,10 +757,10 @@ no_name_header:
 				}
 
 				if (zend_hash_find(HASH_OF(return_value), Z_STRVAL_PP(hdr), (p - Z_STRVAL_PP(hdr) + 1), (void **) &prev_val) == FAILURE) {
-					add_assoc_stringl_ex(return_value, Z_STRVAL_PP(hdr), (p - Z_STRVAL_PP(hdr) + 1), s, (Z_STRSIZE_PP(hdr) - (s - Z_STRVAL_PP(hdr))), 1);
+					add_assoc_stringl_ex(return_value, Z_STRVAL_PP(hdr), (p - Z_STRVAL_PP(hdr) + 1), s, (Z_STRLEN_PP(hdr) - (s - Z_STRVAL_PP(hdr))), 1);
 				} else { /* some headers may occur more then once, therefor we need to remake the string into an array */
 					convert_to_array(*prev_val);
-					add_next_index_stringl(*prev_val, s, (Z_STRSIZE_PP(hdr) - (s - Z_STRVAL_PP(hdr))), 1);
+					add_next_index_stringl(*prev_val, s, (Z_STRLEN_PP(hdr) - (s - Z_STRVAL_PP(hdr))), 1);
 				}
 
 				*p = c;

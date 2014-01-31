@@ -163,7 +163,7 @@ PHP_FUNCTION(shmop_open)
 	char *flags;
 	php_size_t flags_len;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "iSii", &key, &flags, &flags_len, &mode, &size) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "lsll", &key, &flags, &flags_len, &mode, &size) == FAILURE) {
 		return;
 	}
 
@@ -237,7 +237,7 @@ PHP_FUNCTION(shmop_open)
 	shmop->size = shm.shm_segsz;
 
 	rsid = zend_list_insert(shmop, shm_type TSRMLS_CC);
-	RETURN_INT(rsid);
+	RETURN_LONG(rsid);
 err:
 	efree(shmop);
 	RETURN_FALSE;
@@ -255,7 +255,7 @@ PHP_FUNCTION(shmop_read)
 	php_int_t bytes;
 	char *return_string;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "iii", &shmid, &start, &count) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "lll", &shmid, &start, &count) == FAILURE) {
 		return;
 	}
 
@@ -290,7 +290,7 @@ PHP_FUNCTION(shmop_close)
 	struct php_shmop *shmop;
 	int type;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "i", &shmid) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &shmid) == FAILURE) {
 		return;
 	}
 
@@ -308,13 +308,13 @@ PHP_FUNCTION(shmop_size)
 	struct php_shmop *shmop;
 	int type;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "i", &shmid) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &shmid) == FAILURE) {
 		return;
 	}
 
 	PHP_SHMOP_GET_RES
 
-	RETURN_INT(shmop->size);
+	RETURN_LONG(shmop->size);
 }
 /* }}} */
 
@@ -329,7 +329,7 @@ PHP_FUNCTION(shmop_write)
 	char *data;
 	php_size_t data_len;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "iSi", &shmid, &data, &data_len, &offset) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "lsl", &shmid, &data, &data_len, &offset) == FAILURE) {
 		return;
 	}
 
@@ -348,7 +348,7 @@ PHP_FUNCTION(shmop_write)
 	writesize = (data_len < shmop->size - offset) ? data_len : shmop->size - offset;
 	memcpy(shmop->addr + offset, data, writesize);
 
-	RETURN_INT(writesize);
+	RETURN_LONG(writesize);
 }
 /* }}} */
 
@@ -360,7 +360,7 @@ PHP_FUNCTION(shmop_delete)
 	struct php_shmop *shmop;
 	int type;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "i", &shmid) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &shmid) == FAILURE) {
 		return;
 	}
 

@@ -267,11 +267,11 @@ char *alloca ();
 #endif
 
 #if SIZEOF_ZEND_INT == 4
-#define MAX_LENGTH_OF_ZEND_INT 11
-static const char int_min_digits[] = "2147483648";
+#define MAX_LENGTH_OF_LONG 11
+static const char long_min_digits[] = "2147483648";
 #elif SIZEOF_ZEND_INT == 8
-#define MAX_LENGTH_OF_ZEND_INT 20
-static const char int_min_digits[] = "9223372036854775808";
+#define MAX_LENGTH_OF_LONG 20
+static const char long_min_digits[] = "9223372036854775808";
 #else
 #error "Unknown SIZEOF_ZEND_INT"
 #endif
@@ -580,7 +580,7 @@ typedef int (*zend_write_func_t)(const char *str, zend_size_t str_length);
 /* data types */
 /* All data types <= IS_BOOL have their constructor/destructors skipped */
 #define IS_NULL		0
-#define IS_INT		1
+#define IS_LONG		1
 #define IS_DOUBLE	2
 #define IS_BOOL		3
 #define IS_ARRAY	4

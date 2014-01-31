@@ -48,7 +48,7 @@ static zval *com_property_read(zval *object, zval *member, int type, const zend_
 
 		convert_to_string_ex(&member);
 
-		res = php_com_do_invoke(obj, Z_STRVAL_P(member), Z_STRSIZE_P(member),
+		res = php_com_do_invoke(obj, Z_STRVAL_P(member), Z_STRLEN_P(member),
 				DISPATCH_METHOD|DISPATCH_PROPERTYGET, &v, 0, NULL, 1 TSRMLS_CC);
 
 		if (res == SUCCESS) {
@@ -75,7 +75,7 @@ static void com_property_write(zval *object, zval *member, zval *value, const ze
 		VariantInit(&v);
 
 		convert_to_string_ex(&member);
-		if (SUCCESS == php_com_do_invoke(obj, Z_STRVAL_P(member), Z_STRSIZE_P(member),
+		if (SUCCESS == php_com_do_invoke(obj, Z_STRVAL_P(member), Z_STRLEN_P(member),
 				DISPATCH_PROPERTYPUT|DISPATCH_PROPERTYPUTREF, &v, 1, &value, 0 TSRMLS_CC)) {
 			VariantClear(&v);
 		}
@@ -106,10 +106,10 @@ static zval *com_read_dimension(zval *object, zval *offset, int type TSRMLS_DC)
 			VariantClear(&v);
 		}
 	} else if (V_ISARRAY(&obj->v)) {
-		convert_to_int(offset);
+		convert_to_long(offset);
 
 		if (SafeArrayGetDim(V_ARRAY(&obj->v)) == 1) {	
-			if (php_com_safearray_get_elem(&obj->v, &v, Z_IVAL_P(offset) TSRMLS_CC)) {
+			if (php_com_safearray_get_elem(&obj->v, &v, Z_LVAL_P(offset) TSRMLS_CC)) {
 				php_com_wrap_variant(return_value, &v, obj->code_page TSRMLS_CC);
 				VariantClear(&v);
 			}
@@ -152,8 +152,8 @@ static void com_write_dimension(zval *object, zval *offset, zval *value TSRMLS_D
 				vt = V_VT(&obj->v) & ~VT_ARRAY;
 			}
 
-			convert_to_int(offset);
-			indices = Z_IVAL_P(offset);
+			convert_to_long(offset);
+			indices = Z_LVAL_P(offset);
 
 			VariantInit(&v);
 			php_com_variant_from_zval(&v, value, obj->code_page TSRMLS_CC);
@@ -205,7 +205,7 @@ static int com_property_exists(zval *object, zval *member, int check_empty, cons
 
 	if (V_VT(&obj->v) == VT_DISPATCH) {
 		convert_to_string_ex(&member);
-		if (SUCCEEDED(php_com_get_id_of_name(obj, Z_STRVAL_P(member), Z_STRSIZE_P(member), &dispid TSRMLS_CC))) {
+		if (SUCCEEDED(php_com_get_id_of_name(obj, Z_STRVAL_P(member), Z_STRLEN_P(member), &dispid TSRMLS_CC))) {
 			/* TODO: distinguish between property and method! */
 			return 1;
 		}
@@ -507,7 +507,7 @@ static int com_object_cast(zval *readobj, zval *writeobj, int type TSRMLS_DC)
 	}
 
 	switch(type) {
-		case IS_INT:
+		case IS_LONG:
 			vt = VT_INT;
 			break;
 		case IS_DOUBLE:

@@ -101,8 +101,8 @@ static int xmlreader_property_reader(xmlreader_object *obj, xmlreader_prop_handl
 		case IS_BOOL:
 			ZVAL_BOOL(*retval, retint);
 			break;
-		case IS_INT:
-			ZVAL_INT(*retval, retint);
+		case IS_LONG:
+			ZVAL_LONG(*retval, retint);
 			break;
 		default:
 			ZVAL_NULL(*retval);
@@ -132,7 +132,7 @@ zval **xmlreader_get_property_ptr_ptr(zval *object, zval *member, int type, cons
 	obj = (xmlreader_object *)zend_objects_get_address(object TSRMLS_CC);
 
 	if (obj->prop_handler != NULL) {
-		ret = zend_hash_find(obj->prop_handler, Z_STRVAL_P(member), Z_STRSIZE_P(member)+1, (void **) &hnd);
+		ret = zend_hash_find(obj->prop_handler, Z_STRVAL_P(member), Z_STRLEN_P(member)+1, (void **) &hnd);
 	}
 	if (ret == FAILURE) {
 		std_hnd = zend_get_std_object_handlers();
@@ -167,7 +167,7 @@ zval *xmlreader_read_property(zval *object, zval *member, int type, const zend_l
 	obj = (xmlreader_object *)zend_objects_get_address(object TSRMLS_CC);
 
 	if (obj->prop_handler != NULL) {
-		ret = zend_hash_find(obj->prop_handler, Z_STRVAL_P(member), Z_STRSIZE_P(member)+1, (void **) &hnd);
+		ret = zend_hash_find(obj->prop_handler, Z_STRVAL_P(member), Z_STRLEN_P(member)+1, (void **) &hnd);
 	}
 	if (ret == SUCCESS) {
 		ret = xmlreader_property_reader(obj, hnd, &retval TSRMLS_CC);
@@ -209,7 +209,7 @@ void xmlreader_write_property(zval *object, zval *member, zval *value, const zen
 	obj = (xmlreader_object *)zend_objects_get_address(object TSRMLS_CC);
 
 	if (obj->prop_handler != NULL) {
-		ret = zend_hash_find((HashTable *)obj->prop_handler, Z_STRVAL_P(member), Z_STRSIZE_P(member)+1, (void **) &hnd);
+		ret = zend_hash_find((HashTable *)obj->prop_handler, Z_STRVAL_P(member), Z_STRLEN_P(member)+1, (void **) &hnd);
 	}
 	if (ret == SUCCESS) {
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Cannot write to read-only property");
@@ -417,7 +417,7 @@ static void php_xmlreader_string_arg(INTERNAL_FUNCTION_PARAMETERS, xmlreader_rea
 	xmlreader_object *intern;
 	char *name;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &name, &name_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &name, &name_len) == FAILURE) {
 		return;
 	}
 
@@ -496,7 +496,7 @@ static void php_xmlreader_set_relaxng_schema(INTERNAL_FUNCTION_PARAMETERS, int t
 	xmlRelaxNGPtr schema = NULL;
 	char *source;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "P!", &source, &source_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "p!", &source, &source_len) == FAILURE) {
 		return;
 	}
 
@@ -576,7 +576,7 @@ PHP_METHOD(xmlreader, getAttributeNo)
 	char *retchar = NULL;
 	xmlreader_object *intern;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "i", &attr_pos) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &attr_pos) == FAILURE) {
 		return;
 	}
 
@@ -606,7 +606,7 @@ PHP_METHOD(xmlreader, getAttributeNs)
 	xmlreader_object *intern;
 	char *name, *ns_uri, *retchar = NULL;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "SS", &name, &name_len, &ns_uri, &ns_uri_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss", &name, &name_len, &ns_uri, &ns_uri_len) == FAILURE) {
 		return;
 	}
 
@@ -637,7 +637,7 @@ PHP_METHOD(xmlreader, getParserProperty)
 	int retval = -1;
 	xmlreader_object *intern;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "i", &property) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &property) == FAILURE) {
 		return;
 	}
 
@@ -688,7 +688,7 @@ PHP_METHOD(xmlreader, moveToAttribute)
 	xmlreader_object *intern;
 	char *name;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &name, &name_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &name, &name_len) == FAILURE) {
 		return;
 	}
 
@@ -721,7 +721,7 @@ PHP_METHOD(xmlreader, moveToAttributeNo)
 	int retval;
 	xmlreader_object *intern;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "i", &attr_pos) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &attr_pos) == FAILURE) {
 		return;
 	}
 
@@ -754,7 +754,7 @@ PHP_METHOD(xmlreader, moveToAttributeNs)
 	xmlreader_object *intern;
 	char *name, *ns_uri;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "SS", &name, &name_len, &ns_uri, &ns_uri_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss", &name, &name_len, &ns_uri, &ns_uri_len) == FAILURE) {
 		return;
 	}
 
@@ -835,7 +835,7 @@ PHP_METHOD(xmlreader, next)
 	xmlreader_object *intern;
 	char *name = NULL;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|S", &name, &name_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|s", &name, &name_len) == FAILURE) {
 		return;
 	}
 
@@ -880,7 +880,7 @@ PHP_METHOD(xmlreader, open)
 	char resolved_path[MAXPATHLEN + 1];
 	xmlTextReaderPtr reader = NULL;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "P|S!i", &source, &source_len, &encoding, &encoding_len, &options) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "p|s!l", &source, &source_len, &encoding, &encoding_len, &options) == FAILURE) {
 		return;
 	}
 
@@ -967,7 +967,7 @@ PHP_METHOD(xmlreader, setSchema)
 	xmlreader_object *intern;
 	char *source;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "P!", &source, &source_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "p!", &source, &source_len) == FAILURE) {
 		return;
 	}
 
@@ -1010,7 +1010,7 @@ PHP_METHOD(xmlreader, setParserProperty)
 	zend_bool value;
 	xmlreader_object *intern;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ib", &property, &value) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "lb", &property, &value) == FAILURE) {
 		return;
 	}
 
@@ -1066,7 +1066,7 @@ PHP_METHOD(xmlreader, XML)
 	xmlParserInputBufferPtr inputbfr;
 	xmlTextReaderPtr reader;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S|S!i", &source, &source_len, &encoding, &encoding_len, &options) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|s!l", &source, &source_len, &encoding, &encoding_len, &options) == FAILURE) {
 		return;
 	}
 
@@ -1341,9 +1341,9 @@ PHP_MINIT_FUNCTION(xmlreader)
 	xmlreader_class_entry = zend_register_internal_class(&ce TSRMLS_CC);
 
 	zend_hash_init(&xmlreader_prop_handlers, 0, NULL, NULL, 1);
-	xmlreader_register_prop_handler(&xmlreader_prop_handlers, "attributeCount", xmlTextReaderAttributeCount, NULL, IS_INT TSRMLS_CC);
+	xmlreader_register_prop_handler(&xmlreader_prop_handlers, "attributeCount", xmlTextReaderAttributeCount, NULL, IS_LONG TSRMLS_CC);
 	xmlreader_register_prop_handler(&xmlreader_prop_handlers, "baseURI", NULL, xmlTextReaderConstBaseUri, IS_STRING TSRMLS_CC);
-	xmlreader_register_prop_handler(&xmlreader_prop_handlers, "depth", xmlTextReaderDepth, NULL, IS_INT TSRMLS_CC);
+	xmlreader_register_prop_handler(&xmlreader_prop_handlers, "depth", xmlTextReaderDepth, NULL, IS_LONG TSRMLS_CC);
 	xmlreader_register_prop_handler(&xmlreader_prop_handlers, "hasAttributes", xmlTextReaderHasAttributes, NULL, IS_BOOL TSRMLS_CC);
 	xmlreader_register_prop_handler(&xmlreader_prop_handlers, "hasValue", xmlTextReaderHasValue, NULL, IS_BOOL TSRMLS_CC);
 	xmlreader_register_prop_handler(&xmlreader_prop_handlers, "isDefault", xmlTextReaderIsDefault, NULL, IS_BOOL TSRMLS_CC);
@@ -1351,43 +1351,43 @@ PHP_MINIT_FUNCTION(xmlreader)
 	xmlreader_register_prop_handler(&xmlreader_prop_handlers, "localName", NULL, xmlTextReaderConstLocalName, IS_STRING TSRMLS_CC);
 	xmlreader_register_prop_handler(&xmlreader_prop_handlers, "name", NULL, xmlTextReaderConstName, IS_STRING TSRMLS_CC);
 	xmlreader_register_prop_handler(&xmlreader_prop_handlers, "namespaceURI", NULL, xmlTextReaderConstNamespaceUri, IS_STRING TSRMLS_CC);
-	xmlreader_register_prop_handler(&xmlreader_prop_handlers, "nodeType", xmlTextReaderNodeType, NULL, IS_INT TSRMLS_CC);
+	xmlreader_register_prop_handler(&xmlreader_prop_handlers, "nodeType", xmlTextReaderNodeType, NULL, IS_LONG TSRMLS_CC);
 	xmlreader_register_prop_handler(&xmlreader_prop_handlers, "prefix", NULL, xmlTextReaderConstPrefix, IS_STRING TSRMLS_CC);
 	xmlreader_register_prop_handler(&xmlreader_prop_handlers, "value", NULL, xmlTextReaderConstValue, IS_STRING TSRMLS_CC);
 	xmlreader_register_prop_handler(&xmlreader_prop_handlers, "xmlLang", NULL, xmlTextReaderConstXmlLang, IS_STRING TSRMLS_CC);
 
 	/* Constants for NodeType - cannot define common types to share with dom as there are differences in these types */
 
-	REGISTER_XMLREADER_CLASS_CONST_INT("NONE",	XML_READER_TYPE_NONE);
-	REGISTER_XMLREADER_CLASS_CONST_INT("ELEMENT",	XML_READER_TYPE_ELEMENT);
-	REGISTER_XMLREADER_CLASS_CONST_INT("ATTRIBUTE",	XML_READER_TYPE_ATTRIBUTE);
-	REGISTER_XMLREADER_CLASS_CONST_INT("TEXT",	XML_READER_TYPE_TEXT);
-	REGISTER_XMLREADER_CLASS_CONST_INT("CDATA",	XML_READER_TYPE_CDATA);
-	REGISTER_XMLREADER_CLASS_CONST_INT("ENTITY_REF",	XML_READER_TYPE_ENTITY_REFERENCE);
-	REGISTER_XMLREADER_CLASS_CONST_INT("ENTITY",	XML_READER_TYPE_ENTITY);
-	REGISTER_XMLREADER_CLASS_CONST_INT("PI",	XML_READER_TYPE_PROCESSING_INSTRUCTION);
-	REGISTER_XMLREADER_CLASS_CONST_INT("COMMENT",	XML_READER_TYPE_COMMENT);
-	REGISTER_XMLREADER_CLASS_CONST_INT("DOC",	XML_READER_TYPE_DOCUMENT);
-	REGISTER_XMLREADER_CLASS_CONST_INT("DOC_TYPE",	XML_READER_TYPE_DOCUMENT_TYPE);
-	REGISTER_XMLREADER_CLASS_CONST_INT("DOC_FRAGMENT",	XML_READER_TYPE_DOCUMENT_FRAGMENT);
-	REGISTER_XMLREADER_CLASS_CONST_INT("NOTATION",	XML_READER_TYPE_NOTATION);
-	REGISTER_XMLREADER_CLASS_CONST_INT("WHITESPACE",	XML_READER_TYPE_WHITESPACE);
-	REGISTER_XMLREADER_CLASS_CONST_INT("SIGNIFICANT_WHITESPACE",	XML_READER_TYPE_SIGNIFICANT_WHITESPACE);
-	REGISTER_XMLREADER_CLASS_CONST_INT("END_ELEMENT",	XML_READER_TYPE_END_ELEMENT);
-	REGISTER_XMLREADER_CLASS_CONST_INT("END_ENTITY",	XML_READER_TYPE_END_ENTITY);
-	REGISTER_XMLREADER_CLASS_CONST_INT("XML_DECLARATION",	XML_READER_TYPE_XML_DECLARATION);
+	REGISTER_XMLREADER_CLASS_CONST_LONG("NONE",	XML_READER_TYPE_NONE);
+	REGISTER_XMLREADER_CLASS_CONST_LONG("ELEMENT",	XML_READER_TYPE_ELEMENT);
+	REGISTER_XMLREADER_CLASS_CONST_LONG("ATTRIBUTE",	XML_READER_TYPE_ATTRIBUTE);
+	REGISTER_XMLREADER_CLASS_CONST_LONG("TEXT",	XML_READER_TYPE_TEXT);
+	REGISTER_XMLREADER_CLASS_CONST_LONG("CDATA",	XML_READER_TYPE_CDATA);
+	REGISTER_XMLREADER_CLASS_CONST_LONG("ENTITY_REF",	XML_READER_TYPE_ENTITY_REFERENCE);
+	REGISTER_XMLREADER_CLASS_CONST_LONG("ENTITY",	XML_READER_TYPE_ENTITY);
+	REGISTER_XMLREADER_CLASS_CONST_LONG("PI",	XML_READER_TYPE_PROCESSING_INSTRUCTION);
+	REGISTER_XMLREADER_CLASS_CONST_LONG("COMMENT",	XML_READER_TYPE_COMMENT);
+	REGISTER_XMLREADER_CLASS_CONST_LONG("DOC",	XML_READER_TYPE_DOCUMENT);
+	REGISTER_XMLREADER_CLASS_CONST_LONG("DOC_TYPE",	XML_READER_TYPE_DOCUMENT_TYPE);
+	REGISTER_XMLREADER_CLASS_CONST_LONG("DOC_FRAGMENT",	XML_READER_TYPE_DOCUMENT_FRAGMENT);
+	REGISTER_XMLREADER_CLASS_CONST_LONG("NOTATION",	XML_READER_TYPE_NOTATION);
+	REGISTER_XMLREADER_CLASS_CONST_LONG("WHITESPACE",	XML_READER_TYPE_WHITESPACE);
+	REGISTER_XMLREADER_CLASS_CONST_LONG("SIGNIFICANT_WHITESPACE",	XML_READER_TYPE_SIGNIFICANT_WHITESPACE);
+	REGISTER_XMLREADER_CLASS_CONST_LONG("END_ELEMENT",	XML_READER_TYPE_END_ELEMENT);
+	REGISTER_XMLREADER_CLASS_CONST_LONG("END_ENTITY",	XML_READER_TYPE_END_ENTITY);
+	REGISTER_XMLREADER_CLASS_CONST_LONG("XML_DECLARATION",	XML_READER_TYPE_XML_DECLARATION);
 
 	/* Constants for Parser options */
-	REGISTER_XMLREADER_CLASS_CONST_INT("LOADDTD",	XML_PARSER_LOADDTD);
-	REGISTER_XMLREADER_CLASS_CONST_INT("DEFAULTATTRS",	XML_PARSER_DEFAULTATTRS);
-	REGISTER_XMLREADER_CLASS_CONST_INT("VALIDATE",	XML_PARSER_VALIDATE);
-	REGISTER_XMLREADER_CLASS_CONST_INT("SUBST_ENTITIES",	XML_PARSER_SUBST_ENTITIES);
+	REGISTER_XMLREADER_CLASS_CONST_LONG("LOADDTD",	XML_PARSER_LOADDTD);
+	REGISTER_XMLREADER_CLASS_CONST_LONG("DEFAULTATTRS",	XML_PARSER_DEFAULTATTRS);
+	REGISTER_XMLREADER_CLASS_CONST_LONG("VALIDATE",	XML_PARSER_VALIDATE);
+	REGISTER_XMLREADER_CLASS_CONST_LONG("SUBST_ENTITIES",	XML_PARSER_SUBST_ENTITIES);
 
 	/* Constants for Errors when loading - not yet used until we implement custom error handling
-	REGISTER_XMLREADER_CLASS_CONST_INT("VALIDITY_WARNING",		XML_PARSER_SEVERITY_VALIDITY_WARNING,	CONST_CS | CONST_PERSISTENT);
-	REGISTER_XMLREADER_CLASS_CONST_INT("VALIDITY_ERROR",		XML_PARSER_SEVERITY_VALIDITY_ERROR,		CONST_CS | CONST_PERSISTENT);
-	REGISTER_XMLREADER_CLASS_CONST_INT("WARNING",				XML_PARSER_SEVERITY_WARNING,			CONST_CS | CONST_PERSISTENT);
-	REGISTER_XMLREADER_CLASS_CONST_INT("ERROR",				XML_PARSER_SEVERITY_ERROR,				CONST_CS | CONST_PERSISTENT);
+	REGISTER_XMLREADER_CLASS_CONST_LONG("VALIDITY_WARNING",		XML_PARSER_SEVERITY_VALIDITY_WARNING,	CONST_CS | CONST_PERSISTENT);
+	REGISTER_XMLREADER_CLASS_CONST_LONG("VALIDITY_ERROR",		XML_PARSER_SEVERITY_VALIDITY_ERROR,		CONST_CS | CONST_PERSISTENT);
+	REGISTER_XMLREADER_CLASS_CONST_LONG("WARNING",				XML_PARSER_SEVERITY_WARNING,			CONST_CS | CONST_PERSISTENT);
+	REGISTER_XMLREADER_CLASS_CONST_LONG("ERROR",				XML_PARSER_SEVERITY_ERROR,				CONST_CS | CONST_PERSISTENT);
 	*/
 
 	return SUCCESS;

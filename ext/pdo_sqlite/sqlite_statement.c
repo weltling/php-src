@@ -111,13 +111,13 @@ static int pdo_sqlite_stmt_param_hook(pdo_stmt_t *stmt, struct pdo_bound_param_d
 								return 1;
 							}
 						} else {
-							convert_to_int(param->parameter);
+							convert_to_long(param->parameter);
 #if ZEND_INT_MAX > 2147483647
-							if (SQLITE_OK == sqlite3_bind_int64(S->stmt, param->paramno + 1, Z_IVAL_P(param->parameter))) {
+							if (SQLITE_OK == sqlite3_bind_int64(S->stmt, param->paramno + 1, Z_LVAL_P(param->parameter))) {
 								return 1;
 							}
 #else
-							if (SQLITE_OK == sqlite3_bind_int(S->stmt, param->paramno + 1, Z_IVAL_P(param->parameter))) {
+							if (SQLITE_OK == sqlite3_bind_int(S->stmt, param->paramno + 1, Z_LVAL_P(param->parameter))) {
 								return 1;
 							}
 #endif
@@ -132,7 +132,7 @@ static int pdo_sqlite_stmt_param_hook(pdo_stmt_t *stmt, struct pdo_bound_param_d
 							if (stm) {
 								SEPARATE_ZVAL(&param->parameter);
 								Z_TYPE_P(param->parameter) = IS_STRING;
-								Z_STRSIZE_P(param->parameter) = php_stream_copy_to_mem(stm,
+								Z_STRLEN_P(param->parameter) = php_stream_copy_to_mem(stm,
 									&Z_STRVAL_P(param->parameter), PHP_STREAM_COPY_ALL, 0);
 							} else {
 								pdo_raise_impl_error(stmt->dbh, stmt, "HY105", "Expected a stream resource" TSRMLS_CC);
@@ -150,7 +150,7 @@ static int pdo_sqlite_stmt_param_hook(pdo_stmt_t *stmt, struct pdo_bound_param_d
 						
 						if (SQLITE_OK == sqlite3_bind_blob(S->stmt, param->paramno + 1,
 								Z_STRVAL_P(param->parameter),
-								Z_STRSIZE_P(param->parameter),
+								Z_STRLEN_P(param->parameter),
 								SQLITE_STATIC)) {
 							return 1;	
 						}
@@ -167,7 +167,7 @@ static int pdo_sqlite_stmt_param_hook(pdo_stmt_t *stmt, struct pdo_bound_param_d
 							convert_to_string(param->parameter);
 							if(SQLITE_OK == sqlite3_bind_text(S->stmt, param->paramno + 1,
 									Z_STRVAL_P(param->parameter),
-									Z_STRSIZE_P(param->parameter),
+									Z_STRLEN_P(param->parameter),
 									SQLITE_STATIC)) {
 								return 1;	
 							}

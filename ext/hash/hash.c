@@ -132,7 +132,7 @@ static void php_hash_do_hash(INTERNAL_FUNCTION_PARAMETERS, int isfilename, zend_
 	void *context;
 	php_stream *stream = NULL;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "SS|b", &algo, &algo_len, &data, &data_len, &raw_output) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss|b", &algo, &algo_len, &data, &data_len, &raw_output) == FAILURE) {
 		return;
 	}
 
@@ -247,7 +247,7 @@ static void php_hash_do_hash_hmac(INTERNAL_FUNCTION_PARAMETERS, int isfilename, 
 	void *context;
 	php_stream *stream = NULL;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "SSS|b", &algo, &algo_len, &data, &data_len, 
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sss|b", &algo, &algo_len, &data, &data_len, 
 																  &key, &key_len, &raw_output) == FAILURE) {
 		return;
 	}
@@ -340,7 +340,7 @@ PHP_FUNCTION(hash_init)
 	const php_hash_ops *ops;
 	php_hash_data *hash;
 
-	if (zend_parse_parameters(argc TSRMLS_CC, "S|iS", &algo, &algo_len, &options, &key, &key_len) == FAILURE) {
+	if (zend_parse_parameters(argc TSRMLS_CC, "s|ls", &algo, &algo_len, &options, &key, &key_len) == FAILURE) {
 		return;
 	}
 
@@ -403,7 +403,7 @@ PHP_FUNCTION(hash_update)
 	char *data;
 	php_size_t data_len;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rS", &zhash, &data, &data_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rs", &zhash, &data, &data_len) == FAILURE) {
 		return;
 	}
 
@@ -424,7 +424,7 @@ PHP_FUNCTION(hash_update_stream)
 	php_stream *stream = NULL;
 	php_int_t length = -1, didread = 0;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rr|i", &zhash, &zstream, &length) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rr|l", &zhash, &zstream, &length) == FAILURE) {
 		return;
 	}
 
@@ -442,14 +442,14 @@ PHP_FUNCTION(hash_update_stream)
 
 		if ((n = php_stream_read(stream, buf, toread)) <= 0) {
 			/* Nada mas */
-			RETURN_INT(didread);
+			RETURN_LONG(didread);
 		}
 		hash->ops->hash_update(hash->context, (unsigned char *) buf, n);
 		length -= n;
 		didread += n;
 	} 
 
-	RETURN_INT(didread);
+	RETURN_LONG(didread);
 }
 /* }}} */
 
@@ -464,7 +464,7 @@ PHP_FUNCTION(hash_update_file)
 	char *filename, buf[1024];
 	php_size_t filename_len, n;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rS|r", &zhash, &filename, &filename_len, &zcontext) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rs|r", &zhash, &filename, &filename_len, &zcontext) == FAILURE) {
 		return;
 	}
 
@@ -622,7 +622,7 @@ PHP_FUNCTION(hash_pbkdf2)
 	void *context;
 
 	argc = ZEND_NUM_ARGS();
-	if (zend_parse_parameters(argc TSRMLS_CC, "SSSi|ib", &algo, &algo_len, &pass, &pass_len, &salt, &salt_len, &iterations, &length, &raw_output) == FAILURE) {
+	if (zend_parse_parameters(argc TSRMLS_CC, "sssl|lb", &algo, &algo_len, &pass, &pass_len, &salt, &salt_len, &iterations, &length, &raw_output) == FAILURE) {
 		return;
 	}
 
@@ -793,7 +793,7 @@ static void mhash_init(INIT_FUNC_ARGS)
 		}
 
 		len = slprintf(buf, 127, "MHASH_%s", algorithm.mhash_name, strlen(algorithm.mhash_name));
-		zend_register_int_constant(buf, len + 1, algorithm.value, CONST_CS | CONST_PERSISTENT, module_number TSRMLS_CC);
+		zend_register_long_constant(buf, len + 1, algorithm.value, CONST_CS | CONST_PERSISTENT, module_number TSRMLS_CC);
 	}
 	zend_register_internal_module(&mhash_module_entry TSRMLS_CC);
 }
@@ -810,8 +810,8 @@ PHP_FUNCTION(mhash)
 	}
 
 	SEPARATE_ZVAL(z_algorithm);
-	convert_to_int_ex(z_algorithm);
-	algorithm = Z_IVAL_PP(z_algorithm);
+	convert_to_long_ex(z_algorithm);
+	algorithm = Z_LVAL_PP(z_algorithm);
 
 	/* need to convert the first parameter from int constant to string algorithm name */
 	if (algorithm >= 0 && algorithm < MHASH_NUM_ALGOS) {
@@ -837,7 +837,7 @@ PHP_FUNCTION(mhash_get_hash_name)
 {
 	php_int_t algorithm;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "i", &algorithm) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &algorithm) == FAILURE) {
 		return;
 	}
 
@@ -858,7 +858,7 @@ PHP_FUNCTION(mhash_count)
 	if (zend_parse_parameters_none() == FAILURE) {
 		return;
 	}
-	RETURN_INT(MHASH_NUM_ALGOS - 1);
+	RETURN_LONG(MHASH_NUM_ALGOS - 1);
 }
 /* }}} */
 
@@ -868,7 +868,7 @@ PHP_FUNCTION(mhash_get_block_size)
 {
 	php_int_t algorithm;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "i", &algorithm) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &algorithm) == FAILURE) {
 		return;
 	}
 	RETVAL_FALSE;
@@ -878,7 +878,7 @@ PHP_FUNCTION(mhash_get_block_size)
 		if (algorithm_lookup.mhash_name) {
 			const php_hash_ops *ops = php_hash_fetch_ops(algorithm_lookup.hash_name, strlen(algorithm_lookup.hash_name));
 			if (ops) {
-				RETVAL_INT(ops->digest_size);
+				RETVAL_LONG(ops->digest_size);
 			}
 		}
 	}
@@ -896,7 +896,7 @@ PHP_FUNCTION(mhash_keygen_s2k)
 	php_size_t password_len, salt_len;
 	char padded_salt[SALT_SIZE];
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "iSSi", &algorithm, &password, &password_len, &salt, &salt_len, &l_bytes) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "lssl", &algorithm, &password, &password_len, &salt, &salt_len, &l_bytes) == FAILURE) {
 		return;
 	}
 
@@ -1014,7 +1014,7 @@ PHP_MINIT_FUNCTION(hash)
 	PHP_HASH_HAVAL_REGISTER(5,224);
 	PHP_HASH_HAVAL_REGISTER(5,256);
 
-	REGISTER_INT_CONSTANT("HASH_HMAC",		PHP_HASH_HMAC,	CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("HASH_HMAC",		PHP_HASH_HMAC,	CONST_CS | CONST_PERSISTENT);
 
 #ifdef PHP_MHASH_BC
 	mhash_init(INIT_FUNC_ARGS_PASSTHRU);

@@ -35,22 +35,22 @@ PHP_FUNCTION(ftok)
 	php_size_t pathname_len, proj_len;
 	key_t k;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "PS", &pathname, &pathname_len, &proj, &proj_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ps", &pathname, &pathname_len, &proj, &proj_len) == FAILURE) {
 		return;
 	}
 
 	if (pathname_len == 0){
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Pathname is invalid");
-		RETURN_INT(-1);
+		RETURN_LONG(-1);
 	}
 
 	if (proj_len != 1){
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Project identifier is invalid");
-		RETURN_INT(-1);
+		RETURN_LONG(-1);
 	}
 
 	if (php_check_open_basedir(pathname TSRMLS_CC)) {
-		RETURN_INT(-1);
+		RETURN_LONG(-1);
 	}
 
 	k = ftok(pathname, proj[0]);
@@ -58,7 +58,7 @@ PHP_FUNCTION(ftok)
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "ftok() failed - %s", strerror(errno));
 	}
 
-	RETURN_INT(k);
+	RETURN_LONG(k);
 }
 /* }}} */
 #endif

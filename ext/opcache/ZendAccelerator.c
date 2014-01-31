@@ -1851,7 +1851,7 @@ static int persistent_stream_open_function(const char *filename, zend_file_handl
 				int filename_len;
 
 				if (opline->op1.op_type == IS_CONST) {
-					filename_len = Z_STRSIZE(opline->op1.u.constant);
+					filename_len = Z_STRLEN(opline->op1.u.constant);
 				} else {
 					filename_len = strlen(filename);
 				}
@@ -2243,7 +2243,7 @@ static void accel_fast_zval_ptr_dtor(zval **zval_ptr)
 					zend_list_delete(zvalue->value.lval);
 				}
 				break;
-			case IS_INT:
+			case IS_LONG:
 			case IS_DOUBLE:
 			case IS_BOOL:
 			case IS_NULL:

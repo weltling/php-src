@@ -326,8 +326,8 @@ static int really_register_bound_param(struct pdo_bound_param_data *param, pdo_s
 			convert_to_string(param->parameter);
 		}
 	} else if (PDO_PARAM_TYPE(param->param_type) == PDO_PARAM_INT && Z_TYPE_P(param->parameter) == IS_BOOL) {
-		convert_to_int(param->parameter);
-	} else if (PDO_PARAM_TYPE(param->param_type) == PDO_PARAM_BOOL && Z_TYPE_P(param->parameter) == IS_INT) {
+		convert_to_long(param->parameter);
+	} else if (PDO_PARAM_TYPE(param->param_type) == PDO_PARAM_BOOL && Z_TYPE_P(param->parameter) == IS_LONG) {
 		convert_to_boolean(param->parameter);
 	}
 
@@ -577,7 +577,7 @@ static inline void fetch_value(pdo_stmt_t *stmt, zval *dest, php_int_t colno, in
 			
 		case PDO_PARAM_INT:
 			if (value && value_len == sizeof(php_int_t)) {
-				ZVAL_INT(dest, *(php_int_t*)value);
+				ZVAL_LONG(dest, *(php_int_t*)value);
 				break;
 			}
 			ZVAL_NULL(dest);
@@ -651,7 +651,7 @@ static inline void fetch_value(pdo_stmt_t *stmt, zval *dest, php_int_t colno, in
 	if (type != new_type) {
 		switch (new_type) {
 			case PDO_PARAM_INT:
-				convert_to_int_ex(&dest);
+				convert_to_long_ex(&dest);
 				break;
 			case PDO_PARAM_BOOL:
 				convert_to_boolean_ex(&dest);
@@ -673,7 +673,7 @@ static inline void fetch_value(pdo_stmt_t *stmt, zval *dest, php_int_t colno, in
 
 	if (stmt->dbh->stringify) {
 		switch (Z_TYPE_P(dest)) {
-			case IS_INT:
+			case IS_LONG:
 			case IS_DOUBLE:
 				convert_to_string(dest);
 				break;
@@ -951,7 +951,7 @@ static int do_fetch(pdo_stmt_t *stmt, int do_bind, zval *return_value,
 					fetch_value(stmt, &val, i++, NULL TSRMLS_CC);
 					if (Z_TYPE(val) != IS_NULL) {
 						convert_to_string(&val);
-						if (zend_lookup_class(Z_STRVAL(val), Z_STRSIZE(val), &cep TSRMLS_CC) == FAILURE) {
+						if (zend_lookup_class(Z_STRVAL(val), Z_STRLEN(val), &cep TSRMLS_CC) == FAILURE) {
 							stmt->fetch.cls.ce = ZEND_STANDARD_CLASS_DEF_PTR;
 						} else {
 							stmt->fetch.cls.ce = *cep;
@@ -1056,11 +1056,11 @@ static int do_fetch(pdo_stmt_t *stmt, int do_bind, zval *return_value,
 						MAKE_STD_ZVAL(tmp);
 						fetch_value(stmt, tmp, ++i, NULL TSRMLS_CC);
 
-						if (Z_TYPE_P(val) == IS_INT) {
-							zend_hash_index_update((return_all ? Z_ARRVAL_P(return_all) : Z_ARRVAL_P(return_value)), Z_IVAL_P(val), &tmp, sizeof(zval *), NULL);
+						if (Z_TYPE_P(val) == IS_LONG) {
+							zend_hash_index_update((return_all ? Z_ARRVAL_P(return_all) : Z_ARRVAL_P(return_value)), Z_LVAL_P(val), &tmp, sizeof(zval *), NULL);
 						} else {
 							convert_to_string(val);
-							zend_symtable_update((return_all ? Z_ARRVAL_P(return_all) : Z_ARRVAL_P(return_value)), Z_STRVAL_P(val), Z_STRSIZE_P(val) + 1, &tmp, sizeof(zval *), NULL);
+							zend_symtable_update((return_all ? Z_ARRVAL_P(return_all) : Z_ARRVAL_P(return_value)), Z_STRVAL_P(val), Z_STRLEN_P(val) + 1, &tmp, sizeof(zval *), NULL);
 						}
 						zval_ptr_dtor(&val);
 						return 1;
@@ -1134,7 +1134,7 @@ static int do_fetch(pdo_stmt_t *stmt, int do_bind, zval *return_value,
 						php_unserialize_data_t var_hash;
 
 						PHP_VAR_UNSERIALIZE_INIT(var_hash);
-						if (php_var_unserialize(&return_value, (const unsigned char**)&Z_STRVAL_P(val), Z_STRVAL_P(val)+Z_STRSIZE_P(val), NULL TSRMLS_CC) == FAILURE) {
+						if (php_var_unserialize(&return_value, (const unsigned char**)&Z_STRVAL_P(val), Z_STRVAL_P(val)+Z_STRLEN_P(val), NULL TSRMLS_CC) == FAILURE) {
 							pdo_raise_impl_error(stmt->dbh, stmt, "HY000", "cannot unserialize data" TSRMLS_CC);
 							PHP_VAR_UNSERIALIZE_DESTROY(var_hash);
 							return 0;
@@ -1146,7 +1146,7 @@ static int do_fetch(pdo_stmt_t *stmt, int do_bind, zval *return_value,
 							zval_ptr_dtor(&val);
 							pdo_raise_impl_error(stmt->dbh, stmt, "HY000", "cannot unserialize class" TSRMLS_CC);
 							return 0;
-						} else if (ce->unserialize(&return_value, ce, (unsigned char *)(Z_TYPE_P(val) == IS_STRING ? Z_STRVAL_P(val) : ""), Z_TYPE_P(val) == IS_STRING ? Z_STRSIZE_P(val) : 0, NULL TSRMLS_CC) == FAILURE) {
+						} else if (ce->unserialize(&return_value, ce, (unsigned char *)(Z_TYPE_P(val) == IS_STRING ? Z_STRVAL_P(val) : ""), Z_TYPE_P(val) == IS_STRING ? Z_STRLEN_P(val) : 0, NULL TSRMLS_CC) == FAILURE) {
 							zval_ptr_dtor(&val);
 							pdo_raise_impl_error(stmt->dbh, stmt, "HY000", "cannot unserialize class" TSRMLS_CC);
 							zval_dtor(return_value);
@@ -1222,7 +1222,7 @@ static int do_fetch(pdo_stmt_t *stmt, int do_bind, zval *return_value,
 			if ((flags & PDO_FETCH_UNIQUE) == PDO_FETCH_UNIQUE) {
 				add_assoc_zval(return_all, Z_STRVAL(grp_val), return_value);
 			} else {
-				if (zend_symtable_find(Z_ARRVAL_P(return_all), Z_STRVAL(grp_val), Z_STRSIZE(grp_val)+1, (void**)&pgrp) == FAILURE) {
+				if (zend_symtable_find(Z_ARRVAL_P(return_all), Z_STRVAL(grp_val), Z_STRLEN(grp_val)+1, (void**)&pgrp) == FAILURE) {
 					MAKE_STD_ZVAL(grp);
 					array_init(grp);
 					add_assoc_zval(return_all, Z_STRVAL(grp_val), grp);
@@ -1308,7 +1308,7 @@ static PHP_METHOD(PDOStatement, fetch)
 	php_int_t off = 0;
         PHP_STMT_GET_OBJ;
 
-	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|iii", &how,
+	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|lll", &how,
 			&ori, &off)) {
 		RETURN_FALSE;
 	}
@@ -1341,7 +1341,7 @@ static PHP_METHOD(PDOStatement, fetchObject)
 
 	PHP_STMT_GET_OBJ;
 
-	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|S!a", &class_name, &class_name_len, &ctor_args)) {
+	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|s!a", &class_name, &class_name_len, &ctor_args)) {
 		RETURN_FALSE;
 	}
 
@@ -1401,7 +1401,7 @@ static PHP_METHOD(PDOStatement, fetchColumn)
 	php_int_t col_n = 0;
 	PHP_STMT_GET_OBJ;
 
-	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|i", &col_n)) {
+	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|l", &col_n)) {
 		RETURN_FALSE;
 	}
 
@@ -1428,7 +1428,7 @@ static PHP_METHOD(PDOStatement, fetchAll)
 	int error = 0, flags, old_arg_count;
 	PHP_STMT_GET_OBJ;    	  
 
-	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|izz", &how, &arg2, &ctor_args)) {
+	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|lzz", &how, &arg2, &ctor_args)) {
 		RETURN_FALSE;
 	}
 
@@ -1466,7 +1466,7 @@ static PHP_METHOD(PDOStatement, fetchAll)
 				error = 1;
 				break;
 			} else {
-				stmt->fetch.cls.ce = zend_fetch_class(Z_STRVAL_P(arg2), Z_STRSIZE_P(arg2), ZEND_FETCH_CLASS_AUTO TSRMLS_CC);
+				stmt->fetch.cls.ce = zend_fetch_class(Z_STRVAL_P(arg2), Z_STRLEN_P(arg2), ZEND_FETCH_CLASS_AUTO TSRMLS_CC);
 				if (!stmt->fetch.cls.ce) {
 					pdo_raise_impl_error(stmt->dbh, stmt, "HY000", "could not find user-specified class" TSRMLS_CC);
 					error = 1;
@@ -1503,8 +1503,8 @@ static PHP_METHOD(PDOStatement, fetchAll)
 			stmt->fetch.column = how & PDO_FETCH_GROUP ? -1 : 0;
 			break;
 		case 2:
-			convert_to_int(arg2);
-			stmt->fetch.column = Z_IVAL_P(arg2);
+			convert_to_long(arg2);
+			stmt->fetch.column = Z_LVAL_P(arg2);
 			break;
 		case 3:
 			pdo_raise_impl_error(stmt->dbh, stmt, "HY000", "Third parameter not allowed for PDO::FETCH_COLUMN" TSRMLS_CC);
@@ -1587,9 +1587,9 @@ static int register_bound_param(INTERNAL_FUNCTION_PARAMETERS, pdo_stmt_t *stmt, 
 	param.paramno = -1;
 
 	if (FAILURE == zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS() TSRMLS_CC,
-			"iz|iiz!", &param.paramno, &param.parameter, &param_type, &param.max_value_len,
+			"lz|llz!", &param.paramno, &param.parameter, &param_type, &param.max_value_len,
 			&param.driver_params)) {
-		if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Sz|iiz!", &param.name,
+		if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sz|llz!", &param.name,
 				&param.namelen, &param.parameter, &param_type, &param.max_value_len, 
 				&param.driver_params)) {
 			return 0;
@@ -1627,8 +1627,8 @@ static PHP_METHOD(PDOStatement, bindValue)
 	param.paramno = -1;
 	
 	if (FAILURE == zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS() TSRMLS_CC,
-			"iz/|i", &param.paramno, &param.parameter, &param_type)) {
-		if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Sz/|i", &param.name,
+			"lz/|l", &param.paramno, &param.parameter, &param_type)) {
+		if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sz/|l", &param.name,
 				&param.namelen, &param.parameter, &param_type)) {
 			RETURN_FALSE;
 		}
@@ -1680,7 +1680,7 @@ static PHP_METHOD(PDOStatement, rowCount)
 {
 	PHP_STMT_GET_OBJ;
 
-	RETURN_INT(stmt->row_count);
+	RETURN_LONG(stmt->row_count);
 }
 /* }}} */
 
@@ -1744,7 +1744,7 @@ static PHP_METHOD(PDOStatement, setAttribute)
 	zval *value = NULL;
 	PHP_STMT_GET_OBJ;
 
-	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "iz!", &attr, &value)) {
+	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "lz!", &attr, &value)) {
 		RETURN_FALSE;
 	}
 
@@ -1785,7 +1785,7 @@ static PHP_METHOD(PDOStatement, getAttribute)
 	php_int_t attr;
 	PHP_STMT_GET_OBJ;
 
-	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "i", &attr)) {
+	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &attr)) {
 		RETURN_FALSE;
 	}
 
@@ -1827,7 +1827,7 @@ static PHP_METHOD(PDOStatement, columnCount)
 	if (zend_parse_parameters_none() == FAILURE) {
 		return;
 	}
-	RETURN_INT(stmt->column_count);
+	RETURN_LONG(stmt->column_count);
 }
 /* }}} */
 
@@ -1839,7 +1839,7 @@ static PHP_METHOD(PDOStatement, getColumnMeta)
 	struct pdo_column_data *col;
 	PHP_STMT_GET_OBJ;
 
-	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "i", &colno)) {
+	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &colno)) {
 		RETURN_FALSE;
 	}
 	if(colno < 0) {
@@ -1861,11 +1861,11 @@ static PHP_METHOD(PDOStatement, getColumnMeta)
 	/* add stock items */
 	col = &stmt->columns[colno];
 	add_assoc_string(return_value, "name", col->name, 1);
-	add_assoc_int(return_value, "len", col->maxlen); /* FIXME: unsigned ? */
-	add_assoc_int(return_value, "precision", col->precision);
+	add_assoc_long(return_value, "len", col->maxlen); /* FIXME: unsigned ? */
+	add_assoc_long(return_value, "precision", col->precision);
 	if (col->param_type != PDO_PARAM_ZVAL) {
 		/* if param_type is PDO_PARAM_ZVAL the driver has to provide correct data */
-		add_assoc_int(return_value, "pdo_type", col->param_type);
+		add_assoc_long(return_value, "pdo_type", col->param_type);
 	}
 }
 /* }}} */
@@ -1905,11 +1905,11 @@ int pdo_stmt_setup_fetch_mode(INTERNAL_FUNCTION_PARAMETERS, pdo_stmt_t *stmt, in
 	retval = zend_get_parameters_array_ex(ZEND_NUM_ARGS(), args);
 	
 	if (SUCCESS == retval) {
-		if (Z_TYPE_PP(args[skip]) != IS_INT) {
+		if (Z_TYPE_PP(args[skip]) != IS_LONG) {
 			pdo_raise_impl_error(stmt->dbh, stmt, "HY000", "mode must be an integer" TSRMLS_CC);
 			retval = FAILURE;
 		} else {
-			mode = Z_IVAL_PP(args[skip]);
+			mode = Z_LVAL_PP(args[skip]);
 			flags = mode & PDO_FETCH_FLAGS;
 	
 			retval = pdo_stmt_verify_mode(stmt, mode, 0 TSRMLS_CC);
@@ -1943,10 +1943,10 @@ int pdo_stmt_setup_fetch_mode(INTERNAL_FUNCTION_PARAMETERS, pdo_stmt_t *stmt, in
 		case PDO_FETCH_COLUMN:
 			if (argc != 2) {
 				pdo_raise_impl_error(stmt->dbh, stmt, "HY000", "fetch mode requires the colno argument" TSRMLS_CC);
-			} else	if (Z_TYPE_PP(args[skip+1]) != IS_INT) {
+			} else	if (Z_TYPE_PP(args[skip+1]) != IS_LONG) {
 				pdo_raise_impl_error(stmt->dbh, stmt, "HY000", "colno must be an integer" TSRMLS_CC);
 			} else {
-				stmt->fetch.column = Z_IVAL_PP(args[skip+1]);
+				stmt->fetch.column = Z_LVAL_PP(args[skip+1]);
 				retval = SUCCESS;
 			}
 			break;
@@ -1969,7 +1969,7 @@ int pdo_stmt_setup_fetch_mode(INTERNAL_FUNCTION_PARAMETERS, pdo_stmt_t *stmt, in
 					pdo_raise_impl_error(stmt->dbh, stmt, "HY000", "classname must be a string" TSRMLS_CC);
 				} else {
 					retval = zend_lookup_class(Z_STRVAL_PP(args[skip+1]),
-						Z_STRSIZE_PP(args[skip+1]), &cep TSRMLS_CC);
+						Z_STRLEN_PP(args[skip+1]), &cep TSRMLS_CC);
 
 					if (SUCCESS == retval && cep && *cep) {
 						stmt->fetch.cls.ce = *cep;
@@ -2174,7 +2174,7 @@ static PHP_METHOD(PDOStatement, debugDumpParams)
 			int res;
 
 			res = zend_hash_get_current_key_ex(stmt->bound_params, &str, &len, &num, 0, &pos);
-			if (res == HASH_KEY_IS_INT) {
+			if (res == HASH_KEY_IS_LONG) {
 				php_stream_printf(out TSRMLS_CC, "Key: Position #%pd:\n", num);
 			} else if (res == HASH_KEY_IS_STRING) {
 				php_stream_printf(out TSRMLS_CC, "Key: Name: [%d] %.*s\n", len, len, str);
@@ -2506,7 +2506,7 @@ static void pdo_stmt_iter_get_key(zend_object_iterator *iter, zval *key TSRMLS_D
 	if (I->key == (ulong)-1) {
 		ZVAL_NULL(key);
 	} else {
-		ZVAL_INT(key, I->key);
+		ZVAL_LONG(key, I->key);
 	}
 }
 
@@ -2590,9 +2590,9 @@ static zval *row_prop_read(zval *object, zval *member, int type, const zend_lite
 	RETVAL_NULL();
 
 	if (stmt) {
-		if (Z_TYPE_P(member) == IS_INT) {
-			if (Z_IVAL_P(member) >= 0 && Z_IVAL_P(member) < stmt->column_count) {
-				fetch_value(stmt, return_value, Z_IVAL_P(member), NULL TSRMLS_CC);
+		if (Z_TYPE_P(member) == IS_LONG) {
+			if (Z_LVAL_P(member) >= 0 && Z_LVAL_P(member) < stmt->column_count) {
+				fetch_value(stmt, return_value, Z_LVAL_P(member), NULL TSRMLS_CC);
 			}
 		} else {
 			convert_to_string(member);
@@ -2640,8 +2640,8 @@ static int row_prop_exists(zval *object, zval *member, int check_empty, const ze
 	int colno = -1;
 
 	if (stmt) {
-		if (Z_TYPE_P(member) == IS_INT) {
-			return Z_IVAL_P(member) >= 0 && Z_IVAL_P(member) < stmt->column_count;
+		if (Z_TYPE_P(member) == IS_LONG) {
+			return Z_LVAL_P(member) >= 0 && Z_LVAL_P(member) < stmt->column_count;
 		} else {
 			convert_to_string(member);
 

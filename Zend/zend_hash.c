@@ -228,7 +228,7 @@ ZEND_API int _zend_hash_add_or_update(HashTable *ht, const char *arKey, zend_siz
 		p = p->pNext;
 	}
 	
-	if (IS_INTERNED(arKey)) {
+	if (IS_LONGERNED(arKey)) {
 		p = (Bucket *) pemalloc(sizeof(Bucket), ht->persistent);
 		p->arKey = arKey;
 	} else {
@@ -291,7 +291,7 @@ ZEND_API int _zend_hash_quick_add_or_update(HashTable *ht, const char *arKey, ze
 		p = p->pNext;
 	}
 	
-	if (IS_INTERNED(arKey)) {
+	if (IS_LONGERNED(arKey)) {
 		p = (Bucket *) pemalloc(sizeof(Bucket), ht->persistent);
 		p->arKey = arKey;
 	} else {
@@ -1106,7 +1106,7 @@ ZEND_API int zend_hash_get_current_key_ex(const HashTable *ht, char **str_index,
 			return HASH_KEY_IS_STRING;
 		} else {
 			*num_index = p->h;
-			return HASH_KEY_IS_INT;
+			return HASH_KEY_IS_LONG;
 		}
 	}
 	return HASH_KEY_NON_EXISTENT;
@@ -1123,11 +1123,11 @@ ZEND_API void zend_hash_get_current_key_zval_ex(const HashTable *ht, zval *key, 
 		Z_TYPE_P(key) = IS_NULL;
 	} else if (p->nKeyLength) {
 		Z_TYPE_P(key) = IS_STRING;
-		Z_STRVAL_P(key) = IS_INTERNED(p->arKey) ? (char*)p->arKey : estrndup(p->arKey, p->nKeyLength - 1);
-		Z_STRSIZE_P(key) = p->nKeyLength - 1;
+		Z_STRVAL_P(key) = IS_LONGERNED(p->arKey) ? (char*)p->arKey : estrndup(p->arKey, p->nKeyLength - 1);
+		Z_STRLEN_P(key) = p->nKeyLength - 1;
 	} else {
-		Z_TYPE_P(key) = IS_INT;
-		Z_IVAL_P(key) = p->h;
+		Z_TYPE_P(key) = IS_LONG;
+		Z_LVAL_P(key) = p->h;
 	}
 }
 
@@ -1143,7 +1143,7 @@ ZEND_API int zend_hash_get_current_key_type_ex(HashTable *ht, HashPosition *pos)
 		if (p->nKeyLength) {
 			return HASH_KEY_IS_STRING;
 		} else {
-			return HASH_KEY_IS_INT;
+			return HASH_KEY_IS_LONG;
 		}
 	}
 	return HASH_KEY_NON_EXISTENT;
@@ -1182,7 +1182,7 @@ ZEND_API int zend_hash_update_current_key_ex(HashTable *ht, int key_type, const 
 	IS_CONSISTENT(ht);
 
 	if (p) {
-		if (key_type == HASH_KEY_IS_INT) {
+		if (key_type == HASH_KEY_IS_LONG) {
 			str_length = 0;
 			if (!p->nKeyLength && p->h == num_index) {
 				return SUCCESS;
@@ -1196,7 +1196,7 @@ ZEND_API int zend_hash_update_current_key_ex(HashTable *ht, int key_type, const 
 				q = q->pNext;
 			}
 		} else if (key_type == HASH_KEY_IS_STRING) {
-			if (IS_INTERNED(str_index)) {
+			if (IS_LONGERNED(str_index)) {
 				h = INTERNED_HASH(str_index);
 			} else {
 				h = zend_inline_hash_func(str_index, str_length);
@@ -1315,11 +1315,11 @@ ZEND_API int zend_hash_update_current_key_ex(HashTable *ht, int key_type, const 
 			ht->arBuckets[p->h & ht->nTableMask] = p->pNext;
 		}
 
-		if ((IS_INTERNED(p->arKey) != IS_INTERNED(str_index)) ||
-		    (!IS_INTERNED(p->arKey) && p->nKeyLength != str_length)) {
+		if ((IS_LONGERNED(p->arKey) != IS_LONGERNED(str_index)) ||
+		    (!IS_LONGERNED(p->arKey) && p->nKeyLength != str_length)) {
 			Bucket *q;
 
-			if (IS_INTERNED(str_index)) {
+			if (IS_LONGERNED(str_index)) {
 				q = (Bucket *) pemalloc(sizeof(Bucket), ht->persistent);
 			} else {
 				q = (Bucket *) pemalloc(sizeof(Bucket) + str_length, ht->persistent);
@@ -1354,12 +1354,12 @@ ZEND_API int zend_hash_update_current_key_ex(HashTable *ht, int key_type, const 
 			p = q;
 		}
 
-		if (key_type == HASH_KEY_IS_INT) {
+		if (key_type == HASH_KEY_IS_LONG) {
 			p->h = num_index;
 		} else {
 			p->h = h;
 			p->nKeyLength = str_length;
-			if (IS_INTERNED(str_index)) {
+			if (IS_LONGERNED(str_index)) {
 				p->arKey = str_index;
 			} else {
 				p->arKey = (const char*)(p+1);

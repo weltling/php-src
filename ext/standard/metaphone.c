@@ -36,7 +36,7 @@ PHP_FUNCTION(metaphone)
 	php_size_t str_len;
 	php_int_t phones = 0;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S|i", &str, &str_len,
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|l", &str, &str_len,
 							  &phones) == FAILURE) {
 		return;
 	}

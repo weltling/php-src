@@ -751,7 +751,7 @@ mysqlnd_stmt_fetch_row_buffered(MYSQLND_RES *result, void *param, php_uint_t fla
 						  Thus for NULL and zero-length we are quite efficient.
 						*/
 						if (Z_TYPE_P(current_row[i]) >= IS_STRING) {
-							php_uint_t len = Z_STRSIZE_P(current_row[i]);
+							php_uint_t len = Z_STRLEN_P(current_row[i]);
 							if (meta->fields[i].max_length < len) {
 								meta->fields[i].max_length = len;
 							}
@@ -872,8 +872,8 @@ mysqlnd_stmt_fetch_row_unbuffered(MYSQLND_RES *result, void *param, php_uint_t f
 					zval_dtor(stmt->result_bind[i].zv);
 #endif
 					if (IS_NULL != (Z_TYPE_P(stmt->result_bind[i].zv) = Z_TYPE_P(data)) ) {
-						if ((Z_TYPE_P(data) == IS_STRING) && (result->meta->fields[i].max_length < (php_uint_t) Z_STRSIZE_P(data))) {
-							result->meta->fields[i].max_length = Z_STRSIZE_P(data);
+						if ((Z_TYPE_P(data) == IS_STRING) && (result->meta->fields[i].max_length < (php_uint_t) Z_STRLEN_P(data))) {
+							result->meta->fields[i].max_length = Z_STRLEN_P(data);
 						}
 						stmt->result_bind[i].zv->value = data->value;
 						/* copied data, thus also the ownership. Thus null data */
@@ -1053,8 +1053,8 @@ mysqlnd_fetch_stmt_row_cursor(MYSQLND_RES *result, void *param, php_uint_t flags
 					DBG_INF_FMT("i=%u bound_var=%p type=%u refc=%u", i, stmt->result_bind[i].zv,
 								Z_TYPE_P(data), Z_REFCOUNT_P(stmt->result_bind[i].zv));
 					if (IS_NULL != (Z_TYPE_P(stmt->result_bind[i].zv) = Z_TYPE_P(data))) {
-						if ((Z_TYPE_P(data) == IS_STRING) && (result->meta->fields[i].max_length < (php_uint_t) Z_STRSIZE_P(data))) {
-							result->meta->fields[i].max_length = Z_STRSIZE_P(data);
+						if ((Z_TYPE_P(data) == IS_STRING) && (result->meta->fields[i].max_length < (php_uint_t) Z_STRLEN_P(data))) {
+							result->meta->fields[i].max_length = Z_STRLEN_P(data);
 						}
 						stmt->result_bind[i].zv->value = data->value;
 						/* copied data, thus also the ownership. Thus null data */

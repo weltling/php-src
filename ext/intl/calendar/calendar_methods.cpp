@@ -56,7 +56,7 @@ U_CFUNC PHP_FUNCTION(intlcal_create_instance)
 	UErrorCode	status			= U_ZERO_ERROR;
 	intl_error_reset(NULL TSRMLS_CC);
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|ZS!",
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|Zs!",
 			&zv_timezone, &locale_str, &dummy) == FAILURE) {
 		intl_error_set(NULL, U_ILLEGAL_ARGUMENT_ERROR,
 			"intlcal_create_calendar: bad arguments", 0 TSRMLS_CC);
@@ -148,7 +148,7 @@ U_CFUNC PHP_FUNCTION(intlcal_get_keyword_values_for_locale)
 	zend_bool	commonly_used;
 	intl_error_reset(NULL TSRMLS_CC);
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "SSb",
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ssb",
 			&key, &key_len, &locale, &locale_len, &commonly_used) == FAILURE) {
 		intl_error_set(NULL, U_ILLEGAL_ARGUMENT_ERROR,
 			"intlcal_get_keyword_values_for_locale: bad arguments", 0 TSRMLS_CC);
@@ -224,7 +224,7 @@ static void _php_intlcal_field_uec_ret_in32t_method(
 	CALENDAR_METHOD_INIT_VARS;
 
 	if (zend_parse_method_parameters(ZEND_NUM_ARGS() TSRMLS_CC, getThis(),
-			"Oi", &object, Calendar_ce_ptr, &field) == FAILURE) {
+			"Ol", &object, Calendar_ce_ptr, &field) == FAILURE) {
 		spprintf(&message, 0, "%s: bad arguments", method_name);
 		intl_error_set(NULL, U_ILLEGAL_ARGUMENT_ERROR, message, 1 TSRMLS_CC);
 		efree(message);
@@ -244,7 +244,7 @@ static void _php_intlcal_field_uec_ret_in32t_method(
 		(UCalendarDateFields)field, CALENDAR_ERROR_CODE(co));
 	INTL_METHOD_CHECK_STATUS(co, "Call to ICU method has failed");
 
-	RETURN_INT((php_int_t)result);
+	RETURN_LONG((php_int_t)result);
 }
 
 U_CFUNC PHP_FUNCTION(intlcal_get)
@@ -300,7 +300,7 @@ U_CFUNC PHP_FUNCTION(intlcal_add)
 	CALENDAR_METHOD_INIT_VARS;
 
 	if (zend_parse_method_parameters(ZEND_NUM_ARGS() TSRMLS_CC, getThis(),
-			"Oii", &object, Calendar_ce_ptr, &field, &amount) == FAILURE) {
+			"Oll", &object, Calendar_ce_ptr, &field, &amount) == FAILURE) {
 		intl_error_set(NULL, U_ILLEGAL_ARGUMENT_ERROR,
 			"intlcal_add: bad arguments", 0 TSRMLS_CC);
 		RETURN_FALSE;
@@ -424,7 +424,7 @@ U_CFUNC PHP_FUNCTION(intlcal_set)
 
 	if (variant == 4 ||
 			zend_parse_method_parameters(ZEND_NUM_ARGS() TSRMLS_CC, getThis(),
-			"Oii|iiii",	&object, Calendar_ce_ptr, &arg1, &arg2, &arg3, &arg4,
+			"Oll|llll",	&object, Calendar_ce_ptr, &arg1, &arg2, &arg3, &arg4,
 			&arg5, &arg6) == FAILURE) {
 		intl_error_set(NULL, U_ILLEGAL_ARGUMENT_ERROR,
 			"intlcal_set: bad arguments", 0 TSRMLS_CC);
@@ -432,7 +432,7 @@ U_CFUNC PHP_FUNCTION(intlcal_set)
 	}
 	
 	for (i = 0; i < variant; i++) {
-		if (Z_IVAL_PP(args[i]) < INT32_MIN || Z_IVAL_PP(args[i]) > INT32_MAX) {
+		if (Z_LVAL_PP(args[i]) < INT32_MIN || Z_LVAL_PP(args[i]) > INT32_MAX) {
 			intl_error_set(NULL, U_ILLEGAL_ARGUMENT_ERROR,
 				"intlcal_set: at least one of the arguments has an absolute "
 				"value that is too large", 0 TSRMLS_CC);
@@ -481,7 +481,7 @@ U_CFUNC PHP_FUNCTION(intlcal_roll)
 	}
 	if (args[1] != NULL && Z_TYPE_PP(args[1]) == IS_BOOL) {
 		if (zend_parse_method_parameters(ZEND_NUM_ARGS() TSRMLS_CC, getThis(),
-				"Oib", &object, Calendar_ce_ptr, &field, &bool_variant_val)
+				"Olb", &object, Calendar_ce_ptr, &field, &bool_variant_val)
 				== FAILURE) {
 			intl_error_set(NULL, U_ILLEGAL_ARGUMENT_ERROR,
 				"intlcal_roll: bad arguments", 0 TSRMLS_CC);
@@ -489,7 +489,7 @@ U_CFUNC PHP_FUNCTION(intlcal_roll)
 		}
 		bool_variant_val = Z_BVAL_PP(args[1]);
 	} else if (zend_parse_method_parameters(ZEND_NUM_ARGS() TSRMLS_CC, getThis(),
-			"Oii", &object, Calendar_ce_ptr, &field, &value) == FAILURE) {
+			"Oll", &object, Calendar_ce_ptr, &field, &value) == FAILURE) {
 		intl_error_set(NULL, U_ILLEGAL_ARGUMENT_ERROR,
 			"intlcal_roll: bad arguments", 0 TSRMLS_CC);
 		RETURN_FALSE;
@@ -548,7 +548,7 @@ U_CFUNC PHP_FUNCTION(intlcal_clear)
 		}
 		variant = 0;
 	} else if (zend_parse_method_parameters(ZEND_NUM_ARGS() TSRMLS_CC,
-			getThis(), "Oi", &object, Calendar_ce_ptr, &field) == FAILURE) {
+			getThis(), "Ol", &object, Calendar_ce_ptr, &field) == FAILURE) {
 		intl_error_set(NULL, U_ILLEGAL_ARGUMENT_ERROR,
 			"intlcal_clear: bad arguments", 0 TSRMLS_CC);
 		RETURN_FALSE;
@@ -578,7 +578,7 @@ U_CFUNC PHP_FUNCTION(intlcal_field_difference)
 	CALENDAR_METHOD_INIT_VARS;
 
 	if (zend_parse_method_parameters(ZEND_NUM_ARGS() TSRMLS_CC, getThis(),
-			"Odi", &object, Calendar_ce_ptr, &when, &field)	== FAILURE) {
+			"Odl", &object, Calendar_ce_ptr, &when, &field)	== FAILURE) {
 		intl_error_set(NULL, U_ILLEGAL_ARGUMENT_ERROR,
 			"intlcal_field_difference: bad arguments", 0 TSRMLS_CC);
 		RETURN_FALSE;
@@ -597,7 +597,7 @@ U_CFUNC PHP_FUNCTION(intlcal_field_difference)
 	INTL_METHOD_CHECK_STATUS(co,
 		"intlcal_field_difference: Call to ICU method has failed");
 
-	RETURN_INT((php_int_t)result);
+	RETURN_LONG((php_int_t)result);
 }
 
 U_CFUNC PHP_FUNCTION(intlcal_get_actual_maximum)
@@ -619,7 +619,7 @@ U_CFUNC PHP_FUNCTION(intlcal_get_day_of_week_type)
 	CALENDAR_METHOD_INIT_VARS;
 
 	if (zend_parse_method_parameters(ZEND_NUM_ARGS() TSRMLS_CC, getThis(),
-			"Oi", &object, Calendar_ce_ptr, &dow) == FAILURE) {
+			"Ol", &object, Calendar_ce_ptr, &dow) == FAILURE) {
 		intl_error_set(NULL, U_ILLEGAL_ARGUMENT_ERROR,
 			"intlcal_get_day_of_week_type: bad arguments", 0 TSRMLS_CC);
 		RETURN_FALSE;
@@ -638,7 +638,7 @@ U_CFUNC PHP_FUNCTION(intlcal_get_day_of_week_type)
 	INTL_METHOD_CHECK_STATUS(co,
 		"intlcal_get_day_of_week_type: Call to ICU method has failed");
 
-	RETURN_INT((php_int_t)result);
+	RETURN_LONG((php_int_t)result);
 }
 #endif
 
@@ -659,7 +659,7 @@ U_CFUNC PHP_FUNCTION(intlcal_get_first_day_of_week)
 	INTL_METHOD_CHECK_STATUS(co,
 		"intlcal_get_first_day_of_week: Call to ICU method has failed");
 
-	RETURN_INT((php_int_t)result);
+	RETURN_LONG((php_int_t)result);
 }
 
 static void _php_intlcal_field_ret_in32t_method(
@@ -672,7 +672,7 @@ static void _php_intlcal_field_ret_in32t_method(
 	CALENDAR_METHOD_INIT_VARS;
 
 	if (zend_parse_method_parameters(ZEND_NUM_ARGS() TSRMLS_CC, getThis(),
-			"Oi", &object, Calendar_ce_ptr, &field) == FAILURE) {
+			"Ol", &object, Calendar_ce_ptr, &field) == FAILURE) {
 		spprintf(&message, 0, "%s: bad arguments", method_name);
 		intl_error_set(NULL, U_ILLEGAL_ARGUMENT_ERROR, message, 1 TSRMLS_CC);
 		efree(message);
@@ -691,7 +691,7 @@ static void _php_intlcal_field_ret_in32t_method(
 	int32_t result = (co->ucal->*func)((UCalendarDateFields)field);
 	INTL_METHOD_CHECK_STATUS(co, "Call to ICU method has failed");
 
-	RETURN_INT((php_int_t)result);
+	RETURN_LONG((php_int_t)result);
 }
 
 U_CFUNC PHP_FUNCTION(intlcal_get_greatest_minimum)
@@ -712,7 +712,7 @@ U_CFUNC PHP_FUNCTION(intlcal_get_locale)
 	CALENDAR_METHOD_INIT_VARS;
 
 	if (zend_parse_method_parameters(ZEND_NUM_ARGS() TSRMLS_CC, getThis(),
-			"Oi", &object, Calendar_ce_ptr, &locale_type) == FAILURE) {
+			"Ol", &object, Calendar_ce_ptr, &locale_type) == FAILURE) {
 		intl_error_set(NULL, U_ILLEGAL_ARGUMENT_ERROR,
 			"intlcal_get_locale: bad arguments", 0 TSRMLS_CC);
 		RETURN_FALSE;
@@ -757,7 +757,7 @@ U_CFUNC PHP_FUNCTION(intlcal_get_minimal_days_in_first_week)
 	INTL_METHOD_CHECK_STATUS(co,
 		"intlcal_get_first_day_of_week: Call to ICU method has failed");
 
-	RETURN_INT((php_int_t)result);
+	RETURN_LONG((php_int_t)result);
 }
 
 U_CFUNC PHP_FUNCTION(intlcal_get_minimum)
@@ -812,7 +812,7 @@ U_CFUNC PHP_FUNCTION(intlcal_get_weekend_transition)
 	CALENDAR_METHOD_INIT_VARS;
 
 	if (zend_parse_method_parameters(ZEND_NUM_ARGS() TSRMLS_CC, getThis(),
-			"Oi", &object, Calendar_ce_ptr, &dow) == FAILURE) {
+			"Ol", &object, Calendar_ce_ptr, &dow) == FAILURE) {
 		intl_error_set(NULL, U_ILLEGAL_ARGUMENT_ERROR,
 			"intlcal_get_weekend_transition: bad arguments", 0 TSRMLS_CC);
 		RETURN_FALSE;
@@ -831,7 +831,7 @@ U_CFUNC PHP_FUNCTION(intlcal_get_weekend_transition)
 	INTL_METHOD_CHECK_STATUS(co, "intlcal_get_weekend_transition: "
 		"Error calling ICU method");
 
-	RETURN_INT((php_int_t)res);
+	RETURN_LONG((php_int_t)res);
 }
 #endif
 
@@ -903,7 +903,7 @@ U_CFUNC PHP_FUNCTION(intlcal_is_set)
 	CALENDAR_METHOD_INIT_VARS;
 
 	if (zend_parse_method_parameters(ZEND_NUM_ARGS() TSRMLS_CC, getThis(),
-			"Oi", &object, Calendar_ce_ptr, &field) == FAILURE) {
+			"Ol", &object, Calendar_ce_ptr, &field) == FAILURE) {
 		intl_error_set(NULL, U_ILLEGAL_ARGUMENT_ERROR,
 			"intlcal_is_set: bad arguments", 0 TSRMLS_CC);
 		RETURN_FALSE;
@@ -958,7 +958,7 @@ U_CFUNC PHP_FUNCTION(intlcal_set_first_day_of_week)
 	CALENDAR_METHOD_INIT_VARS;
 
 	if (zend_parse_method_parameters(ZEND_NUM_ARGS() TSRMLS_CC, getThis(),
-			"Oi", &object, Calendar_ce_ptr, &dow) == FAILURE) {
+			"Ol", &object, Calendar_ce_ptr, &dow) == FAILURE) {
 		intl_error_set(NULL, U_ILLEGAL_ARGUMENT_ERROR,
 			"intlcal_set_first_day_of_week: bad arguments", 0 TSRMLS_CC);
 		RETURN_FALSE;
@@ -1002,7 +1002,7 @@ U_CFUNC PHP_FUNCTION(intlcal_set_minimal_days_in_first_week)
 	CALENDAR_METHOD_INIT_VARS;
 
 	if (zend_parse_method_parameters(ZEND_NUM_ARGS() TSRMLS_CC, getThis(),
-			"Oi", &object, Calendar_ce_ptr, &num_days) == FAILURE) {
+			"Ol", &object, Calendar_ce_ptr, &num_days) == FAILURE) {
 		intl_error_set(NULL, U_ILLEGAL_ARGUMENT_ERROR,
 			"intlcal_set_minimal_days_in_first_week: bad arguments", 0 TSRMLS_CC);
 		RETURN_FALSE;
@@ -1065,7 +1065,7 @@ U_CFUNC PHP_FUNCTION(intlcal_get_repeated_wall_time_option)
 
 	CALENDAR_METHOD_FETCH_OBJECT;
 
-	RETURN_INT(co->ucal->getRepeatedWallTimeOption());
+	RETURN_LONG(co->ucal->getRepeatedWallTimeOption());
 }
 
 U_CFUNC PHP_FUNCTION(intlcal_get_skipped_wall_time_option)
@@ -1081,7 +1081,7 @@ U_CFUNC PHP_FUNCTION(intlcal_get_skipped_wall_time_option)
 
 	CALENDAR_METHOD_FETCH_OBJECT;
 
-	RETURN_INT(co->ucal->getSkippedWallTimeOption());
+	RETURN_LONG(co->ucal->getSkippedWallTimeOption());
 }
 
 U_CFUNC PHP_FUNCTION(intlcal_set_repeated_wall_time_option)
@@ -1090,7 +1090,7 @@ U_CFUNC PHP_FUNCTION(intlcal_set_repeated_wall_time_option)
 	CALENDAR_METHOD_INIT_VARS;
 
 	if (zend_parse_method_parameters(ZEND_NUM_ARGS() TSRMLS_CC, getThis(),
-			"Oi", &object, Calendar_ce_ptr, &option) == FAILURE) {
+			"Ol", &object, Calendar_ce_ptr, &option) == FAILURE) {
 		intl_error_set(NULL, U_ILLEGAL_ARGUMENT_ERROR,
 			"intlcal_set_repeated_wall_time_option: bad arguments", 0 TSRMLS_CC);
 		RETURN_FALSE;
@@ -1115,7 +1115,7 @@ U_CFUNC PHP_FUNCTION(intlcal_set_skipped_wall_time_option)
 	CALENDAR_METHOD_INIT_VARS;
 
 	if (zend_parse_method_parameters(ZEND_NUM_ARGS() TSRMLS_CC, getThis(),
-			"Oi", &object, Calendar_ce_ptr, &option) == FAILURE) {
+			"Ol", &object, Calendar_ce_ptr, &option) == FAILURE) {
 		intl_error_set(NULL, U_ILLEGAL_ARGUMENT_ERROR,
 			"intlcal_set_skipped_wall_time_option: bad arguments", 0 TSRMLS_CC);
 		RETURN_FALSE;
@@ -1150,7 +1150,7 @@ U_CFUNC PHP_FUNCTION(intlcal_from_date_time)
 	Calendar        *cal;
 	intl_error_reset(NULL TSRMLS_CC);
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Z|S!",
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Z|s!",
 			&zv_arg, &locale_str, &locale_str_len) == FAILURE) {
 		intl_error_set(NULL, U_ILLEGAL_ARGUMENT_ERROR,
 			"intlcal_from_date_time: bad arguments", 0 TSRMLS_CC);
@@ -1181,7 +1181,7 @@ U_CFUNC PHP_FUNCTION(intlcal_from_date_time)
 
 	zend_call_method_with_0_params(&zv_datetime, php_date_get_date_ce(),
 		NULL, "gettimestamp", &zv_timestamp);
-	if (!zv_timestamp || Z_TYPE_P(zv_timestamp) != IS_INT) {
+	if (!zv_timestamp || Z_TYPE_P(zv_timestamp) != IS_LONG) {
 		intl_error_set(NULL, U_ILLEGAL_ARGUMENT_ERROR,
 			"intlcal_from_date_time: bad DateTime; call to "
 			"DateTime::getTimestamp() failed", 0 TSRMLS_CC);
@@ -1210,7 +1210,7 @@ U_CFUNC PHP_FUNCTION(intlcal_from_date_time)
 				"error creating ICU Calendar object", 0 TSRMLS_CC);
 		goto error;
 	}
-	cal->setTime(((UDate)Z_IVAL_P(zv_timestamp)) * 1000., status);
+	cal->setTime(((UDate)Z_LVAL_P(zv_timestamp)) * 1000., status);
     if (U_FAILURE(status)) {
 		/* time zone was adopted by cal; should not be deleted here */
 		delete cal;
@@ -1326,7 +1326,7 @@ U_CFUNC PHP_FUNCTION(intlcal_get_error_code)
 	if (co == NULL)
 		RETURN_FALSE;
 
-	RETURN_INT((php_int_t)CALENDAR_ERROR_CODE(co));
+	RETURN_LONG((php_int_t)CALENDAR_ERROR_CODE(co));
 }
 
 U_CFUNC PHP_FUNCTION(intlcal_get_error_message)

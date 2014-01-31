@@ -32,7 +32,7 @@ PHP_METHOD(Spoofchecker, isSuspicious)
 	zval *error_code = NULL;
 	SPOOFCHECKER_METHOD_INIT_VARS;
 	
-	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S|z", &text, &text_len, &error_code)) {
+	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|z", &text, &text_len, &error_code)) {
 		return;
 	}
 	
@@ -47,7 +47,7 @@ PHP_METHOD(Spoofchecker, isSuspicious)
 	
 	if (error_code) {
 		zval_dtor(error_code);
-		ZVAL_INT(error_code, ret);
+		ZVAL_LONG(error_code, ret);
 	}
 	RETVAL_BOOL(ret != 0);
 }
@@ -64,7 +64,7 @@ PHP_METHOD(Spoofchecker, areConfusable)
 	zval *error_code = NULL;
 	SPOOFCHECKER_METHOD_INIT_VARS;
 	
-	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "SS|z", &s1, &s1_len,
+	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss|z", &s1, &s1_len,
 										 &s2, &s2_len, &error_code)) {
 		return;
 	}
@@ -80,7 +80,7 @@ PHP_METHOD(Spoofchecker, areConfusable)
 	
 	if (error_code) {
 		zval_dtor(error_code);
-		ZVAL_INT(error_code, ret);
+		ZVAL_LONG(error_code, ret);
 	}
 	RETVAL_BOOL(ret != 0);
 }
@@ -95,7 +95,7 @@ PHP_METHOD(Spoofchecker, setAllowedLocales)
 	php_size_t locales_len;
 	SPOOFCHECKER_METHOD_INIT_VARS;
 	
-	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &locales, &locales_len)) {
+	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &locales, &locales_len)) {
 		return;
 	}
 
@@ -118,7 +118,7 @@ PHP_METHOD(Spoofchecker, setChecks)
 	php_int_t checks;
 	SPOOFCHECKER_METHOD_INIT_VARS;
 		
-	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "i", &checks)) {
+	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &checks)) {
 		return;
 	}
 

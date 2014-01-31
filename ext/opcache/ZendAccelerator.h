@@ -359,17 +359,17 @@ zend_op_array *persistent_compile_file(zend_file_handle *file_handle, int type T
 const char *accel_new_interned_string(const char *arKey, zend_size_t nKeyLength, int free_src TSRMLS_DC);
 
 # define interned_free(s) do { \
-		if (!IS_INTERNED(s)) { \
+		if (!IS_LONGERNED(s)) { \
 			free(s); \
 		} \
 	} while (0)
 # define interned_efree(s) do { \
-		if (!IS_INTERNED(s)) { \
+		if (!IS_LONGERNED(s)) { \
 			efree(s); \
 		} \
 	} while (0)
 # define interned_estrndup(s, n) \
-	(IS_INTERNED(s) ? (s) : estrndup(s, n))
+	(IS_LONGERNED(s) ? (s) : estrndup(s, n))
 # define ZEND_RESULT_TYPE(opline)	(opline)->result_type
 # define ZEND_RESULT(opline)		(opline)->result
 # define ZEND_OP1_TYPE(opline)		(opline)->op1_type
@@ -385,7 +385,7 @@ const char *accel_new_interned_string(const char *arKey, zend_size_t nKeyLength,
 # define ZEND_CE_DOC_COMMENT(ce)        (ce)->info.user.doc_comment
 # define ZEND_CE_DOC_COMMENT_LEN(ce)	(ce)->info.user.doc_comment_len
 #else
-# define IS_INTERNED(s)				0
+# define IS_LONGERNED(s)				0
 # define interned_free(s)			free(s)
 # define interned_efree(s)			efree(s)
 # define interned_estrndup(s, n)	estrndup(s, n)

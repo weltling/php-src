@@ -726,81 +726,81 @@ PHP_MINIT_FUNCTION(odbc)
 	Z_TYPE(odbc_module_entry) = type;
 	
 	REGISTER_STRING_CONSTANT("ODBC_TYPE", PHP_ODBC_TYPE, CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("ODBC_BINMODE_PASSTHRU", 0, CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("ODBC_BINMODE_RETURN", 1, CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("ODBC_BINMODE_CONVERT", 2, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("ODBC_BINMODE_PASSTHRU", 0, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("ODBC_BINMODE_RETURN", 1, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("ODBC_BINMODE_CONVERT", 2, CONST_CS | CONST_PERSISTENT);
 	/* Define Constants for options
 	   these Constants are defined in <sqlext.h>
 	*/
-	REGISTER_INT_CONSTANT("SQL_ODBC_CURSORS", SQL_ODBC_CURSORS, CONST_PERSISTENT | CONST_CS);
-	REGISTER_INT_CONSTANT("SQL_CUR_USE_DRIVER", SQL_CUR_USE_DRIVER, CONST_PERSISTENT | CONST_CS);
-	REGISTER_INT_CONSTANT("SQL_CUR_USE_IF_NEEDED", SQL_CUR_USE_IF_NEEDED, CONST_PERSISTENT | CONST_CS);
-	REGISTER_INT_CONSTANT("SQL_CUR_USE_ODBC", SQL_CUR_USE_ODBC, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_ODBC_CURSORS", SQL_ODBC_CURSORS, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_CUR_USE_DRIVER", SQL_CUR_USE_DRIVER, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_CUR_USE_IF_NEEDED", SQL_CUR_USE_IF_NEEDED, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_CUR_USE_ODBC", SQL_CUR_USE_ODBC, CONST_PERSISTENT | CONST_CS);
 
 
-	REGISTER_INT_CONSTANT("SQL_CONCURRENCY", SQL_CONCURRENCY, CONST_PERSISTENT | CONST_CS);
-	REGISTER_INT_CONSTANT("SQL_CONCUR_READ_ONLY", SQL_CONCUR_READ_ONLY, CONST_PERSISTENT | CONST_CS);
-	REGISTER_INT_CONSTANT("SQL_CONCUR_LOCK", SQL_CONCUR_LOCK, CONST_PERSISTENT | CONST_CS);
-	REGISTER_INT_CONSTANT("SQL_CONCUR_ROWVER", SQL_CONCUR_ROWVER, CONST_PERSISTENT | CONST_CS);
-	REGISTER_INT_CONSTANT("SQL_CONCUR_VALUES", SQL_CONCUR_VALUES, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_CONCURRENCY", SQL_CONCURRENCY, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_CONCUR_READ_ONLY", SQL_CONCUR_READ_ONLY, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_CONCUR_LOCK", SQL_CONCUR_LOCK, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_CONCUR_ROWVER", SQL_CONCUR_ROWVER, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_CONCUR_VALUES", SQL_CONCUR_VALUES, CONST_PERSISTENT | CONST_CS);
 
-	REGISTER_INT_CONSTANT("SQL_CURSOR_TYPE", SQL_CURSOR_TYPE, CONST_PERSISTENT | CONST_CS);
-	REGISTER_INT_CONSTANT("SQL_CURSOR_FORWARD_ONLY", SQL_CURSOR_FORWARD_ONLY, CONST_PERSISTENT | CONST_CS);
-	REGISTER_INT_CONSTANT("SQL_CURSOR_KEYSET_DRIVEN", SQL_CURSOR_KEYSET_DRIVEN, CONST_PERSISTENT | CONST_CS);
-	REGISTER_INT_CONSTANT("SQL_CURSOR_DYNAMIC", SQL_CURSOR_DYNAMIC, CONST_PERSISTENT | CONST_CS);
-	REGISTER_INT_CONSTANT("SQL_CURSOR_STATIC", SQL_CURSOR_STATIC, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_CURSOR_TYPE", SQL_CURSOR_TYPE, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_CURSOR_FORWARD_ONLY", SQL_CURSOR_FORWARD_ONLY, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_CURSOR_KEYSET_DRIVEN", SQL_CURSOR_KEYSET_DRIVEN, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_CURSOR_DYNAMIC", SQL_CURSOR_DYNAMIC, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_CURSOR_STATIC", SQL_CURSOR_STATIC, CONST_PERSISTENT | CONST_CS);
 	
-	REGISTER_INT_CONSTANT("SQL_KEYSET_SIZE", SQL_KEYSET_SIZE, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_KEYSET_SIZE", SQL_KEYSET_SIZE, CONST_PERSISTENT | CONST_CS);
 
 	/* these are for the Data Source type */
-	REGISTER_INT_CONSTANT("SQL_FETCH_FIRST", SQL_FETCH_FIRST, CONST_PERSISTENT | CONST_CS);
-	REGISTER_INT_CONSTANT("SQL_FETCH_NEXT", SQL_FETCH_NEXT, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_FETCH_FIRST", SQL_FETCH_FIRST, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_FETCH_NEXT", SQL_FETCH_NEXT, CONST_PERSISTENT | CONST_CS);
 
 	/*
 	 * register the standard data types
 	 */
-	REGISTER_INT_CONSTANT("SQL_CHAR", SQL_CHAR, CONST_PERSISTENT | CONST_CS);
-	REGISTER_INT_CONSTANT("SQL_VARCHAR", SQL_VARCHAR, CONST_PERSISTENT | CONST_CS);
-	REGISTER_INT_CONSTANT("SQL_LONGVARCHAR", SQL_LONGVARCHAR, CONST_PERSISTENT | CONST_CS);
-	REGISTER_INT_CONSTANT("SQL_DECIMAL", SQL_DECIMAL, CONST_PERSISTENT | CONST_CS);
-	REGISTER_INT_CONSTANT("SQL_NUMERIC", SQL_NUMERIC, CONST_PERSISTENT | CONST_CS);
-	REGISTER_INT_CONSTANT("SQL_BIT", SQL_BIT, CONST_PERSISTENT | CONST_CS);
-	REGISTER_INT_CONSTANT("SQL_TINYINT", SQL_TINYINT, CONST_PERSISTENT | CONST_CS);
-	REGISTER_INT_CONSTANT("SQL_SMALLINT", SQL_SMALLINT, CONST_PERSISTENT | CONST_CS);
-	REGISTER_INT_CONSTANT("SQL_INTEGER", SQL_INTEGER, CONST_PERSISTENT | CONST_CS);
-	REGISTER_INT_CONSTANT("SQL_BIGINT", SQL_BIGINT, CONST_PERSISTENT | CONST_CS);
-	REGISTER_INT_CONSTANT("SQL_REAL", SQL_REAL, CONST_PERSISTENT | CONST_CS);
-	REGISTER_INT_CONSTANT("SQL_FLOAT", SQL_FLOAT, CONST_PERSISTENT | CONST_CS);
-	REGISTER_INT_CONSTANT("SQL_DOUBLE", SQL_DOUBLE, CONST_PERSISTENT | CONST_CS);
-	REGISTER_INT_CONSTANT("SQL_BINARY", SQL_BINARY, CONST_PERSISTENT | CONST_CS);
-	REGISTER_INT_CONSTANT("SQL_VARBINARY", SQL_VARBINARY, CONST_PERSISTENT | CONST_CS);
-	REGISTER_INT_CONSTANT("SQL_LONGVARBINARY", SQL_LONGVARBINARY, CONST_PERSISTENT | CONST_CS);
-	REGISTER_INT_CONSTANT("SQL_DATE", SQL_DATE, CONST_PERSISTENT | CONST_CS);
-	REGISTER_INT_CONSTANT("SQL_TIME", SQL_TIME, CONST_PERSISTENT | CONST_CS);
-	REGISTER_INT_CONSTANT("SQL_TIMESTAMP", SQL_TIMESTAMP, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_CHAR", SQL_CHAR, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_VARCHAR", SQL_VARCHAR, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_LONGVARCHAR", SQL_LONGVARCHAR, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_DECIMAL", SQL_DECIMAL, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_NUMERIC", SQL_NUMERIC, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_BIT", SQL_BIT, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_TINYINT", SQL_TINYINT, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_SMALLINT", SQL_SMALLINT, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_INTEGER", SQL_INTEGER, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_BIGINT", SQL_BIGINT, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_REAL", SQL_REAL, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_FLOAT", SQL_FLOAT, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_DOUBLE", SQL_DOUBLE, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_BINARY", SQL_BINARY, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_VARBINARY", SQL_VARBINARY, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_LONGVARBINARY", SQL_LONGVARBINARY, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_DATE", SQL_DATE, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_TIME", SQL_TIME, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_TIMESTAMP", SQL_TIMESTAMP, CONST_PERSISTENT | CONST_CS);
 #if defined(ODBCVER) && (ODBCVER >= 0x0300)
-	REGISTER_INT_CONSTANT("SQL_TYPE_DATE", SQL_TYPE_DATE, CONST_PERSISTENT | CONST_CS);
-	REGISTER_INT_CONSTANT("SQL_TYPE_TIME", SQL_TYPE_TIME, CONST_PERSISTENT | CONST_CS);
-	REGISTER_INT_CONSTANT("SQL_TYPE_TIMESTAMP", SQL_TYPE_TIMESTAMP, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_TYPE_DATE", SQL_TYPE_DATE, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_TYPE_TIME", SQL_TYPE_TIME, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_TYPE_TIMESTAMP", SQL_TYPE_TIMESTAMP, CONST_PERSISTENT | CONST_CS);
 
 	/*
 	 * SQLSpecialColumns values
 	 */
-	REGISTER_INT_CONSTANT("SQL_BEST_ROWID", SQL_BEST_ROWID, CONST_PERSISTENT | CONST_CS);
-	REGISTER_INT_CONSTANT("SQL_ROWVER", SQL_ROWVER, CONST_PERSISTENT | CONST_CS);
-	REGISTER_INT_CONSTANT("SQL_SCOPE_CURROW", SQL_SCOPE_CURROW, CONST_PERSISTENT | CONST_CS);
-	REGISTER_INT_CONSTANT("SQL_SCOPE_TRANSACTION", SQL_SCOPE_TRANSACTION, CONST_PERSISTENT | CONST_CS);
-	REGISTER_INT_CONSTANT("SQL_SCOPE_SESSION", SQL_SCOPE_SESSION, CONST_PERSISTENT | CONST_CS);
-	REGISTER_INT_CONSTANT("SQL_NO_NULLS", SQL_NO_NULLS, CONST_PERSISTENT | CONST_CS);
-	REGISTER_INT_CONSTANT("SQL_NULLABLE", SQL_NULLABLE, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_BEST_ROWID", SQL_BEST_ROWID, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_ROWVER", SQL_ROWVER, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_SCOPE_CURROW", SQL_SCOPE_CURROW, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_SCOPE_TRANSACTION", SQL_SCOPE_TRANSACTION, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_SCOPE_SESSION", SQL_SCOPE_SESSION, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_NO_NULLS", SQL_NO_NULLS, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_NULLABLE", SQL_NULLABLE, CONST_PERSISTENT | CONST_CS);
 
 	/*
 	 * SQLStatistics values
 	 */
-	REGISTER_INT_CONSTANT("SQL_INDEX_UNIQUE", SQL_INDEX_UNIQUE, CONST_PERSISTENT | CONST_CS);
-	REGISTER_INT_CONSTANT("SQL_INDEX_ALL", SQL_INDEX_ALL, CONST_PERSISTENT | CONST_CS);
-	REGISTER_INT_CONSTANT("SQL_ENSURE", SQL_ENSURE, CONST_PERSISTENT | CONST_CS);
-	REGISTER_INT_CONSTANT("SQL_QUICK", SQL_QUICK, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_INDEX_UNIQUE", SQL_INDEX_UNIQUE, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_INDEX_ALL", SQL_INDEX_ALL, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_ENSURE", SQL_ENSURE, CONST_PERSISTENT | CONST_CS);
+	REGISTER_LONG_CONSTANT("SQL_QUICK", SQL_QUICK, CONST_PERSISTENT | CONST_CS);
 #endif
 
 #if defined(HAVE_IBMDB2) && defined(_AIX)
@@ -918,11 +918,11 @@ void php_odbc_fetch_attribs(INTERNAL_FUNCTION_PARAMETERS, int mode)
 	zval *pv_res;
 	php_int_t flag;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ri", &pv_res, &flag) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rl", &pv_res, &flag) == FAILURE) {
 		return;
 	}
 	
-	if (Z_IVAL_P(pv_res)) {
+	if (Z_LVAL_P(pv_res)) {
 		ZEND_FETCH_RESOURCE(result, odbc_result *, &pv_res, -1, "ODBC result", le_result);
         if (mode) {
             result->longreadlen = flag;
@@ -1049,7 +1049,7 @@ void odbc_column_lengths(INTERNAL_FUNCTION_PARAMETERS, int type)
 	zval *pv_res;
 	php_int_t pv_num;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ri", &pv_res, &pv_num) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rl", &pv_res, &pv_num) == FAILURE) {
 		return;
 	}
 
@@ -1072,7 +1072,7 @@ void odbc_column_lengths(INTERNAL_FUNCTION_PARAMETERS, int type)
 
 	SQLColAttributes(result->stmt, (SQLUSMALLINT)pv_num, (SQLUSMALLINT) (type?SQL_COLUMN_SCALE:SQL_COLUMN_PRECISION), NULL, 0, NULL, &len);
 
-	RETURN_INT(len);
+	RETURN_LONG(len);
 }
 /* }}} */
 
@@ -1150,7 +1150,7 @@ PHP_FUNCTION(odbc_prepare)
 	SQLUINTEGER      scrollopts;
 #endif
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rS", &pv_conn, &query, &query_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rs", &pv_conn, &query, &query_len) == FAILURE) {
 		return;
 	}
 
@@ -1296,7 +1296,7 @@ PHP_FUNCTION(odbc_execute)
 			}
 			
 			rc = SQLDescribeParam(result->stmt, (SQLUSMALLINT)i, &sqltype, &precision, &scale, &nullable);
-			params[i-1].vallen = Z_STRSIZE_PP(tmp);
+			params[i-1].vallen = Z_STRLEN_PP(tmp);
 			params[i-1].fp = -1;
 			if (rc == SQL_ERROR) {
 				odbc_sql_error(result->conn_ptr, result->stmt, "SQLDescribeParameter");	
@@ -1316,14 +1316,14 @@ PHP_FUNCTION(odbc_execute)
 				ctype = SQL_C_CHAR;
 			}
 
-			if (Z_STRSIZE_PP(tmp) > 2 &&
+			if (Z_STRLEN_PP(tmp) > 2 &&
 				Z_STRVAL_PP(tmp)[0] == '\'' &&
-				Z_STRVAL_PP(tmp)[Z_STRSIZE_PP(tmp) - 1] == '\'') {
+				Z_STRVAL_PP(tmp)[Z_STRLEN_PP(tmp) - 1] == '\'') {
 					
 				if (CHECK_ZVAL_NULL_PATH(*tmp)) {
 					RETURN_FALSE;
 				}
-				filename = estrndup(&Z_STRVAL_PP(tmp)[1], Z_STRSIZE_PP(tmp) - 2);
+				filename = estrndup(&Z_STRVAL_PP(tmp)[1], Z_STRLEN_PP(tmp) - 2);
 				filename[strlen(filename)] = '\0';
 
 				/* Check the basedir */
@@ -1519,7 +1519,7 @@ PHP_FUNCTION(odbc_data_source)
 	UCHAR server_name[100], desc[200];
 	SQLSMALLINT len1=0, len2=0, fetch_type;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ri", &zv_conn, &zv_fetch_type) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rl", &zv_conn, &zv_fetch_type) == FAILURE) {
 		return;
 	}
 
@@ -1581,7 +1581,7 @@ PHP_FUNCTION(odbc_exec)
 
 	numArgs = ZEND_NUM_ARGS();
 	
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rS|i", &pv_conn, &query, &query_len, &pv_flags) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rs|l", &pv_conn, &query, &query_len, &pv_flags) == FAILURE) {
 		return;
 	}
 
@@ -1666,7 +1666,7 @@ static void php_odbc_fetch_hash(INTERNAL_FUNCTION_PARAMETERS, int result_type)
 	zval *pv_res, *tmp;
 	php_int_t pv_row = -1;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r|i", &pv_res, &pv_row) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r|l", &pv_res, &pv_row) == FAILURE) {
 		return;
 	}
 	
@@ -1713,7 +1713,7 @@ static void php_odbc_fetch_hash(INTERNAL_FUNCTION_PARAMETERS, int result_type)
 	for(i = 0; i < result->numcols; i++) {
 		ALLOC_INIT_ZVAL(tmp);
 		Z_TYPE_P(tmp) = IS_STRING;
-		Z_STRSIZE_P(tmp) = 0;
+		Z_STRLEN_P(tmp) = 0;
 		sql_c_type = SQL_C_CHAR;
 
 		switch(result->values[i].coltype) {
@@ -1745,14 +1745,14 @@ static void php_odbc_fetch_hash(INTERNAL_FUNCTION_PARAMETERS, int result_type)
 				}
 
 				if (rc == SQL_SUCCESS_WITH_INFO) {
-					Z_STRSIZE_P(tmp) = result->longreadlen;
+					Z_STRLEN_P(tmp) = result->longreadlen;
 				} else if (result->values[i].vallen == SQL_NULL_DATA) {
 					ZVAL_NULL(tmp);
 					break;
 				} else {
-					Z_STRSIZE_P(tmp) = result->values[i].vallen;
+					Z_STRLEN_P(tmp) = result->values[i].vallen;
 				}
-				Z_STRVAL_P(tmp) = estrndup(buf, Z_STRSIZE_P(tmp));
+				Z_STRVAL_P(tmp) = estrndup(buf, Z_STRLEN_P(tmp));
 				break;
 
 			default:
@@ -1760,8 +1760,8 @@ static void php_odbc_fetch_hash(INTERNAL_FUNCTION_PARAMETERS, int result_type)
 					ZVAL_NULL(tmp);
 					break;
 				}
-				Z_STRSIZE_P(tmp) = result->values[i].vallen;
-				Z_STRVAL_P(tmp) = estrndup(result->values[i].value,Z_STRSIZE_P(tmp));
+				Z_STRLEN_P(tmp) = result->values[i].vallen;
+				Z_STRVAL_P(tmp) = estrndup(result->values[i].value,Z_STRLEN_P(tmp));
 				break;
 		}
 
@@ -1769,7 +1769,7 @@ static void php_odbc_fetch_hash(INTERNAL_FUNCTION_PARAMETERS, int result_type)
 			zend_hash_index_update(Z_ARRVAL_P(return_value), i, &tmp, sizeof(zval *), NULL);
 		} else {
 			if (!*(result->values[i].name) && Z_TYPE_P(tmp) == IS_STRING) {
-				zend_hash_update(Z_ARRVAL_P(return_value), Z_STRVAL_P(tmp),	Z_STRSIZE_P(tmp)+1, &tmp, sizeof(zval *), NULL);
+				zend_hash_update(Z_ARRVAL_P(return_value), Z_STRVAL_P(tmp),	Z_STRLEN_P(tmp)+1, &tmp, sizeof(zval *), NULL);
 			} else {
 				zend_hash_update(Z_ARRVAL_P(return_value), result->values[i].name, strlen(result->values[i].name)+1, &tmp, sizeof(zval *), NULL);
 			}
@@ -1820,7 +1820,7 @@ PHP_FUNCTION(odbc_fetch_into)
 #endif /* HAVE_SQL_EXTENDED_FETCH */
 
 #ifdef HAVE_SQL_EXTENDED_FETCH
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rZ|i", &pv_res, &pv_res_arr, &pv_row) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rZ|l", &pv_res, &pv_res_arr, &pv_row) == FAILURE) {
 		return;
 	}
 	
@@ -1867,7 +1867,7 @@ PHP_FUNCTION(odbc_fetch_into)
 	for(i = 0; i < result->numcols; i++) {
 		MAKE_STD_ZVAL(tmp);
 		Z_TYPE_P(tmp) = IS_STRING;
-		Z_STRSIZE_P(tmp) = 0;
+		Z_STRLEN_P(tmp) = 0;
 		sql_c_type = SQL_C_CHAR;
 
 		switch(result->values[i].coltype) {
@@ -1896,14 +1896,14 @@ PHP_FUNCTION(odbc_fetch_into)
 					RETURN_FALSE;
 				}
 				if (rc == SQL_SUCCESS_WITH_INFO) {
-					Z_STRSIZE_P(tmp) = result->longreadlen;
+					Z_STRLEN_P(tmp) = result->longreadlen;
 				} else if (result->values[i].vallen == SQL_NULL_DATA) {
 					ZVAL_NULL(tmp);
 					break;
 				} else {
-					Z_STRSIZE_P(tmp) = result->values[i].vallen;
+					Z_STRLEN_P(tmp) = result->values[i].vallen;
 				}
-				Z_STRVAL_P(tmp) = estrndup(buf, Z_STRSIZE_P(tmp));
+				Z_STRVAL_P(tmp) = estrndup(buf, Z_STRLEN_P(tmp));
 				break;
 
 			default:
@@ -1911,14 +1911,14 @@ PHP_FUNCTION(odbc_fetch_into)
 					ZVAL_NULL(tmp);
 					break;
 				}
-				Z_STRSIZE_P(tmp) = result->values[i].vallen;
-				Z_STRVAL_P(tmp) = estrndup(result->values[i].value,Z_STRSIZE_P(tmp));
+				Z_STRLEN_P(tmp) = result->values[i].vallen;
+				Z_STRVAL_P(tmp) = estrndup(result->values[i].value,Z_STRLEN_P(tmp));
 				break;
 		}
 		zend_hash_index_update(Z_ARRVAL_PP(pv_res_arr), i, &tmp, sizeof(zval *), NULL);
 	}
 	if (buf) efree(buf);
-	RETURN_INT(result->numcols);	
+	RETURN_LONG(result->numcols);	
 }
 /* }}} */
 
@@ -1969,7 +1969,7 @@ PHP_FUNCTION(odbc_fetch_row)
 	SQLUSMALLINT RowStatus[1];
 #endif
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r|i", &pv_res, &pv_row) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r|l", &pv_res, &pv_row) == FAILURE) {
 		return;
 	}
 	
@@ -2034,8 +2034,8 @@ PHP_FUNCTION(odbc_result)
 	if (Z_TYPE_PP(pv_field) == IS_STRING) {
 		field = Z_STRVAL_PP(pv_field);
 	} else {
-		convert_to_int_ex(pv_field);
-		field_ind = Z_IVAL_PP(pv_field) - 1;
+		convert_to_long_ex(pv_field);
+		field_ind = Z_LVAL_PP(pv_field) - 1;
 	}
 	
 	ZEND_FETCH_RESOURCE(result, odbc_result *, &pv_res, -1, "ODBC result", le_result);
@@ -2202,7 +2202,7 @@ PHP_FUNCTION(odbc_result_all)
 	SQLUSMALLINT RowStatus[1];
 #endif
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r|S", &pv_res, &pv_format, &pv_format_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r|s", &pv_res, &pv_format, &pv_format_len) == FAILURE) {
 		return;
 	}
 				
@@ -2221,7 +2221,7 @@ PHP_FUNCTION(odbc_result_all)
 
 	if (rc != SQL_SUCCESS && rc != SQL_SUCCESS_WITH_INFO) {
 		php_printf("<h2>No rows found</h2>\n");
-		RETURN_INT(0);
+		RETURN_LONG(0);
 	}
 	
 	/* Start table tag */
@@ -2302,7 +2302,7 @@ PHP_FUNCTION(odbc_result_all)
 	}
 	php_printf("</table>\n");
 	if (buf) efree(buf);
-	RETURN_INT(result->fetched);
+	RETURN_LONG(result->fetched);
 }
 /* }}} */
 
@@ -2329,7 +2329,7 @@ PHP_FUNCTION(odbc_free_result)
 		result->values = NULL;
 	}
 			
-	zend_list_delete(Z_IVAL_P(pv_res));
+	zend_list_delete(Z_LVAL_P(pv_res));
 	
 	RETURN_TRUE;
 }
@@ -2497,7 +2497,7 @@ void odbc_do_connect(INTERNAL_FUNCTION_PARAMETERS, int persistent)
 	/*  Now an optional 4th parameter specifying the cursor type
 	 *  defaulting to the cursors default
 	 */
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "SSS|i", &db, &db_len, &uid, &uid_len, &pwd, &pwd_len, &pv_opt) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sss|l", &db, &db_len, &uid, &uid_len, &pwd, &pwd_len, &pv_opt) == FAILURE) {
 		return;
 	}
 	
@@ -2613,7 +2613,7 @@ try_and_get_another_connection:
 
 			if (ptr && (type == le_conn || type == le_pconn)) {
 				zend_list_addref(conn_id);
-				Z_IVAL_P(return_value) = conn_id;
+				Z_LVAL_P(return_value) = conn_id;
 				Z_TYPE_P(return_value) = IS_RESOURCE;
 				efree(hashed_details);
 				return;
@@ -2632,7 +2632,7 @@ try_and_get_another_connection:
 			RETURN_FALSE;
 		}
 		db_conn->id = ZEND_REGISTER_RESOURCE(return_value, db_conn, le_conn);
-		new_index_ptr.ptr = (void *) Z_IVAL_P(return_value);
+		new_index_ptr.ptr = (void *) Z_LVAL_P(return_value);
 		Z_TYPE(new_index_ptr) = le_index_ptr;
 
 		if (zend_hash_update(&EG(regular_list), hashed_details, hashed_len + 1, (void *) &new_index_ptr,
@@ -2682,10 +2682,10 @@ PHP_FUNCTION(odbc_close)
 		}
 	}
 	
-	zend_list_delete(Z_IVAL_P(pv_conn));
+	zend_list_delete(Z_LVAL_P(pv_conn));
 	
 	if(is_pconn){
-		zend_hash_apply_with_argument(&EG(persistent_list),	(apply_func_arg_t) _close_pconn_with_id, (void *) &(Z_IVAL_P(pv_conn)) TSRMLS_CC);	
+		zend_hash_apply_with_argument(&EG(persistent_list),	(apply_func_arg_t) _close_pconn_with_id, (void *) &(Z_LVAL_P(pv_conn)) TSRMLS_CC);	
 	}
 }
 /* }}} */
@@ -2703,7 +2703,7 @@ PHP_FUNCTION(odbc_num_rows)
 	}
 	ZEND_FETCH_RESOURCE(result, odbc_result *, &pv_res, -1, "ODBC result", le_result);
 	SQLRowCount(result->stmt, &rows);
-	RETURN_INT(rows);
+	RETURN_LONG(rows);
 }
 /* }}} */
 
@@ -2768,7 +2768,7 @@ PHP_FUNCTION(odbc_num_fields)
 		return;
 	}
 	ZEND_FETCH_RESOURCE(result, odbc_result *, &pv_res, -1, "ODBC result", le_result);
-	RETURN_INT(result->numcols);
+	RETURN_LONG(result->numcols);
 }
 /* }}} */
 
@@ -2780,7 +2780,7 @@ PHP_FUNCTION(odbc_field_name)
 	zval *pv_res;
 	php_int_t pv_num;
 	
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ri", &pv_res, &pv_num) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rl", &pv_res, &pv_num) == FAILURE) {
 		return;
 	}
 	
@@ -2815,7 +2815,7 @@ PHP_FUNCTION(odbc_field_type)
 	zval		*pv_res;
 	php_int_t		pv_num;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ri", &pv_res, &pv_num) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rl", &pv_res, &pv_num) == FAILURE) {
 		return;
 	}
 
@@ -2867,7 +2867,7 @@ PHP_FUNCTION(odbc_field_num)
 	odbc_result *result;
 	zval *pv_res;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rS", &pv_res, &fname, &fname_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rs", &pv_res, &fname, &fname_len) == FAILURE) {
 		return;
 	}
 	
@@ -2888,7 +2888,7 @@ PHP_FUNCTION(odbc_field_num)
 	if (field_ind == -1) {
 		RETURN_FALSE;
 	}
-	RETURN_INT(field_ind);
+	RETURN_LONG(field_ind);
 }
 /* }}} */
 
@@ -2902,7 +2902,7 @@ PHP_FUNCTION(odbc_autocommit)
 	zval *pv_conn;
 	php_int_t pv_onoff = 0;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r|i", &pv_conn, &pv_onoff) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r|l", &pv_conn, &pv_onoff) == FAILURE) {
 		return;
 	}
 
@@ -2923,7 +2923,7 @@ PHP_FUNCTION(odbc_autocommit)
 			odbc_sql_error(conn, SQL_NULL_HSTMT, "Get commit status");
 			RETURN_FALSE;
 		}
-		RETVAL_INT((long)status);
+		RETVAL_LONG((long)status);
 	}
 }
 /* }}} */
@@ -3014,7 +3014,7 @@ PHP_FUNCTION(odbc_setoption)
 	zval *pv_handle;
 	php_int_t pv_which, pv_opt, pv_val;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "riii", &pv_handle, &pv_which, &pv_opt, &pv_val) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rlll", &pv_handle, &pv_which, &pv_opt, &pv_val) == FAILURE) {
 		return;
 	}
 
@@ -3067,7 +3067,7 @@ PHP_FUNCTION(odbc_tables)
 	php_size_t cat_len = 0, schema_len = 0, table_len = 0, type_len = 0;
 	RETCODE rc;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r|S!SSS", &pv_conn, &cat, &cat_len, &schema, &schema_len, 
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r|s!sss", &pv_conn, &cat, &cat_len, &schema, &schema_len, 
 		&table, &table_len, &type, &type_len) == FAILURE) {
 		return;
 	}
@@ -3134,7 +3134,7 @@ PHP_FUNCTION(odbc_columns)
 	php_size_t cat_len = 0, schema_len = 0, table_len = 0, column_len = 0;
 	RETCODE rc;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r|S!SSS", &pv_conn, &cat, &cat_len, &schema, &schema_len,
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r|s!sss", &pv_conn, &cat, &cat_len, &schema, &schema_len,
 		&table, &table_len, &column, &column_len) == FAILURE) {
 		return;
 	}
@@ -3204,7 +3204,7 @@ PHP_FUNCTION(odbc_columnprivileges)
 	php_size_t cat_len = 0, schema_len, table_len, column_len;
 	RETCODE rc;
 	
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rS!SSS", &pv_conn, &cat, &cat_len, &schema, &schema_len,
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rs!sss", &pv_conn, &cat, &cat_len, &schema, &schema_len,
 		&table, &table_len, &column, &column_len) == FAILURE) {
 		return;
 	}
@@ -3268,7 +3268,7 @@ PHP_FUNCTION(odbc_foreignkeys)
 	php_size_t pcat_len = 0, pschema_len, ptable_len, fcat_len, fschema_len, ftable_len;
 	RETCODE rc;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rS!SSSSS", &pv_conn, &pcat, &pcat_len, &pschema, &pschema_len, 
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rs!sssss", &pv_conn, &pcat, &pcat_len, &pschema, &pschema_len, 
 		&ptable, &ptable_len, &fcat, &fcat_len, &fschema, &fschema_len, &ftable, &ftable_len) == FAILURE) {
 		return;
 	}
@@ -3345,7 +3345,7 @@ PHP_FUNCTION(odbc_gettypeinfo)
 	RETCODE rc;
 	SQLSMALLINT data_type;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r|i", &pv_conn, &pv_data_type) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r|l", &pv_conn, &pv_data_type) == FAILURE) {
 		return;
 	}
 	
@@ -3404,7 +3404,7 @@ PHP_FUNCTION(odbc_primarykeys)
 	php_size_t cat_len = 0, schema_len, table_len;
 	RETCODE rc;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rS!SS", &pv_conn, &cat, &cat_len, &schema, &schema_len, &table, &table_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rs!ss", &pv_conn, &cat, &cat_len, &schema, &schema_len, &table, &table_len) == FAILURE) {
 		return;
 	}
 
@@ -3469,7 +3469,7 @@ PHP_FUNCTION(odbc_procedurecolumns)
 		WRONG_PARAM_COUNT;
 	}
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r|S!SSS", &pv_conn, &cat, &cat_len, &schema, &schema_len, 
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r|s!sss", &pv_conn, &cat, &cat_len, &schema, &schema_len, 
 		&proc, &proc_len, &col, &col_len) == FAILURE) {
 		return;
 	}
@@ -3537,7 +3537,7 @@ PHP_FUNCTION(odbc_procedures)
 		WRONG_PARAM_COUNT;
 	}
 	
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r|S!SS", &pv_conn, &cat, &cat_len, &schema, &schema_len, &proc, &proc_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r|s!ss", &pv_conn, &cat, &cat_len, &schema, &schema_len, &proc, &proc_len) == FAILURE) {
 		return;
 	}
 
@@ -3600,7 +3600,7 @@ PHP_FUNCTION(odbc_specialcolumns)
 	SQLUSMALLINT type, scope, nullable;
 	RETCODE rc;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "riS!SSii", &pv_conn, &vtype, &cat, &cat_len, &schema, &schema_len,
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rls!ssll", &pv_conn, &vtype, &cat, &cat_len, &schema, &schema_len,
 		&name, &name_len, &vscope, &vnullable) == FAILURE) {
 		return;
 	}
@@ -3670,7 +3670,7 @@ PHP_FUNCTION(odbc_statistics)
 	SQLUSMALLINT unique, reserved;
 	RETCODE rc;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rS!SSii", &pv_conn, &cat, &cat_len, &schema, &schema_len,
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rs!ssll", &pv_conn, &cat, &cat_len, &schema, &schema_len,
 		&name, &name_len, &vunique, &vreserved) == FAILURE) {
 		return;
 	}
@@ -3737,7 +3737,7 @@ PHP_FUNCTION(odbc_tableprivileges)
 	php_size_t cat_len = 0, schema_len, table_len;
 	RETCODE rc;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rS!SS", &pv_conn, &cat, &cat_len, &schema, &schema_len, &table, &table_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rs!ss", &pv_conn, &cat, &cat_len, &schema, &schema_len, &table, &table_len) == FAILURE) {
 		return;
 	}
 

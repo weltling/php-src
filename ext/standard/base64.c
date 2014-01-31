@@ -223,7 +223,7 @@ PHP_FUNCTION(base64_encode)
 	unsigned char *result;
 	php_size_t str_len, ret_length;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &str, &str_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &str, &str_len) == FAILURE) {
 		return;
 	}
 	result = php_base64_encode((unsigned char*)str, str_len, &ret_length);
@@ -244,7 +244,7 @@ PHP_FUNCTION(base64_decode)
 	zend_bool strict = 0;
 	php_size_t str_len, ret_length;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S|b", &str, &str_len, &strict) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|b", &str, &str_len, &strict) == FAILURE) {
 		return;
 	}
 	result = php_base64_decode_ex((unsigned char*)str, str_len, &ret_length, strict);

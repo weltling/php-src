@@ -66,7 +66,7 @@ PHP_FUNCTION(readlink)
 	php_size_t link_len;
 	char target[MAXPATHLEN];
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "P", &link, &link_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "p", &link, &link_len) == FAILURE) {
 		return;
 	}
 
@@ -91,17 +91,17 @@ PHP_FUNCTION(linkinfo)
 	php_stat_t sb;
 	int ret;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "P", &link, &link_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "p", &link, &link_len) == FAILURE) {
 		return;
 	}
 
 	ret = VCWD_STAT(link, &sb);
 	if (ret == -1) {
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "%s", strerror(errno));
-		RETURN_INT(-1L);
+		RETURN_LONG(-1L);
 	}
 
-	RETURN_INT((php_int_t) sb.st_dev);
+	RETURN_LONG((php_int_t) sb.st_dev);
 }
 /* }}} */
 
@@ -134,7 +134,7 @@ PHP_FUNCTION(symlink)
 		RETURN_FALSE;
 	}
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "PP", &topath, &topath_len, &frompath, &frompath_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "pp", &topath, &topath_len, &frompath, &frompath_len) == FAILURE) {
 		return;
 	}
 	
@@ -197,7 +197,7 @@ PHP_FUNCTION(link)
 
 	/*First argument to link function is the target and hence should go to frompath
 	  Second argument to link function is the link itself and hence should go to topath */
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "SS", &frompath, &frompath_len, &topath, &topath_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss", &frompath, &frompath_len, &topath, &topath_len) == FAILURE) {
 		return;
 	}
 

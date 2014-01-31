@@ -66,7 +66,7 @@ PHP_FUNCTION( msgfmt_parse )
 
 
 	/* Parse parameters. */
-	if( zend_parse_method_parameters( ZEND_NUM_ARGS() TSRMLS_CC, getThis(), "OS",
+	if( zend_parse_method_parameters( ZEND_NUM_ARGS() TSRMLS_CC, getThis(), "Os",
 		&object, MessageFormatter_ce_ptr,  &source, &source_len ) == FAILURE )
 	{
 		intl_error_set( NULL, U_ILLEGAL_ARGUMENT_ERROR,
@@ -101,7 +101,7 @@ PHP_FUNCTION( msgfmt_parse_message )
 	MessageFormatter_object *mfo = &mf;
 
 	/* Parse parameters. */
-	if( zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "SSS",
+	if( zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "sss",
 		  &slocale, &slocale_len, &pattern, &pattern_len, &source, &src_len ) == FAILURE )
 	{
 		intl_error_set( NULL, U_ILLEGAL_ARGUMENT_ERROR,

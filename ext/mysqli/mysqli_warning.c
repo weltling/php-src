@@ -111,7 +111,7 @@ MYSQLI_WARNING *php_new_warning(const zval * reason, int errorno TSRMLS_DC)
 	w->reason = *reason;
 	zval_copy_ctor(&(w->reason));
 
-	ZVAL_UTF8_STRINGL(&(w->reason),  Z_STRVAL(w->reason), Z_STRSIZE(w->reason),  ZSTR_AUTOFREE);
+	ZVAL_UTF8_STRINGL(&(w->reason),  Z_STRVAL(w->reason), Z_STRLEN(w->reason),  ZSTR_AUTOFREE);
 
 	ZVAL_UTF8_STRINGL(&(w->sqlstate), "HY000", sizeof("HY000") - 1,  ZSTR_DUPLICATE);
 
@@ -151,8 +151,8 @@ MYSQLI_WARNING * php_get_warnings(MYSQLND_CONN_DATA * mysql TSRMLS_DC)
 
 		/* 1. Here comes the error no */
 		zend_hash_get_current_data(Z_ARRVAL_P(row), (void **)&entry);
-		convert_to_int_ex(entry);
-		errno = Z_IVAL_PP(entry);
+		convert_to_long_ex(entry);
+		errno = Z_LVAL_PP(entry);
 		zend_hash_move_forward(Z_ARRVAL_P(row));
 
 		/* 2. Here comes the reason */
@@ -257,7 +257,7 @@ int mysqli_warning_errno(mysqli_object *obj, zval **retval TSRMLS_DC)
 	}
 	w = (MYSQLI_WARNING *)((MYSQLI_RESOURCE *)(obj->ptr))->ptr;
 	MAKE_STD_ZVAL(*retval);
-	ZVAL_INT(*retval, w->errorno);
+	ZVAL_LONG(*retval, w->errorno);
 	return SUCCESS;
 }
 /* }}} */

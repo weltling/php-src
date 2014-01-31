@@ -90,7 +90,7 @@ U_CFUNC zval *timezone_convert_to_datetimezone(const TimeZone *timeZone,
 	} else {
 		/* Call the constructor! */
 		Z_TYPE(arg) = IS_STRING;
-		if (intl_charFromString(id, &Z_STRVAL(arg), &Z_STRSIZE(arg),
+		if (intl_charFromString(id, &Z_STRVAL(arg), &Z_STRLEN(arg),
 				&INTL_ERROR_CODE(*outside_error)) == FAILURE) {
 			spprintf(&message, 0, "%s: could not convert id to UTF-8", func);
 			intl_errors_set(outside_error, INTL_ERROR_CODE(*outside_error),
@@ -179,7 +179,7 @@ U_CFUNC TimeZone *timezone_process_timezone_argument(zval **zv_timezone,
 						gottenId;
 		UErrorCode		status = U_ZERO_ERROR; /* outside_error may be NULL */
 		convert_to_string_ex(zv_timezone);
-		if (intl_stringFromChar(id, Z_STRVAL_PP(zv_timezone), Z_STRSIZE_PP(zv_timezone),
+		if (intl_stringFromChar(id, Z_STRVAL_PP(zv_timezone), Z_STRLEN_PP(zv_timezone),
 				&status) == FAILURE) {
 			spprintf(&message, 0, "%s: Time zone identifier given is not a "
 				"valid UTF-8 string", func);
@@ -320,8 +320,8 @@ static HashTable *TimeZone_get_debug_info(zval *object, int *is_temp TSRMLS_DC)
 		return Z_ARRVAL(zv);
 	}
 	
-	add_assoc_int_ex(&zv, "rawOffset", sizeof("rawOffset"), (php_int_t)rawOffset);
-	add_assoc_int_ex(&zv, "currentOffset", sizeof("currentOffset"),
+	add_assoc_long_ex(&zv, "rawOffset", sizeof("rawOffset"), (php_int_t)rawOffset);
+	add_assoc_long_ex(&zv, "currentOffset", sizeof("currentOffset"),
 		(php_int_t)(rawOffset + dstOffset));
 
 	return Z_ARRVAL(zv);
@@ -512,26 +512,26 @@ U_CFUNC void timezone_register_IntlTimeZone_class(TSRMLS_D)
 	TimeZone_handlers.get_debug_info = TimeZone_get_debug_info;
 
 	/* Declare 'IntlTimeZone' class constants */
-#define TIMEZONE_DECL_INT_CONST(name, val) \
-	zend_declare_class_constant_int(TimeZone_ce_ptr, name, sizeof(name) - 1, \
+#define TIMEZONE_DECL_LONG_CONST(name, val) \
+	zend_declare_class_constant_long(TimeZone_ce_ptr, name, sizeof(name) - 1, \
 		val TSRMLS_CC)
 
-	TIMEZONE_DECL_INT_CONST("DISPLAY_SHORT", TimeZone::SHORT);
-	TIMEZONE_DECL_INT_CONST("DISPLAY_LONG", TimeZone::LONG);
+	TIMEZONE_DECL_LONG_CONST("DISPLAY_SHORT", TimeZone::SHORT);
+	TIMEZONE_DECL_LONG_CONST("DISPLAY_LONG", TimeZone::LONG);
 
 #if U_ICU_VERSION_MAJOR_NUM * 10 + U_ICU_VERSION_MINOR_NUM >= 44
-	TIMEZONE_DECL_INT_CONST("DISPLAY_SHORT_GENERIC", TimeZone::SHORT_GENERIC);
-	TIMEZONE_DECL_INT_CONST("DISPLAY_LONG_GENERIC", TimeZone::LONG_GENERIC);
-	TIMEZONE_DECL_INT_CONST("DISPLAY_SHORT_GMT", TimeZone::SHORT_GMT);
-	TIMEZONE_DECL_INT_CONST("DISPLAY_LONG_GMT", TimeZone::LONG_GMT);
-	TIMEZONE_DECL_INT_CONST("DISPLAY_SHORT_COMMONLY_USED", TimeZone::SHORT_COMMONLY_USED);
-	TIMEZONE_DECL_INT_CONST("DISPLAY_GENERIC_LOCATION", TimeZone::GENERIC_LOCATION);
+	TIMEZONE_DECL_LONG_CONST("DISPLAY_SHORT_GENERIC", TimeZone::SHORT_GENERIC);
+	TIMEZONE_DECL_LONG_CONST("DISPLAY_LONG_GENERIC", TimeZone::LONG_GENERIC);
+	TIMEZONE_DECL_LONG_CONST("DISPLAY_SHORT_GMT", TimeZone::SHORT_GMT);
+	TIMEZONE_DECL_LONG_CONST("DISPLAY_LONG_GMT", TimeZone::LONG_GMT);
+	TIMEZONE_DECL_LONG_CONST("DISPLAY_SHORT_COMMONLY_USED", TimeZone::SHORT_COMMONLY_USED);
+	TIMEZONE_DECL_LONG_CONST("DISPLAY_GENERIC_LOCATION", TimeZone::GENERIC_LOCATION);
 #endif
 
 #if U_ICU_VERSION_MAJOR_NUM * 10 + U_ICU_VERSION_MINOR_NUM >= 48
-	TIMEZONE_DECL_INT_CONST("TYPE_ANY", UCAL_ZONE_TYPE_ANY);
-	TIMEZONE_DECL_INT_CONST("TYPE_CANONICAL", UCAL_ZONE_TYPE_CANONICAL);
-	TIMEZONE_DECL_INT_CONST("TYPE_CANONICAL_LOCATION", UCAL_ZONE_TYPE_CANONICAL_LOCATION);
+	TIMEZONE_DECL_LONG_CONST("TYPE_ANY", UCAL_ZONE_TYPE_ANY);
+	TIMEZONE_DECL_LONG_CONST("TYPE_CANONICAL", UCAL_ZONE_TYPE_CANONICAL);
+	TIMEZONE_DECL_LONG_CONST("TYPE_CANONICAL_LOCATION", UCAL_ZONE_TYPE_CANONICAL_LOCATION);
 #endif
 
 	/* Declare 'IntlTimeZone' class properties */

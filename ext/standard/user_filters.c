@@ -113,13 +113,13 @@ PHP_MINIT_FUNCTION(user_filters)
 		return FAILURE;
 	}
 
-	REGISTER_INT_CONSTANT("PSFS_PASS_ON",			PSFS_PASS_ON,			CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("PSFS_FEED_ME",			PSFS_FEED_ME,			CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("PSFS_ERR_FATAL",		PSFS_ERR_FATAL,			CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("PSFS_PASS_ON",			PSFS_PASS_ON,			CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("PSFS_FEED_ME",			PSFS_FEED_ME,			CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("PSFS_ERR_FATAL",		PSFS_ERR_FATAL,			CONST_CS | CONST_PERSISTENT);
 
-	REGISTER_INT_CONSTANT("PSFS_FLAG_NORMAL",		PSFS_FLAG_NORMAL,		CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("PSFS_FLAG_FLUSH_INC",	PSFS_FLAG_FLUSH_INC,	CONST_CS | CONST_PERSISTENT);
-	REGISTER_INT_CONSTANT("PSFS_FLAG_FLUSH_CLOSE",	PSFS_FLAG_FLUSH_CLOSE,	CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("PSFS_FLAG_NORMAL",		PSFS_FLAG_NORMAL,		CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("PSFS_FLAG_FLUSH_INC",	PSFS_FLAG_FLUSH_INC,	CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("PSFS_FLAG_FLUSH_CLOSE",	PSFS_FLAG_FLUSH_CLOSE,	CONST_CS | CONST_PERSISTENT);
 	
 	return SUCCESS;
 }
@@ -203,7 +203,7 @@ php_stream_filter_status_t userfilter_filter(
 
 	ALLOC_INIT_ZVAL(zconsumed);
 	if (bytes_consumed) {
-		ZVAL_INT(zconsumed, *bytes_consumed);
+		ZVAL_LONG(zconsumed, *bytes_consumed);
 	} else {
 		ZVAL_NULL(zconsumed);
 	}
@@ -221,14 +221,14 @@ php_stream_filter_status_t userfilter_filter(
 			0, NULL TSRMLS_CC);
 
 	if (call_result == SUCCESS && retval != NULL) {
-		convert_to_int(retval);
-		ret = Z_IVAL_P(retval);
+		convert_to_long(retval);
+		ret = Z_LVAL_P(retval);
 	} else if (call_result == FAILURE) {
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "failed to call filter function");
 	}
 
 	if (bytes_consumed) {
-		*bytes_consumed = Z_IVAL_P(zconsumed);
+		*bytes_consumed = Z_LVAL_P(zconsumed);
 	}
 
 	if (retval) {
@@ -373,7 +373,7 @@ static php_stream_filter *user_filter_factory_create(const char *filtername,
 			0, NULL TSRMLS_CC);
 
 	if (retval) {
-		if (Z_TYPE_P(retval) == IS_BOOL && Z_IVAL_P(retval) == 0) {
+		if (Z_TYPE_P(retval) == IS_BOOL && Z_LVAL_P(retval) == 0) {
 			/* User reported filter creation error "return false;" */
 			zval_ptr_dtor(&retval);
 
@@ -433,7 +433,7 @@ PHP_FUNCTION(stream_bucket_make_writeable)
 		/* add_property_zval increments the refcount which is unwanted here */
 		zval_ptr_dtor(&zbucket);
 		add_property_stringl(return_value, "data", bucket->buf, bucket->buflen, 1);
-		add_property_int(return_value, "datalen", bucket->buflen);
+		add_property_long(return_value, "datalen", bucket->buflen);
 	}
 }
 /* }}} */
@@ -462,9 +462,9 @@ static void php_stream_bucket_attach(int append, INTERNAL_FUNCTION_PARAMETERS)
 		if (!bucket->own_buf) {
 			bucket = php_stream_bucket_make_writeable(bucket TSRMLS_CC);
 		}
-		if (bucket->buflen != Z_STRSIZE_PP(pzdata)) {
-			bucket->buf = perealloc(bucket->buf, Z_STRSIZE_PP(pzdata), bucket->is_persistent);
-			bucket->buflen = Z_STRSIZE_PP(pzdata);
+		if (bucket->buflen != Z_STRLEN_PP(pzdata)) {
+			bucket->buf = perealloc(bucket->buf, Z_STRLEN_PP(pzdata), bucket->is_persistent);
+			bucket->buflen = Z_STRLEN_PP(pzdata);
 		}
 		memcpy(bucket->buf, Z_STRVAL_PP(pzdata), bucket->buflen);
 	}
@@ -510,7 +510,7 @@ PHP_FUNCTION(stream_bucket_new)
 	php_size_t buffer_len;
 	php_stream_bucket *bucket;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zS", &zstream, &buffer, &buffer_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zs", &zstream, &buffer, &buffer_len) == FAILURE) {
 		RETURN_FALSE;
 	}
 
@@ -535,7 +535,7 @@ PHP_FUNCTION(stream_bucket_new)
 	/* add_property_zval increments the refcount which is unwanted here */
 	zval_ptr_dtor(&zbucket);
 	add_property_stringl(return_value, "data", bucket->buf, bucket->buflen, 1);
-	add_property_int(return_value, "datalen", bucket->buflen);
+	add_property_long(return_value, "datalen", bucket->buflen);
 }
 /* }}} */
 
@@ -577,7 +577,7 @@ PHP_FUNCTION(stream_filter_register)
 	php_size_t filtername_len, classname_len;
 	struct php_user_filter_data *fdat;
 	
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "SS", &filtername, &filtername_len,
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss", &filtername, &filtername_len,
 				&classname, &classname_len) == FAILURE) {
 		RETURN_FALSE;
 	}

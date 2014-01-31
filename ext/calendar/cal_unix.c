@@ -31,7 +31,7 @@ PHP_FUNCTION(unixtojd)
 	time_t ts = 0;
 	struct tm *ta, tmbuf;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|i", &ts) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|l", &ts) == FAILURE) {
 		return;
 	}	
 
@@ -45,7 +45,7 @@ PHP_FUNCTION(unixtojd)
 		RETURN_FALSE;
 	}
 
-	RETURN_INT(GregorianToSdn(ta->tm_year+1900, ta->tm_mon+1, ta->tm_mday));
+	RETURN_LONG(GregorianToSdn(ta->tm_year+1900, ta->tm_mon+1, ta->tm_mday));
 }
 /* }}} */
 
@@ -55,7 +55,7 @@ PHP_FUNCTION(jdtounix)
 {
 	php_int_t uday;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "i", &uday) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &uday) == FAILURE) {
 		return;
 	}	
 	uday -= 2440588 /* J.D. of 1.1.1970 */;
@@ -64,7 +64,7 @@ PHP_FUNCTION(jdtounix)
 		RETURN_FALSE;
 	}
 
-	RETURN_INT(uday * 24 * 3600);
+	RETURN_LONG(uday * 24 * 3600);
 }
 /* }}} */
 

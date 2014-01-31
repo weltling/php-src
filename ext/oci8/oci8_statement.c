@@ -920,11 +920,11 @@ int php_oci_bind_pre_exec(void *data, void *result TSRMLS_DC)
 		 * compatibility and used in php_oci_bind_post_exec.  So it
 		 * needs to be set here for the cases when the callback isn't
 		 * invoked. */
-		if (Z_STRSIZE_P(bind->zval) > SB4MAXVAL) { /* value_sz is sb4 */
+		if (Z_STRLEN_P(bind->zval) > SB4MAXVAL) { /* value_sz is sb4 */
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "String too long to bind");
 			*(int *)result = 1;
 		}
-		bind->bind_len = (ub4)Z_STRSIZE_P(bind->zval);
+		bind->bind_len = (ub4)Z_STRLEN_P(bind->zval);
 	}
 	switch (bind->type) {
 		case SQLT_NTY:
@@ -989,18 +989,18 @@ int php_oci_bind_post_exec(void *data TSRMLS_DC)
 		zval_dtor(val);
 		ZVAL_NULL(val);
 	} else if (Z_TYPE_P(bind->zval) == IS_STRING) {
-		Z_STRSIZE_P(bind->zval) = bind->bind_len;
-		if (Z_STRSIZE_P(bind->zval) > 0
-			&& Z_STRVAL_P(bind->zval)[Z_STRSIZE_P(bind->zval)] != '\0') {
+		Z_STRLEN_P(bind->zval) = bind->bind_len;
+		if (Z_STRLEN_P(bind->zval) > 0
+			&& Z_STRVAL_P(bind->zval)[Z_STRLEN_P(bind->zval)] != '\0') {
 			/* The post- PHP 5.3 feature for "interned" strings disallows
 			 * their reallocation but (i) any IN binds either interned or
 			 * not should already be null terminated and (ii) for OUT
 			 * binds, php_oci_bind_out_callback() should have allocated a
 			 * new string that we can modify here.
 			 */
-			if (Z_STRSIZE_P(bind->zval) < ZEND_SIZE_MAX)
-				Z_STRVAL_P(bind->zval) = erealloc(Z_STRVAL_P(bind->zval), Z_STRSIZE_P(bind->zval)+1);
-			Z_STRVAL_P(bind->zval)[Z_STRSIZE_P(bind->zval)] = '\0';
+			if (Z_STRLEN_P(bind->zval) < ZEND_SIZE_MAX)
+				Z_STRVAL_P(bind->zval) = erealloc(Z_STRVAL_P(bind->zval), Z_STRLEN_P(bind->zval)+1);
+			Z_STRVAL_P(bind->zval)[Z_STRLEN_P(bind->zval)] = '\0';
 		}
 	} else if (Z_TYPE_P(bind->zval) == IS_ARRAY) {
 		ub4 i;
@@ -1016,10 +1016,10 @@ int php_oci_bind_post_exec(void *data TSRMLS_DC)
 				for (i = 0; i < bind->array.current_length; i++) {
 					if ((i < bind->array.old_length) && (zend_hash_get_current_data(hash, (void **) &entry) != FAILURE)) {
 						zval_dtor(*entry);
-						ZVAL_INT(*entry, ((ub4 *)(bind->array.elements))[i]);
+						ZVAL_LONG(*entry, ((ub4 *)(bind->array.elements))[i]);
 						zend_hash_move_forward(hash);
 					} else {
-						add_next_index_int(bind->zval, ((ub4 *)(bind->array.elements))[i]);
+						add_next_index_long(bind->zval, ((ub4 *)(bind->array.elements))[i]);
 					}
 				}
 				break;
@@ -1159,8 +1159,8 @@ int php_oci_bind_by_name(php_oci_statement *statement, char *name, php_size_t na
 				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid variable used for bind");
 				return 1;
 			}
-			convert_to_int(var);
-			bind_data = (ub4 *)&Z_IVAL_P(var);
+			convert_to_long(var);
+			bind_data = (ub4 *)&Z_LVAL_P(var);
 			value_sz = sizeof(ub4);
 			mode = OCI_DEFAULT;
 			break;
@@ -1180,11 +1180,11 @@ int php_oci_bind_by_name(php_oci_statement *statement, char *name, php_size_t na
 
 			if (maxlength == -1) {
 				if (Z_TYPE_P(var) == IS_STRING) {
-					if (Z_STRSIZE_P(var) > SB4MAXVAL) {
+					if (Z_STRLEN_P(var) > SB4MAXVAL) {
 						php_error_docref(NULL TSRMLS_CC, E_WARNING, "String too long to bind");
 						return 1;
 					} else {
-						value_sz = Z_STRSIZE_P(var);
+						value_sz = Z_STRLEN_P(var);
 					}
 				} else {
 					value_sz = 0;
@@ -1343,7 +1343,7 @@ sb4 php_oci_bind_in_callback(
 		*alenp = -1;
 		*indpp = (dvoid *)&phpbind->indicator;
 	} else	if ((phpbind->descriptor == 0) && (phpbind->statement == 0)) {
-		if (Z_STRSIZE_P(val) > SB4MAXVAL) { /* OCIBindByName uses sb4 value_sz */
+		if (Z_STRLEN_P(val) > SB4MAXVAL) { /* OCIBindByName uses sb4 value_sz */
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "String too long to bind");
 			return OCI_ERROR;
 		}
@@ -1351,7 +1351,7 @@ sb4 php_oci_bind_in_callback(
 		convert_to_string(val);
 
 		*bufpp = Z_STRVAL_P(val);
-		*alenp = phpbind->bind_len = (ub4)Z_STRSIZE_P(val);
+		*alenp = phpbind->bind_len = (ub4)Z_STRLEN_P(val);
 		*indpp = (dvoid *)&phpbind->indicator;
 	} else if (phpbind->statement != 0) {
 		/* RSET */
@@ -1436,7 +1436,7 @@ sb4 php_oci_bind_out_callback(
 		phpbind->bind_len = PHP_OCI_PIECE_SIZE; /* 64K-1 is max */
 		Z_STRVAL_P(val) = ecalloc(1, phpbind->bind_len + 1);
 		
-		/* The length will be assigned to Z_STRSIZE_P(phpbind->zval) in php_oci_bind_post_exec */
+		/* The length will be assigned to Z_STRLEN_P(phpbind->zval) in php_oci_bind_post_exec */
 		*alenpp = &phpbind->bind_len; 
 		*bufpp = Z_STRVAL_P(phpbind->zval);
 		*piecep = OCI_ONE_PIECE;
@@ -1472,7 +1472,7 @@ php_oci_out_column *php_oci_statement_get_column_helper(INTERNAL_FUNCTION_PARAME
 	}
 	
 	if (Z_TYPE_P(column_index) == IS_STRING) {
-		column = php_oci_statement_get_column(statement, -1, Z_STRVAL_P(column_index), Z_STRSIZE_P(column_index) TSRMLS_CC);
+		column = php_oci_statement_get_column(statement, -1, Z_STRVAL_P(column_index), Z_STRLEN_P(column_index) TSRMLS_CC);
 		if (!column) {
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid column name \"%s\"", Z_STRVAL_P(column_index));
 			return NULL;
@@ -1482,10 +1482,10 @@ php_oci_out_column *php_oci_statement_get_column_helper(INTERNAL_FUNCTION_PARAME
 		/* NB: for PHP4 compat only, it should be using 'Z' instead */
 		tmp = *column_index;
 		zval_copy_ctor(&tmp);
-		convert_to_int(&tmp);
-		column = php_oci_statement_get_column(statement, Z_IVAL(tmp), NULL, 0 TSRMLS_CC);
+		convert_to_long(&tmp);
+		column = php_oci_statement_get_column(statement, Z_LVAL(tmp), NULL, 0 TSRMLS_CC);
 		if (!column) {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid column index \"" ZEND_INT_FMT "\"", Z_IVAL(tmp));
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid column index \"" ZEND_INT_FMT "\"", Z_LVAL(tmp));
 			zval_dtor(&tmp);
 			return NULL;
 		}
@@ -1658,8 +1658,8 @@ php_oci_bind *php_oci_bind_array_helper_string(zval *var, php_int_t max_table_le
 		zend_hash_internal_pointer_reset(hash);
 		while (zend_hash_get_current_data(hash, (void **) &entry) != FAILURE) {
 			convert_to_string_ex(entry);
-			if (maxlength < 0 || (maxlength >= 0 && Z_STRSIZE_PP(entry) > maxlength && Z_STRSIZE_PP(entry) < ZEND_INT_MAX)) {
-				maxlength = Z_STRSIZE_PP(entry) + 1;
+			if (maxlength < 0 || (maxlength >= 0 && Z_STRLEN_PP(entry) > maxlength && Z_STRLEN_PP(entry) < ZEND_INT_MAX)) {
+				maxlength = Z_STRLEN_PP(entry) + 1;
 			}
 			zend_hash_move_forward(hash);
 		}
@@ -1681,8 +1681,8 @@ php_oci_bind *php_oci_bind_array_helper_string(zval *var, php_int_t max_table_le
 	for (i = 0; i < bind->array.current_length; i++) {
 		if (zend_hash_get_current_data(hash, (void **) &entry) != FAILURE) {
 			convert_to_string_ex(entry);
-			bind->array.element_lengths[i] = Z_STRSIZE_PP(entry) > UB2MAXVAL ? UB2MAXVAL : Z_STRSIZE_PP(entry);
-			if (Z_STRSIZE_PP(entry) == 0) {
+			bind->array.element_lengths[i] = Z_STRLEN_PP(entry) > UB2MAXVAL ? UB2MAXVAL : Z_STRLEN_PP(entry);
+			if (Z_STRLEN_PP(entry) == 0) {
 				bind->array.indicators[i] = -1;
 			}
 			zend_hash_move_forward(hash);
@@ -1697,7 +1697,7 @@ php_oci_bind *php_oci_bind_array_helper_string(zval *var, php_int_t max_table_le
 			php_size_t element_length;
 			
 			convert_to_string_ex(entry);
-			element_length = (maxlength > Z_STRSIZE_PP(entry)) ? Z_STRSIZE_PP(entry) : maxlength;
+			element_length = (maxlength > Z_STRLEN_PP(entry)) ? Z_STRLEN_PP(entry) : maxlength;
 			
 			memcpy((text *)bind->array.elements + i*maxlength, Z_STRVAL_PP(entry), element_length);
 			((text *)bind->array.elements)[i*maxlength + element_length] = '\0';
@@ -1739,8 +1739,8 @@ php_oci_bind *php_oci_bind_array_helper_number(zval *var, php_int_t max_table_le
 			bind->array.element_lengths[i] = sizeof(ub4);
 		}
 		if ((i < bind->array.current_length) && (zend_hash_get_current_data(hash, (void **) &entry) != FAILURE)) {
-			convert_to_int_ex(entry);
-			((ub4 *)bind->array.elements)[i] = (ub4) Z_IVAL_PP(entry);
+			convert_to_long_ex(entry);
+			((ub4 *)bind->array.elements)[i] = (ub4) Z_LVAL_PP(entry);
 			zend_hash_move_forward(hash);
 		} else {
 			((ub4 *)bind->array.elements)[i] = 0;
@@ -1821,7 +1821,7 @@ php_oci_bind *php_oci_bind_array_helper_date(zval *var, php_int_t max_table_leng
 		if ((i < bind->array.current_length) && (zend_hash_get_current_data(hash, (void **) &entry) != FAILURE)) {
 			
 			convert_to_string_ex(entry);
-			PHP_OCI_CALL_RETURN(errstatus, OCIDateFromText, (connection->err, (CONST text *)Z_STRVAL_PP(entry), Z_STRSIZE_PP(entry), NULL, 0, NULL, 0, &oci_date));
+			PHP_OCI_CALL_RETURN(errstatus, OCIDateFromText, (connection->err, (CONST text *)Z_STRVAL_PP(entry), Z_STRLEN_PP(entry), NULL, 0, NULL, 0, &oci_date));
 
 			if (errstatus != OCI_SUCCESS) {
 				/* failed to convert string to date */

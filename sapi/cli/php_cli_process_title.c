@@ -34,7 +34,7 @@ PHP_FUNCTION(cli_set_process_title)
     php_size_t title_len;
     int rc;
 
-    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "S", &title, &title_len) == FAILURE) {
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &title, &title_len) == FAILURE) {
         return;
     }
 
