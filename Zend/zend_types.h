@@ -215,6 +215,28 @@ struct _zend_ast_ref {
 	zend_ast         *ast;
 };
 
+#if defined(ZEND_HAVE_LIBTOMMATH)
+
+#include "tommath.h"
+
+struct _zend_bigint {
+	zend_refcounted   gc;
+	mp_int			mp;
+};
+
+#elif defined(ZEND_HAVE_GMP)
+
+#include <gmp.h>
+
+struct _zend_bigint {
+    zend_refcounted   gc;
+    mpz_t             mpz;
+};
+
+#else
+#	error Neither LibTomMath nor GMP available
+#endif
+
 /* regular data types */
 #define IS_UNDEF					0
 #define IS_NULL						1
