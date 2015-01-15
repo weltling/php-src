@@ -150,7 +150,7 @@ static zend_always_inline zend_long zend_dval_to_lval(double d)
 			dmod += two_pow_64;
 		}
 		return (zend_long)(zend_ulong)dmod;
-	} else if (UNEXPECTED(isnan(d))) {
+	} else if (UNEXPECTED(zend_isnan(d))) {
 		return 0;
 	}
 	return (zend_long)d;
