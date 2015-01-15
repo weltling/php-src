@@ -401,6 +401,12 @@ char *alloca();
 #define ZEND_VALID_SOCKET(sock) ((sock) >= 0)
 #endif
 
+#ifdef ZEND_WIN32
+#ifndef isnan
+#define isnan _isnan
+#endif
+#endif
+
 #endif /* ZEND_PORTABILITY_H */
 
 /*
