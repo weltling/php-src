@@ -768,7 +768,7 @@ PHP_JSON_API void php_json_decode_ex(zval *return_value, char *str, size_t str_l
 				}
 			} else if (type == IS_BIGINT) {
 				/* XXX doube/bigint decode needs to be fixed */
-				RETVAL_BIGINT(p);
+				RETVAL_BIGINT(big);
 			}
 		}
 
