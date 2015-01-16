@@ -21,8 +21,11 @@
 #ifndef ZEND_BIGINT_H
 #define ZEND_BIGINT_H
 
+#include <gmp.h>
+
 #include "zend.h"
 #include "zend_types.h"
+
 
 
 /*** INTERNAL FUNCTIONS ***/

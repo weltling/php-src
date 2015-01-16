@@ -68,6 +68,11 @@ static void zend_bigint_free(void *ptr)
 /* We'll build libtommath as part of this file */
 #include "libtommath/mpi.c"
 
+struct _zend_bigint {
+	zend_refcounted   gc;
+	mp_int			mp;
+};
+
 /*** INTERNAL MACROS ***/
 
 #define int_abs(n) ((n) >= 0 ? (n) : -(n)) 
