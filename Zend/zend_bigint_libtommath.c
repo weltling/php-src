@@ -39,29 +39,29 @@
  * emalloc/realloc/free are macros, not functions, so we need wrappers to pass
  * them as our custom allocators
  */
-static void* zend_bigint_malloc(size_t size)
+static void* zend_bigint_custom_malloc(size_t size)
 {
 	return emalloc(size);
 }
-#define XMALLOC zend_bigint_malloc
+#define XMALLOC zend_bigint_custom_malloc
 
-static void* zend_bigint_realloc(void *ptr, size_t size)
+static void* zend_bigint_custom_realloc(void *ptr, size_t size)
 {
 	return erealloc(ptr, size);
 }
-#define XREALLOC zend_bigint_realloc
+#define XREALLOC zend_bigint_custom_realloc
 
-static void* zend_bigint_calloc(size_t num, size_t size)
+static void* zend_bigint_custom_calloc(size_t num, size_t size)
 {
 	return ecalloc(num, size);
 }
-#define XCALLOC zend_bigint_calloc
+#define XCALLOC zend_bigint_custom_calloc
 
-static void zend_bigint_free(void *ptr)
+static void zend_bigint_custom_free(void *ptr)
 {
 	efree(ptr);
 }
-#define XFREE zend_bigint_free
+#define XFREE zend_bigint_custom_free
 
 #include "tommath.h"
 
@@ -204,56 +204,46 @@ void zend_startup_bigint(void)
 
 /*** INITIALISERS ***/
 
-ZEND_API zend_bigint* zend_bigint_alloc(void) /* {{{ */
+ZEND_API zend_bigint* zend_bigint_init(void) /* {{{ */
 {
-	return emalloc(sizeof(zend_bigint));
-}
-/* }}} */
-
-ZEND_API void zend_bigint_init(zend_bigint *big) /* {{{ */
-{
-	GC_REFCOUNT(big) = 1;
-	GC_TYPE_INFO(big) = IS_BIGINT;
-	CHECK_ERROR(mp_init(&big->mp));
-}
-/* }}} */
-
-ZEND_API zend_bigint* zend_bigint_init_alloc(void) /* {{{ */
-{
-	zend_bigint *return_value;
-	return_value = zend_bigint_alloc();
-	zend_bigint_init(return_value);
+	zend_bigint *return_value = emalloc(sizeof(zend_bigint));
+	GC_REFCOUNT(return_value) = 1;
+	GC_TYPE_INFO(return_value) = IS_BIGINT;
+	CHECK_ERROR(mp_init(&return_value->mp));
 	return return_value;
 }
 /* }}} */
 
-ZEND_API int zend_bigint_init_from_string(zend_bigint *big, const char *str, int base) /* {{{ */
+ZEND_API zend_bigint* zend_bigint_init_from_string(const char *str, int base) /* {{{ */
 {
-	zend_bigint_init(big);
+	zend_bigint *big = zend_bigint_init();
+
 	if (mp_read_radix(&big->mp, str, base) < 0) {
-		mp_clear(&big->mp);
-		return FAILURE;
+		zend_bigint_release(big);
+		return NULL;
 	}
-	return SUCCESS;
+	return big;
 }
 /* }}} */
 
-ZEND_API int zend_bigint_init_from_string_length(zend_bigint *big, const char *str, size_t length, int base) /* {{{ */
+ZEND_API zend_bigint* zend_bigint_init_from_string_length(const char *str, size_t length, int base) /* {{{ */
 {
+	zend_bigint *big = zend_bigint_init();
 	char *temp_str = estrndup(str, length);
-	zend_bigint_init(big);
+
 	if (mp_read_radix(&big->mp, temp_str, base) < 0) {
-		mp_clear(&big->mp);
+		zend_bigint_release(big);
 		efree(temp_str);
-		return FAILURE;
+		return NULL;
 	}
 	efree(temp_str);
-	return SUCCESS;
+	return big;
 }
 /* }}} */
 
-ZEND_API void zend_bigint_init_strtol(zend_bigint *big, const char *str, char** endptr, int base) /* {{{ */
+ZEND_API zend_bigint* zend_bigint_init_strtol(const char *str, char** endptr, int base) /* {{{ */
 {
+	zend_bigint *big = zend_bigint_init();
 	size_t len = 0;
 
 	/* Skip leading whitespace */
@@ -286,7 +276,6 @@ ZEND_API void zend_bigint_init_strtol(zend_bigint *big, const char *str, char** 
 		}
 	}
 
-	zend_bigint_init(big);
 	if (len) {
 		char *temp_str = estrndup(str, len);
 		/* we ignore the return value since if it fails it'll just be zero anyway */
@@ -297,46 +286,51 @@ ZEND_API void zend_bigint_init_strtol(zend_bigint *big, const char *str, char** 
 	if (endptr) {
 		*endptr = (char*)(str + len);
 	}
+
+	return big;
 }
 /* }}} */
 
-ZEND_API void zend_bigint_init_from_long(zend_bigint *big, zend_long value) /* {{{ */
+ZEND_API zend_bigint* zend_bigint_init_from_long(zend_long value) /* {{{ */
 {
-	zend_bigint_init(big);
+	zend_bigint *big = zend_bigint_init();
 	zend_bigint_long_to_mp_int(value, &big->mp);
+	return big;
 }
 /* }}} */
 
-ZEND_API void zend_bigint_init_from_double(zend_bigint *big, double value) /* {{{ */
+ZEND_API zend_bigint* zend_bigint_init_from_double(double value) /* {{{ */
 {
-	zend_bigint_init(big);
+	zend_bigint *big = zend_bigint_init();
 	/* prevents crash and ensures zed_dval_to_lval conformity */
 	if (zend_finite(value) && !zend_isnan(value)) {
 		/* FIXME: Handle larger doubles */
 		zend_bigint_long_to_mp_int(zend_dval_to_lval(value), &big->mp);
 	}
+	return big;
 }
 /* }}} */
 
-ZEND_API void zend_bigint_init_dup(zend_bigint *big, const zend_bigint *source) /* {{{ */
+ZEND_API zend_bigint* zend_bigint_dup(const zend_bigint *source) /* {{{ */
 {
-	zend_bigint_init(big);
+	zend_bigint *big = zend_bigint_init();
 	CHECK_ERROR(mp_copy((mp_int *)&source->mp, &big->mp));
-}
-/* }}} */
-
-ZEND_API void zend_bigint_dtor(zend_bigint *big) /* {{{ */
-{
-	mp_clear(&big->mp);
+	return big;
 }
 /* }}} */
 
 ZEND_API void zend_bigint_release(zend_bigint *big) /* {{{ */
 {
 	if (--GC_REFCOUNT(big) <= 0) {
-		zend_bigint_dtor(big);
+		mp_clear(&big->mp);
 		efree(big);
 	}
+}
+
+ZEND_API void zend_bigint_free(zend_bigint *big) /* {{{ */
+{
+	mp_clear(&big->mp);
+	efree(big);
 }
 /* }}} */
 
@@ -779,44 +773,118 @@ ZEND_API void zend_bigint_ones_complement(zend_bigint *out, const zend_bigint *o
 }
 /* }}} */
 
+static void zend_always_inline _zend_bigint_twos_complement(mp_int *out, mp_int *in, int size) /* {{{ */
+{
+	mp_int tmp;
+
+	/* two's complement of a number is 2^width - n
+	 * so first we need 2^width
+	 */
+	CHECK_ERROR(mp_init(&tmp));
+	CHECK_ERROR(mp_set_int(&tmp, 1));
+	CHECK_ERROR(mp_mul_2d(&tmp, size + 1, &tmp));
+
+	/* then, we subtract (or add if our number is already negative) */
+	if (SIGN(in) == MP_NEG) {
+		CHECK_ERROR(mp_add(&tmp, in, out));
+	} else {
+		CHECK_ERROR(mp_sub(&tmp, in, out));
+	}
+
+	mp_clear(&tmp);
+}
+/* }}} */
+
+static void zend_always_inline _zend_bigint_bitwise_op(mp_int *out, mp_int *real_op1, mp_int *real_op2, char op) /* {{{ */
+{
+	zend_bool op1_sign, op2_sign, sign;
+	mp_int op1_copy, op2_copy;
+	int largest_bit_width;
+
+	op1_sign = (SIGN(real_op1) == MP_NEG);
+	op2_sign = (SIGN(real_op2) == MP_NEG);
+
+	/* to emulate two's-complement OR, get twos' complement of negatives */
+	largest_bit_width = MAX(mp_count_bits(real_op1), mp_count_bits(real_op2));
+	if (op1_sign) {
+		CHECK_ERROR(mp_init(&op1_copy));
+		_zend_bigint_twos_complement(&op1_copy, real_op1, largest_bit_width);
+		real_op1 = &op1_copy;
+	}
+	if (op2_sign) {
+		CHECK_ERROR(mp_init(&op2_copy));
+		_zend_bigint_twos_complement(&op2_copy, real_op2, largest_bit_width); 
+		real_op2 = &op2_copy;
+	}
+
+	switch (op) {
+		case '|':
+			CHECK_ERROR(mp_or(real_op1, real_op2, out));
+			sign = op1_sign | op2_sign;
+			break;
+		case '^':
+			CHECK_ERROR(mp_xor(real_op1, real_op2, out));
+			sign = op1_sign ^ op2_sign;
+			break;
+		case '&':
+			CHECK_ERROR(mp_and(real_op1, real_op2, out));
+			sign = op1_sign & op2_sign;
+			break;
+	}
+
+	/* since the sign is negative, we need to undo twos' complement */
+	if (sign) {
+		_zend_bigint_twos_complement(out, out, largest_bit_width);
+		mp_neg(out, out);
+	}
+
+	if (op1_sign) {
+		mp_clear(&op1_copy);
+	}
+	if (op2_sign) {
+		mp_clear(&op2_copy);
+	}
+}
+/* }}} */
+
 ZEND_API void zend_bigint_or(zend_bigint *out, const zend_bigint *op1, const zend_bigint *op2) /* {{{ */
 {
-	CHECK_ERROR(mp_or((mp_int*)&op1->mp, (mp_int*)&op2->mp, &out->mp));
+	_zend_bigint_bitwise_op(&out->mp, (mp_int*)&op1->mp, (mp_int*)&op2->mp, '|');
 }
 /* }}} */
 
 ZEND_API void zend_bigint_or_long(zend_bigint *out, const zend_bigint *op1, zend_long op2) /* {{{ */
 {
 	WITH_TEMP_MP_FROM_ZEND_LONG(op2, op2_mp, {
-		CHECK_ERROR(mp_or((mp_int*)&op1->mp, &op2_mp, &out->mp));
+		_zend_bigint_bitwise_op(&out->mp, (mp_int*)&op1->mp, &op2_mp, '|');
 	})
 }
 /* }}} */
 
 ZEND_API void zend_bigint_and(zend_bigint *out, const zend_bigint *op1, const zend_bigint *op2) /* {{{ */
 {
-	CHECK_ERROR(mp_and((mp_int*)&op1->mp, (mp_int*)&op2->mp, &out->mp));
+	_zend_bigint_bitwise_op(&out->mp, (mp_int*)&op1->mp, (mp_int*)&op2->mp, '&');
 }
 /* }}} */
 
 ZEND_API void zend_bigint_and_long(zend_bigint *out, const zend_bigint *op1, zend_long op2) /* {{{ */
 {
 	WITH_TEMP_MP_FROM_ZEND_LONG(op2, op2_mp, {
-		CHECK_ERROR(mp_and((mp_int*)&op1->mp, &op2_mp, &out->mp));
+		_zend_bigint_bitwise_op(&out->mp, (mp_int*)&op1->mp, &op2_mp, '&');
 	})
 }
 /* }}} */
 
 ZEND_API void zend_bigint_xor(zend_bigint *out, const zend_bigint *op1, const zend_bigint *op2) /* {{{ */
 {
-	CHECK_ERROR(mp_xor((mp_int*)&op1->mp, (mp_int*)&op2->mp, &out->mp));
+	_zend_bigint_bitwise_op(&out->mp, (mp_int*)&op1->mp, (mp_int*)&op2->mp, '^');
 }
 /* }}} */
 
 ZEND_API void zend_bigint_xor_long(zend_bigint *out, const zend_bigint *op1, zend_long op2) /* {{{ */
 {
 	WITH_TEMP_MP_FROM_ZEND_LONG(op2, op2_mp, {
-		CHECK_ERROR(mp_xor((mp_int*)&op1->mp, &op2_mp, &out->mp));
+		_zend_bigint_bitwise_op(&out->mp, (mp_int*)&op1->mp, &op2_mp, '^');
 	})
 }
 /* }}} */

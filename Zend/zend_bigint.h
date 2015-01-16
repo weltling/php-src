@@ -21,12 +21,8 @@
 #ifndef ZEND_BIGINT_H
 #define ZEND_BIGINT_H
 
-#include <gmp.h>
-
 #include "zend.h"
 #include "zend_types.h"
-
-
 
 /*** INTERNAL FUNCTIONS ***/
 
@@ -40,26 +36,19 @@ void zend_startup_bigint(void);
  * the data it points is not.
  */
 
-/* Allocates a bigint and returns pointer, does NOT initialise */
-ZEND_API zend_bigint* zend_bigint_alloc(void);
+/* Allocates and initialises ("creates") a bigint, returns pointer */
+ZEND_API zend_bigint* zend_bigint_init(void);
 
-/* Initialises a bigint */
-ZEND_API void zend_bigint_init(zend_bigint *big);
-
-/* Convenience function: Allocates and initialises a bigint, returns pointer */
-ZEND_API zend_bigint* zend_bigint_init_alloc(void);
-
-/* Initialises a bigint from a string with the specified base (in range 2-36)
- * Returns FAILURE on failure (if the string is not entirely numeric), else SUCCESS
+/* Creates a bigint from a string with the specified base (in range 2-36)
+ * Returns NULL on failure (if the string is not entirely numeric)
  */
-ZEND_API int zend_bigint_init_from_string(zend_bigint *big, const char *str, int base);
+ZEND_API zend_bigint* zend_bigint_init_from_string(const char *str, int base);
 
-/* Initialises a bigint from a string with the specified base (in range 2-36)
- * Takes a length - due to an extra memory allocation, this function is slower
- * Returns FAILURE on failure, else SUCCESS */
-ZEND_API int zend_bigint_init_from_string_length(zend_bigint *big, const char *str, size_t length, int base);
+/* Creates a bigint from a string with the specified base (in range 2-36)
+ * Returns NULL on failure */
+ZEND_API zend_bigint* zend_bigint_init_from_string_length(const char *str, size_t length, int base);
 
-/* Intialises a bigint from a C-string with the specified base (10 or 16)
+/* Creates a bigint from a C-string with the specified base (10 or 16)
  * If endptr is not NULL, it it set to point to first character after number
  * If base is zero, it shall be detected from the prefix: 0x/0X for 16, else 10
  * Leading whitespace is ignored, will take as many valid characters as possible
@@ -67,22 +56,22 @@ ZEND_API int zend_bigint_init_from_string_length(zend_bigint *big, const char *s
  * If there are no valid characters, the bigint is initialised to zero
  * This behaviour is supposed to match that of strtol but is not exactly the same
  */
-ZEND_API void zend_bigint_init_strtol(zend_bigint *big, const char *str, char** endptr, int base);
+ZEND_API zend_bigint* zend_bigint_init_strtol(const char *str, char** endptr, int base);
 
-/* Initialises a bigint from a long */
-ZEND_API void zend_bigint_init_from_long(zend_bigint *big, zend_long value);
+/* Creates a bigint from a long */
+ZEND_API zend_bigint* zend_bigint_init_from_long(zend_long value);
 
-/* Initialises a bigint from a double */
-ZEND_API void zend_bigint_init_from_double(zend_bigint *big, double value);
+/* Creates a bigint from a double */
+ZEND_API zend_bigint* zend_bigint_init_from_double(double value);
 
-/* Initialises a bigint and duplicates a bigint to it (copies value) */
-ZEND_API void zend_bigint_init_dup(zend_bigint *big, const zend_bigint *source);
-
-/* Destroys a bigint (does NOT deallocate) */
-ZEND_API void zend_bigint_dtor(zend_bigint *big);
+/* Creates a bigint and from another bigint, duplicating its value */
+ZEND_API zend_bigint* zend_bigint_dup(const zend_bigint *source);
 
 /* Decreases the refcount of a bigint and, if <= 0, destroys and frees it */
 ZEND_API void zend_bigint_release(zend_bigint *big);
+
+/* Destroys and frees a bigint */
+ZEND_API void zend_bigint_free(zend_bigint *big);
 
 /*** INFORMATION ***/
 
@@ -164,7 +153,7 @@ ZEND_API void zend_bigint_long_pow_ulong(zend_bigint *out, zend_long base, zend_
 
 /* Divides an integer by an integer
  * _as_double functions may provide better precision than converting to double
- * and doing a floating-point division
+ * and doing a floating-point division would
  */
 ZEND_API void zend_bigint_divide(zend_bigint *out, const zend_bigint *big, const zend_bigint *divisor);
 ZEND_API double zend_bigint_divide_as_double(const zend_bigint *num, const zend_bigint *divisor);
@@ -173,31 +162,45 @@ ZEND_API double zend_bigint_divide_long_as_double(const zend_bigint *num, zend_l
 ZEND_API void zend_bigint_long_divide(zend_bigint *out, zend_long big, const zend_bigint *divisor);
 ZEND_API double zend_bigint_long_divide_as_double(zend_long num, const zend_bigint *divisor);
 
-/* Finds the remainder of the division of two integers */
+/* Finds the remainder of the division of two integers
+ * The result always has the sign of the divisor, like in C and PHP
+ */
 ZEND_API void zend_bigint_modulus(zend_bigint *out, const zend_bigint *num, const zend_bigint *divisor);
 ZEND_API void zend_bigint_modulus_long(zend_bigint *out, const zend_bigint *num, zend_long divisor);
 ZEND_API void zend_bigint_long_modulus(zend_bigint *out, zend_long num, const zend_bigint *divisor);
 
-/* Finds the one's complement of an integer */
+/* Finds the one's complement of an integer
+ * If you're used to two's-complement arithmetic, this is equivalent to a
+ * bitwise NOT on a two's-complement signed integer
+ */
 ZEND_API void zend_bigint_ones_complement(zend_bigint *out, const zend_bigint *op);
 
-/* Finds the bitwise OR of two integers */
+/* Finds the bitwise OR of two integers
+ * Uses two's-complement arithmetic for negative numbers */
 ZEND_API void zend_bigint_or(zend_bigint *out, const zend_bigint *op1, const zend_bigint *op2);
 ZEND_API void zend_bigint_or_long(zend_bigint *out, const zend_bigint *op1, zend_long op2);
 
-/* Finds the bitwise AND of two integers */
+/* Finds the bitwise AND of two integers
+ * Uses two's-complement arithmetic for negative numbers */
 ZEND_API void zend_bigint_and(zend_bigint *out, const zend_bigint *op1, const zend_bigint *op2);
 ZEND_API void zend_bigint_and_long(zend_bigint *out, const zend_bigint *op1, zend_long op2);
 
-/* Finds the bitwise XOR of two integers */
+/* Finds the bitwise XOR of two integers
+ * Uses two's-complement arithmetic for negative numbers */
 ZEND_API void zend_bigint_xor(zend_bigint *out, const zend_bigint *op1, const zend_bigint *op2);
 ZEND_API void zend_bigint_xor_long(zend_bigint *out, const zend_bigint *op1, zend_long op2);
 
-/* Shifts an integer left by an integer number of bits */
+/* Shifts an integer left by an integer number of bits
+ * This is a logical left shift, like C
+ */
 ZEND_API void zend_bigint_shift_left_ulong(zend_bigint *out, const zend_bigint *num, zend_ulong shift);
 ZEND_API void zend_bigint_long_shift_left_ulong(zend_bigint *out, zend_long num, zend_ulong shift);
 
-/* Shifts an integer right by an integer number of bits */
+/* Shifts an integer right by an integer number of bits
+ * This is an arithmetic (sign-extending) right shift, like C in most compilers
+ * While bigints are not usually represented as two's complement, it acts the
+ * same as a two's-complement arithmetic right shift
+ */
 ZEND_API void zend_bigint_shift_right_ulong(zend_bigint *out, const zend_bigint *num, zend_ulong shift);
 
 /* Compares two numbers
