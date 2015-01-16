@@ -740,8 +740,6 @@ PHP_JSON_API void php_json_decode_ex(zval *return_value, char *str, size_t str_l
 			if (type == IS_LONG) {
 				RETVAL_LONG(p);
 			} else if (type == IS_DOUBLE) {
-				/* XXX PHP_JSON_BIGINT_AS_STRING should be the default path, rather a negating option
-					should be exposed to the userland. */
 				if (options & PHP_JSON_BIGINT_AS_STRING && overflow_info) {
 					/* Within an object or array, a numeric literal is assumed
 					 * to be an integer if and only if it's entirely made up of
@@ -768,6 +766,9 @@ PHP_JSON_API void php_json_decode_ex(zval *return_value, char *str, size_t str_l
 				} else {
 					RETVAL_DOUBLE(d);
 				}
+			} else if (type == IS_BIGINT) {
+				/* XXX doube/bigint decode needs to be fixed */
+				RETVAL_BIGINT(p);
 			}
 		}
 
