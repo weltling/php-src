@@ -2114,6 +2114,7 @@ PHP_FUNCTION(strripos)
 		needle = Z_STR_P(zneedle);
 	} else {
 		if (php_needle_char(zneedle, ord_needle->val) != SUCCESS) {
+			STR_ALLOCA_FREE(ord_needle, use_heap);
 			RETURN_FALSE;
 		}
 		ord_needle->val[1] = '\0';
@@ -2121,6 +2122,7 @@ PHP_FUNCTION(strripos)
 	}
 
 	if ((haystack->len == 0) || (needle->len == 0)) {
+		STR_ALLOCA_FREE(ord_needle, use_heap);
 		RETURN_FALSE;
 	}
 
@@ -4550,7 +4552,7 @@ PHP_FUNCTION(setlocale)
 					}
 					if (len == loc->len && !memcmp(loc->val, retval, len)) {
 						BG(locale_string) = zend_string_copy(loc);
-						RETURN_STR(zend_string_copy(BG(locale_string)));
+						RETURN_STR(BG(locale_string));
 					} else {
 						BG(locale_string) = zend_string_init(retval, len, 0);
 						zend_string_release(loc);
