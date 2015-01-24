@@ -119,13 +119,17 @@ extern ZEND_API zend_gc_globals gc_globals;
 #endif
 
 BEGIN_EXTERN_C()
-ZEND_API int  gc_collect_cycles(void);
+ZEND_API extern int (*gc_collect_cycles)(void);
+
 ZEND_API void gc_possible_root(zend_refcounted *ref);
 ZEND_API void gc_remove_from_buffer(zend_refcounted *ref);
 ZEND_API void gc_globals_ctor(void);
 ZEND_API void gc_globals_dtor(void);
 ZEND_API void gc_init(void);
 ZEND_API void gc_reset(void);
+
+/* The default implementation of the gc_collect_cycles callback. */
+ZEND_API int  zend_gc_collect_cycles(void);
 END_EXTERN_C()
 
 #define GC_ZVAL_CHECK_POSSIBLE_ROOT(z) \
@@ -141,7 +145,7 @@ END_EXTERN_C()
 static zend_always_inline void gc_check_possible_root(zval *z)
 {
 	ZVAL_DEREF(z);
-	if (Z_COLLECTABLE_P(z) && UNEXPECTED(!Z_GC_INFO_P(z)) && EXPECTED(GC_TYPE(Z_COUNTED_P(z)) != IS_NULL)) {
+	if (Z_COLLECTABLE_P(z) && UNEXPECTED(!Z_GC_INFO_P(z))) {
 		gc_possible_root(Z_COUNTED_P(z));
 	}
 }

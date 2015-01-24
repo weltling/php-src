@@ -31,6 +31,8 @@ ZEND_API int gc_globals_id;
 ZEND_API zend_gc_globals gc_globals;
 #endif
 
+ZEND_API int (*gc_collect_cycles)(TSRMLS_D);
+
 #define GC_REMOVE_FROM_ROOTS(current) \
 	gc_remove_from_roots((current))
 
@@ -137,7 +139,11 @@ ZEND_API void gc_init(void)
 
 ZEND_API void gc_possible_root(zend_refcounted *ref)
 {
-	ZEND_ASSERT(CG(unclean_shutdown) || (GC_TYPE(ref) == IS_ARRAY || GC_TYPE(ref) == IS_OBJECT));
+	if (UNEXPECTED(GC_TYPE(ref) == IS_NULL) || UNEXPECTED(CG(unclean_shutdown))) {
+		return;
+	}
+
+	ZEND_ASSERT(GC_TYPE(ref) == IS_ARRAY || GC_TYPE(ref) == IS_OBJECT);
 	GC_BENCH_INC(zval_possible_root);
 
 	if (EXPECTED(GC_GET_COLOR(GC_INFO(ref)) == GC_BLACK)) {
@@ -697,7 +703,7 @@ tail_call:
 	}
 }
 
-ZEND_API int gc_collect_cycles(void)
+ZEND_API int zend_gc_collect_cycles(void)
 {
 	int count = 0;
 
