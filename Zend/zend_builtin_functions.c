@@ -1986,74 +1986,73 @@ ZEND_FUNCTION(zend_test_func2)
    Return an array containing the names and addresses of specific or all interfaces */
 ZEND_FUNCTION(get_network_interfaces)
 {
-    char *specific = NULL;
-    size_t specific_len;
+	char *specific = NULL;
+	size_t specific_len;
+#if defined(HAVE_IFADDRS_H)
+	struct ifaddrs  *interfaces, 
+			*interface;
+#endif
 
-    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|s", &specific, &specific_len) == FAILURE) {
-        return;
-    }
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|s", &specific, &specific_len) == FAILURE) {
+		return;
+	}
 
 #if defined(HAVE_IFADDRS_H)
-    {
-        struct ifaddrs  *interfaces, 
-                        *interface;
+	if (getifaddrs(&interfaces) != -1) {
+	    char host[NI_MAXHOST];
+	    
+	    array_init(return_value);
+	    
+	    for (interface = interfaces; interface != NULL; interface = interface->ifa_next) {
+		if (interface->ifa_addr != NULL) {
+		    zval *next = NULL;
+		    zend_ulong ifa_name_len = strlen(interface->ifa_name);
+		    
+		    if (!specific ||
+			memcmp(interface->ifa_name, specific, specific_len > ifa_name_len ? ifa_name_len : specific_len) == SUCCESS) {
+			switch (interface->ifa_addr->sa_family) {
+			    case AF_INET:
+			    case AF_INET6: {
+				MAKE_STD_ZVAL(next);
 
-        if (getifaddrs(&interfaces) != -1) {
-            char host[NI_MAXHOST];
-            
-            array_init(return_value);
-            
-            for (interface = interfaces; interface != NULL; interface = interface->ifa_next) {
-                if (interface->ifa_addr != NULL) {
-                    zval *next = NULL;
-                    zend_ulong ifa_name_len = strlen(interface->ifa_name);
-                    
-                    if (!specific ||
-                        memcmp(interface->ifa_name, specific, specific_len > ifa_name_len ? ifa_name_len : specific_len) == SUCCESS) {
-                        switch (interface->ifa_addr->sa_family) {
-                            case AF_INET:
-                            case AF_INET6: {
-                                MAKE_STD_ZVAL(next);
+				array_init(next);
 
-                                array_init(next);
+				add_assoc_string_ex(
+				    next, "name", sizeof("name"), interface->ifa_name, 1);
+				add_assoc_long_ex(
+				    next, "flags", sizeof("flags"), interface->ifa_flags);
+				add_assoc_long_ex(
+				    next, "family", sizeof("family"), interface->ifa_addr->sa_family);
 
-                                add_assoc_string_ex(
-                                    next, "name", sizeof("name"), interface->ifa_name, 1);
-                                add_assoc_long_ex(
-                                    next, "flags", sizeof("flags"), interface->ifa_flags);
-                                add_assoc_long_ex(
-                                    next, "family", sizeof("family"), interface->ifa_addr->sa_family);
+				if (getnameinfo(interface->ifa_addr,
+					(interface->ifa_addr->sa_family == AF_INET) ? 
+					    sizeof(struct sockaddr_in) : 
+					    sizeof(struct sockaddr_in6),
+					host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST) == SUCCESS) {
+				    add_assoc_string_ex(next, "address", sizeof("address"), host, 1);
+				}
 
-                                if (getnameinfo(interface->ifa_addr,
-                                        (interface->ifa_addr->sa_family == AF_INET) ? 
-                                            sizeof(struct sockaddr_in) : 
-                                            sizeof(struct sockaddr_in6),
-                                        host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST) == SUCCESS) {
-                                    add_assoc_string_ex(next, "address", sizeof("address"), host, 1);
-                                }
+				if (getnameinfo(interface->ifa_netmask,
+					(interface->ifa_netmask->sa_family == AF_INET) ? 
+					    sizeof(struct sockaddr_in) : 
+					    sizeof(struct sockaddr_in6),
+					host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST) == SUCCESS) {
+				    add_assoc_string_ex(next, "netmask", sizeof("netmask"), host, 1);
+				}
+			    } break;
+			}
+		    }
 
-                                if (getnameinfo(interface->ifa_netmask,
-                                        (interface->ifa_netmask->sa_family == AF_INET) ? 
-                                            sizeof(struct sockaddr_in) : 
-                                            sizeof(struct sockaddr_in6),
-                                        host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST) == SUCCESS) {
-                                    add_assoc_string_ex(next, "netmask", sizeof("netmask"), host, 1);
-                                }
-                            } break;
-                        }
-                    }
+		    if (next) {
+			add_next_index_zval(return_value, next);
+		    }
+		}
+	    }
 
-                    if (next) {
-                        add_next_index_zval(return_value, next);
-                    }
-                }
-            }
-
-            freeifaddrs(interfaces);
-        } else {
-            RETURN_FALSE;
-        }
-    }
+	    freeifaddrs(interfaces);
+	} else {
+	    RETURN_FALSE;
+	}
 #elif defined(ZEND_WIN32)
 
 #endif
