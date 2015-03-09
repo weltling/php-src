@@ -2166,9 +2166,6 @@ ZEND_FUNCTION(get_network_interfaces)
 				while (pUnicast != NULL) {
 					char tmp2[128];
 
-					/* InetNtop(AF_INET, pUnicast->Address.lpSockaddr, tmp2, 128);
-					add_assoc_string_ex(&unicast, "ip", sizeof("ip")-1, tmp2);*/
-
 					add_assoc_long_ex(&unicast, "family", sizeof("family")-1, pUnicast->Address.lpSockaddr->sa_family);
 					if (AF_INET == pUnicast->Address.lpSockaddr->sa_family && (pCurrAddresses->Flags & IP_ADAPTER_IPV4_ENABLED)) {
 						ULONG mask;
@@ -2185,10 +2182,17 @@ ZEND_FUNCTION(get_network_interfaces)
 					} 
 					
 					if (AF_INET6 == pUnicast->Address.lpSockaddr->sa_family && (pCurrAddresses->Flags & IP_ADAPTER_IPV6_ENABLED)) {
+						struct sockaddr_in6 si6_mask;
+						ULONG i, j;
 						struct sockaddr_in6 *si6 = (struct sockaddr_in6 *)pUnicast->Address.lpSockaddr;
 
 						add_assoc_string_ex(&unicast, "address6", sizeof("address6")-1, inet_ntop(AF_INET6, &(si6->sin6_addr), tmp, 128));
 
+
+						for (i = pUnicast->OnLinkPrefixLength, j = 0; i > 0; i -= 8, ++j) {
+							si6_mask.sin6_addr.s6_addr[j] = i >= 8? 0xff: (ULONG)((0xffU << (8 - i)) & 0xffU);
+						}
+						add_assoc_string_ex(&unicast, "netmask6", sizeof("netmask6")-1, inet_ntop(AF_INET6, &(si6_mask.sin6_addr), tmp, 128));
 					}
 
 					pUnicast = pUnicast->Next;
