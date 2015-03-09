@@ -2158,7 +2158,7 @@ ZEND_FUNCTION(get_network_interfaces)
 			add_assoc_long_ex(&next, "mtu", sizeof("mtu")-1, pCurrAddresses->Mtu);
 
 			pUnicast = pCurrAddresses->FirstUnicastAddress;
-			if (pUnicast != NULL) {
+			if ((pCurrAddresses->OperStatus & IfOperStatusUp) && pUnicast != NULL) {
 				zval unicast;
 
 				array_init(&unicast);
