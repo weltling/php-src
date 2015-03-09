@@ -1988,7 +1988,7 @@ ZEND_FUNCTION(zend_test_func2)
 ZEND_FUNCTION(get_network_interfaces)
 {
     char *specific = NULL;
-    int specific_len;
+    size_t specific_len;
 
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|s", &specific, &specific_len) == FAILURE) {
         return;
