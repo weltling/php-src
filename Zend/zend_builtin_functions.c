@@ -83,7 +83,7 @@ static ZEND_FUNCTION(get_loaded_extensions);
 static ZEND_FUNCTION(extension_loaded);
 static ZEND_FUNCTION(get_extension_funcs);
 static ZEND_FUNCTION(get_defined_constants);
-#ifdef HAVE_IFADDRS_H
+#if defined(HAVE_IFADDRS_H) || defined(ZEND_WIN32)
 static ZEND_FUNCTION(get_network_interfaces);
 #endif
 static ZEND_FUNCTION(debug_backtrace);
@@ -235,7 +235,7 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_get_defined_constants, 0, 0, 0)
 	ZEND_ARG_INFO(0, categorize)
 ZEND_END_ARG_INFO()
 
-#ifdef HAVE_IFADDRS_H
+#if defined(HAVE_IFADDRS_H) || defined(ZEND_WIN32)
 ZEND_BEGIN_ARG_INFO_EX(arginfo_get_network_interfaces, 0, 0, 0)
 	ZEND_ARG_INFO(0, specific)
 ZEND_END_ARG_INFO()
@@ -1982,7 +1982,6 @@ ZEND_FUNCTION(zend_test_func2)
 	zend_get_parameters(ZEND_NUM_ARGS(), 2, &arg1, &arg2);
 }
 
-#ifdef HAVE_IFADDRS_H
 /* {{{ proto array get_network_interfaces([string specific])
    Return an array containing the names and addresses of specific or all interfaces */
 ZEND_FUNCTION(get_network_interfaces)
@@ -1994,6 +1993,7 @@ ZEND_FUNCTION(get_network_interfaces)
         return;
     }
 
+#if defined(HAVE_IFADDRS_H)
     {
         struct ifaddrs  *interfaces, 
                         *interface;
@@ -2054,8 +2054,10 @@ ZEND_FUNCTION(get_network_interfaces)
             RETURN_FALSE;
         }
     }
-} /* }}} */
+#elif defined(ZEND_WIN32)
+
 #endif
+} /* }}} */
 
 #ifdef ZTS
 ZEND_FUNCTION(zend_thread_id)
