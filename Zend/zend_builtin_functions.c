@@ -2164,39 +2164,43 @@ ZEND_FUNCTION(get_network_interfaces)
 				array_init(&unicast);
 
 				while (pUnicast != NULL) {
-					char tmp2[128];
+					zval curuni; 
 
-					add_assoc_long_ex(&unicast, "family", sizeof("family")-1, pUnicast->Address.lpSockaddr->sa_family);
+					array_init(&curuni);
+
+					add_assoc_long_ex(&curuni, "family", sizeof("family")-1, pUnicast->Address.lpSockaddr->sa_family);
+
 					if (AF_INET == pUnicast->Address.lpSockaddr->sa_family && (pCurrAddresses->Flags & IP_ADAPTER_IPV4_ENABLED)) {
 						ULONG mask;
 						struct sockaddr_in si_mask;
 						struct sockaddr_in *si = (struct sockaddr_in *)pUnicast->Address.lpSockaddr;
 
-						add_assoc_string_ex(&unicast, "address", sizeof("address")-1, inet_ntop(AF_INET, &(si->sin_addr), tmp, 128));
+						add_assoc_string_ex(&curuni, "address", sizeof("address")-1, inet_ntop(AF_INET, &(si->sin_addr), tmp, 128));
 
 						ConvertLengthToIpv4Mask(pUnicast->OnLinkPrefixLength, &mask);
 						si_mask.sin_family = AF_INET;
 						si_mask.sin_addr.s_addr = mask;
-						add_assoc_string_ex(&unicast, "netmask", sizeof("netmask")-1, inet_ntop(AF_INET, &(si_mask.sin_addr), tmp, 128));
+						add_assoc_string_ex(&curuni, "netmask", sizeof("netmask")-1, inet_ntop(AF_INET, &(si_mask.sin_addr), tmp, 128));
 
-					} 
-					
-					if (AF_INET6 == pUnicast->Address.lpSockaddr->sa_family && (pCurrAddresses->Flags & IP_ADAPTER_IPV6_ENABLED)) {
+					} else if (AF_INET6 == pUnicast->Address.lpSockaddr->sa_family && (pCurrAddresses->Flags & IP_ADAPTER_IPV6_ENABLED)) {
 						struct sockaddr_in6 si6_mask;
 						ULONG i, j;
 						struct sockaddr_in6 *si6 = (struct sockaddr_in6 *)pUnicast->Address.lpSockaddr;
 
-						add_assoc_string_ex(&unicast, "address6", sizeof("address6")-1, inet_ntop(AF_INET6, &(si6->sin6_addr), tmp, 128));
+						add_assoc_string_ex(&curuni, "address", sizeof("address")-1, inet_ntop(AF_INET6, &(si6->sin6_addr), tmp, 128));
 
 
 						for (i = pUnicast->OnLinkPrefixLength, j = 0; i > 0; i -= 8, ++j) {
 							si6_mask.sin6_addr.s6_addr[j] = i >= 8? 0xff: (ULONG)((0xffU << (8 - i)) & 0xffU);
 						}
-						add_assoc_string_ex(&unicast, "netmask6", sizeof("netmask6")-1, inet_ntop(AF_INET6, &(si6_mask.sin6_addr), tmp, 128));
+						add_assoc_string_ex(&curuni, "netmask", sizeof("netmask")-1, inet_ntop(AF_INET6, &(si6_mask.sin6_addr), tmp, 128));
 					}
+
+					add_next_index_zval(&unicast, &curuni);
 
 					pUnicast = pUnicast->Next;
 				}
+
 				add_assoc_zval(&next, "unicast", &unicast);
 			}
 
