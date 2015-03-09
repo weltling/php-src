@@ -78,6 +78,7 @@
 #include <intrin.h>
 #include <winsock2.h>
 #include <ws2ipdef.h>
+#include <Ws2tcpip.h>
 #include <iphlpapi.h>
 #endif
 

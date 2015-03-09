@@ -2003,10 +2003,31 @@ ZEND_FUNCTION(get_network_interfaces)
 	struct ifaddrs  *interfaces, 
 			*interface;
 #elif defined(ZEND_WIN32)
-	IP_ADAPTER_INFO  *pAdapterInfo;
-	ULONG            ulOutBufLen;
-	DWORD            dwRetVal;
-	PIP_ADAPTER_INFO pAdapter;
+	DWORD dwSize = 0;
+	DWORD dwRetVal = 0;
+
+	unsigned int i = 0;
+
+	// Set the flags to pass to GetAdaptersAddresses
+	ULONG flags = GAA_FLAG_INCLUDE_PREFIX;
+
+	// default to unspecified address family (both)
+	ULONG family = AF_UNSPEC;
+
+	LPVOID lpMsgBuf = NULL;
+
+	PIP_ADAPTER_ADDRESSES pAddresses = NULL;
+	ULONG outBufLen = 0;
+
+	PIP_ADAPTER_ADDRESSES pCurrAddresses = NULL;
+	PIP_ADAPTER_UNICAST_ADDRESS pUnicast = NULL;
+	PIP_ADAPTER_ANYCAST_ADDRESS pAnycast = NULL;
+	PIP_ADAPTER_MULTICAST_ADDRESS pMulticast = NULL;
+	IP_ADAPTER_DNS_SERVER_ADDRESS *pDnServer = NULL;
+	IP_ADAPTER_PREFIX *pPrefix = NULL;
+
+# define MALLOC(x) HeapAlloc(GetProcessHeap(), 0, (x))
+# define FREE(x) HeapFree(GetProcessHeap(), 0, (x))
 #endif
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|s", &specific, &specific_len) == FAILURE) {
@@ -2032,18 +2053,18 @@ ZEND_FUNCTION(get_network_interfaces)
 				array_init(&next);
 
 				add_assoc_string_ex(
-				    &next, "name", sizeof("name"), interface->ifa_name);
+				    &next, "name", sizeof("name")-1, interface->ifa_name);
 				add_assoc_long_ex(
-				    &next, "flags", sizeof("flags"), interface->ifa_flags);
+				    &next, "flags", sizeof("flags")-1, interface->ifa_flags);
 				add_assoc_long_ex(
-				    &next, "family", sizeof("family"), interface->ifa_addr->sa_family);
+				    &next, "family", sizeof("family")-1, interface->ifa_addr->sa_family);
 
 				if (getnameinfo(interface->ifa_addr,
 					(interface->ifa_addr->sa_family == AF_INET) ? 
 					    sizeof(struct sockaddr_in) : 
 					    sizeof(struct sockaddr_in6),
 					host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST) == SUCCESS) {
-				    add_assoc_string_ex(&next, "address", sizeof("address"), host);
+				    add_assoc_string_ex(&next, "address", sizeof("address")-1, host);
 				}
 
 				if (getnameinfo(interface->ifa_netmask,
@@ -2051,7 +2072,7 @@ ZEND_FUNCTION(get_network_interfaces)
 					    sizeof(struct sockaddr_in) : 
 					    sizeof(struct sockaddr_in6),
 					host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST) == SUCCESS) {
-				    add_assoc_string_ex(&next, "netmask", sizeof("netmask"), host);
+				    add_assoc_string_ex(&next, "netmask", sizeof("netmask")-1, host);
 				}
 			    } break;
 			}
@@ -2066,72 +2087,128 @@ ZEND_FUNCTION(get_network_interfaces)
 	    RETURN_FALSE;
 	}
 #elif defined(ZEND_WIN32)
-	pAdapterInfo = (IP_ADAPTER_INFO *) malloc( sizeof(IP_ADAPTER_INFO) );
-	ulOutBufLen = sizeof(IP_ADAPTER_INFO);
+	outBufLen = sizeof (IP_ADAPTER_ADDRESSES);
+	pAddresses = (IP_ADAPTER_ADDRESSES *) MALLOC(outBufLen);
 
-	if (GetAdaptersInfo( pAdapterInfo, &ulOutBufLen) != ERROR_SUCCESS) {
-		free (pAdapterInfo);
-		pAdapterInfo = (IP_ADAPTER_INFO *) malloc ( ulOutBufLen );
+	// Make an initial call to GetAdaptersAddresses to get the 
+	// size needed into the outBufLen variable
+	if (GetAdaptersAddresses(family, flags, NULL, pAddresses, &outBufLen)
+		== ERROR_BUFFER_OVERFLOW) {
+		/* TODO check GetLastError() */
+		FREE(pAddresses);
+		pAddresses = (IP_ADAPTER_ADDRESSES *) MALLOC(outBufLen);
 	}
 
-	if ((dwRetVal = GetAdaptersInfo( pAdapterInfo, &ulOutBufLen)) != ERROR_SUCCESS) {
+	if (pAddresses == NULL) {
 		/* TODO check GetLastError() */
-		zend_error(E_WARNING, "GetAdaptersInfo call failed with %d\n", dwRetVal);
+		zend_error(E_WARNING, "Memory allocation failed for IP_ADAPTER_ADDRESSES struct");
+		RETURN_FALSE;
+	}
+
+	dwRetVal =
+		GetAdaptersAddresses(family, flags, NULL, pAddresses, &outBufLen);
+
+	if (NO_ERROR != dwRetVal) {
+		/* TODO check GetLastError() */
 		RETURN_FALSE;
 	}
 
 	array_init(return_value);
 
-	pAdapter = pAdapterInfo;
-	while (pAdapter) {
+	pCurrAddresses = pAddresses;
+	while (pCurrAddresses) {
 		zval next;
-		zval addr;
 
 		if (!specific ||
-			memcmp(pAdapter->AdapterName, specific, specific_len > MAX_ADAPTER_NAME_LENGTH + 4 ? MAX_ADAPTER_NAME_LENGTH + 4 : specific_len) == SUCCESS) {
+			memcmp(pCurrAddresses->AdapterName, specific, specific_len > MAX_ADAPTER_NAME_LENGTH + 4 ? MAX_ADAPTER_NAME_LENGTH + 4 : specific_len) == SUCCESS) {
+			char tmp[256];
+# define SETUP_TMP_STR(s) memset(tmp, '\0', 256); \
+			wcstombs(tmp, pCurrAddresses->Description, 256);
 
-			if (MIB_IF_TYPE_ETHERNET != pAdapter->Type && MIB_IF_TYPE_PPP != pAdapter->Type && MIB_IF_TYPE_LOOPBACK != pAdapter->Type) {
+			if (IF_TYPE_ETHERNET_CSMACD != pCurrAddresses->IfType && IF_TYPE_SOFTWARE_LOOPBACK != pCurrAddresses->IfType) {
 				/* XXX are these the only useful? */
-				pAdapter = pAdapter->Next;
+				pCurrAddresses = pCurrAddresses->Next;
 				continue;
 			}
 
 			array_init(&next);
 
-			add_assoc_string_ex(&next, "name", sizeof("name"), pAdapter->AdapterName);
-			add_assoc_string_ex(&next, "description", sizeof("description"), pAdapter->Description);
-			/* XXX IPv4 only supported */
-			add_assoc_long_ex(&next, "family", sizeof("family"), AF_INET);
+			add_assoc_string_ex(&next, "name", sizeof("name")-1, pCurrAddresses->AdapterName);
+			SETUP_TMP_STR(pCurrAddresses->Description)
+			add_assoc_string_ex(&next, "description", sizeof("description")-1, tmp);
+			if (pCurrAddresses->PhysicalAddressLength != 0) {
+				char mac[128];
+				int j;
 
-			/*printf("Adapter Name: %s\n", pAdapter->AdapterName);
-			printf("Adapter Desc: %s\n", pAdapter->Description);
-			printf("\tAdapter Addr: \t");
-			for (UINT i = 0; i < pAdapter->AddressLength; i++) {
-				if (i == (pAdapter->AddressLength - 1))
-				    printf("%.2X\n",(int)pAdapter->Address[i]);
-				else
-				    printf("%.2X-",(int)pAdapter->Address[i]);
+				memset(mac, '\0', 128);
+
+				for (j = 0; j < pCurrAddresses->PhysicalAddressLength; j++) {
+					if (j == (pCurrAddresses->PhysicalAddressLength - 1)) {
+						sprintf(mac + j*3, "%.2X", (int) pCurrAddresses->PhysicalAddress[j]);
+					} else {
+						sprintf(mac + j*3, "%.2X-", (int) pCurrAddresses->PhysicalAddress[j]);
+					}
+				}
+
+				add_assoc_string_ex(&next, "mac", sizeof("mac")-1, mac);
 			}
-			printf("IP Address: %s\n", pAdapter->IpAddressList.IpAddress.String);
-			printf("IP Mask: %s\n", pAdapter->IpAddressList.IpMask.String);
-			printf("\tGateway: \t%s\n", pAdapter->GatewayList.IpAddress.String);
-			printf("\t***\n");
-			if (pAdapter->DhcpEnabled) {
-				printf("\tDHCP Enabled: Yes\n");
-				printf("\t\tDHCP Server: \t%s\n", pAdapter->DhcpServer.IpAddress.String);
+			/* From this one can read any possible info like IP_ADAPTER_IPV6_ENABLED and co, see
+				https://msdn.microsoft.com/en-us/library/windows/desktop/aa366058%28v=vs.85%29.aspx */
+			add_assoc_long_ex(&next, "flags", sizeof("flags")-1, pCurrAddresses->Flags);
+			add_assoc_long_ex(&next, "mtu", sizeof("mtu")-1, pCurrAddresses->Mtu);
+
+			pUnicast = pCurrAddresses->FirstUnicastAddress;
+			if (pUnicast != NULL) {
+				zval unicast;
+
+				array_init(&unicast);
+
+				while (pUnicast != NULL) {
+					char tmp2[128];
+
+					/* InetNtop(AF_INET, pUnicast->Address.lpSockaddr, tmp2, 128);
+					add_assoc_string_ex(&unicast, "ip", sizeof("ip")-1, tmp2);*/
+
+					add_assoc_long_ex(&unicast, "family", sizeof("family")-1, pUnicast->Address.lpSockaddr->sa_family);
+					if (AF_INET == pUnicast->Address.lpSockaddr->sa_family && (pCurrAddresses->Flags & IP_ADAPTER_IPV4_ENABLED)) {
+						ULONG mask;
+						struct sockaddr_in si_mask;
+						struct sockaddr_in *si = (struct sockaddr_in *)pUnicast->Address.lpSockaddr;
+
+						add_assoc_string_ex(&unicast, "address", sizeof("address")-1, inet_ntop(AF_INET, &(si->sin_addr), tmp, 128));
+
+						ConvertLengthToIpv4Mask(pUnicast->OnLinkPrefixLength, &mask);
+						si_mask.sin_family = AF_INET;
+						si_mask.sin_addr.s_addr = mask;
+						add_assoc_string_ex(&unicast, "netmask", sizeof("netmask")-1, inet_ntop(AF_INET, &(si_mask.sin_addr), tmp, 128));
+
+					} 
+					
+					if (AF_INET6 == pUnicast->Address.lpSockaddr->sa_family && (pCurrAddresses->Flags & IP_ADAPTER_IPV6_ENABLED)) {
+						struct sockaddr_in6 *si6 = (struct sockaddr_in6 *)pUnicast->Address.lpSockaddr;
+
+						add_assoc_string_ex(&unicast, "address6", sizeof("address6")-1, inet_ntop(AF_INET6, &(si6->sin6_addr), tmp, 128));
+
+					}
+
+					pUnicast = pUnicast->Next;
+				}
+				add_assoc_zval(&next, "unicast", &unicast);
 			}
-			else
-				printf("\tDHCP Enabled: No\n");*/
+
+
+			/* There's much more if makes sense! */
 
 			add_next_index_zval(return_value, &next);
+# undef SETUP_TMP_STR
 		}
 
-		pAdapter = pAdapter->Next;
+		pCurrAddresses = pCurrAddresses->Next;
 	}
 
-	if (pAdapterInfo) {
-		free(pAdapterInfo);
-	}
+	FREE(pAddresses);
+# undef MALLOC
+# undef FREE
 #endif
 } /* }}} */
 
