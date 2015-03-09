@@ -319,6 +319,9 @@ static const zend_function_entry builtin_functions[] = { /* {{{ */
 	ZEND_FE(extension_loaded,		arginfo_extension_loaded)
 	ZEND_FE(get_extension_funcs,		arginfo_extension_loaded)
 	ZEND_FE(get_defined_constants,		arginfo_get_defined_constants)
+#if defined(HAVE_IFADDRS_H) || defined(ZEND_WIN32)
+	ZEND_FE(get_network_interfaces,		arginfo_get_network_interfaces)
+#endif
 	ZEND_FE(debug_backtrace, 		arginfo_debug_backtrace)
 	ZEND_FE(debug_print_backtrace, 		arginfo_debug_print_backtrace)
 #if ZEND_DEBUG
@@ -1982,6 +1985,14 @@ ZEND_FUNCTION(zend_test_func2)
 	zend_get_parameters(ZEND_NUM_ARGS(), 2, &arg1, &arg2);
 }
 
+#ifdef ZTS
+ZEND_FUNCTION(zend_thread_id)
+{
+	RETURN_LONG((zend_long)tsrm_thread_id());
+}
+#endif
+#endif
+
 /* {{{ proto array get_network_interfaces([string specific])
    Return an array containing the names and addresses of specific or all interfaces */
 ZEND_FUNCTION(get_network_interfaces)
@@ -1991,6 +2002,11 @@ ZEND_FUNCTION(get_network_interfaces)
 #if defined(HAVE_IFADDRS_H)
 	struct ifaddrs  *interfaces, 
 			*interface;
+#elif defined(ZEND_WIN32)
+	IP_ADAPTER_INFO  *pAdapterInfo;
+	ULONG            ulOutBufLen;
+	DWORD            dwRetVal;
+	PIP_ADAPTER_INFO pAdapter;
 #endif
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|s", &specific, &specific_len) == FAILURE) {
@@ -2005,31 +2021,29 @@ ZEND_FUNCTION(get_network_interfaces)
 	    
 	    for (interface = interfaces; interface != NULL; interface = interface->ifa_next) {
 		if (interface->ifa_addr != NULL) {
-		    zval *next = NULL;
-		    zend_ulong ifa_name_len = strlen(interface->ifa_name);
+		    zval next;
+		    size_t ifa_name_len = strlen(interface->ifa_name);
 		    
 		    if (!specific ||
 			memcmp(interface->ifa_name, specific, specific_len > ifa_name_len ? ifa_name_len : specific_len) == SUCCESS) {
 			switch (interface->ifa_addr->sa_family) {
 			    case AF_INET:
 			    case AF_INET6: {
-				MAKE_STD_ZVAL(next);
-
-				array_init(next);
+				array_init(&next);
 
 				add_assoc_string_ex(
-				    next, "name", sizeof("name"), interface->ifa_name, 1);
+				    &next, "name", sizeof("name"), interface->ifa_name);
 				add_assoc_long_ex(
-				    next, "flags", sizeof("flags"), interface->ifa_flags);
+				    &next, "flags", sizeof("flags"), interface->ifa_flags);
 				add_assoc_long_ex(
-				    next, "family", sizeof("family"), interface->ifa_addr->sa_family);
+				    &next, "family", sizeof("family"), interface->ifa_addr->sa_family);
 
 				if (getnameinfo(interface->ifa_addr,
 					(interface->ifa_addr->sa_family == AF_INET) ? 
 					    sizeof(struct sockaddr_in) : 
 					    sizeof(struct sockaddr_in6),
 					host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST) == SUCCESS) {
-				    add_assoc_string_ex(next, "address", sizeof("address"), host, 1);
+				    add_assoc_string_ex(&next, "address", sizeof("address"), host);
 				}
 
 				if (getnameinfo(interface->ifa_netmask,
@@ -2037,14 +2051,12 @@ ZEND_FUNCTION(get_network_interfaces)
 					    sizeof(struct sockaddr_in) : 
 					    sizeof(struct sockaddr_in6),
 					host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST) == SUCCESS) {
-				    add_assoc_string_ex(next, "netmask", sizeof("netmask"), host, 1);
+				    add_assoc_string_ex(&next, "netmask", sizeof("netmask"), host);
 				}
 			    } break;
 			}
-		    }
 
-		    if (next) {
-			add_next_index_zval(return_value, next);
+			add_next_index_zval(return_value, &next);
 		    }
 		}
 	    }
@@ -2054,17 +2066,74 @@ ZEND_FUNCTION(get_network_interfaces)
 	    RETURN_FALSE;
 	}
 #elif defined(ZEND_WIN32)
+	pAdapterInfo = (IP_ADAPTER_INFO *) malloc( sizeof(IP_ADAPTER_INFO) );
+	ulOutBufLen = sizeof(IP_ADAPTER_INFO);
 
+	if (GetAdaptersInfo( pAdapterInfo, &ulOutBufLen) != ERROR_SUCCESS) {
+		free (pAdapterInfo);
+		pAdapterInfo = (IP_ADAPTER_INFO *) malloc ( ulOutBufLen );
+	}
+
+	if ((dwRetVal = GetAdaptersInfo( pAdapterInfo, &ulOutBufLen)) != ERROR_SUCCESS) {
+		/* TODO check GetLastError() */
+		zend_error(E_WARNING, "GetAdaptersInfo call failed with %d\n", dwRetVal);
+		RETURN_FALSE;
+	}
+
+	array_init(return_value);
+
+	pAdapter = pAdapterInfo;
+	while (pAdapter) {
+		zval next;
+		zval addr;
+
+		if (!specific ||
+			memcmp(pAdapter->AdapterName, specific, specific_len > MAX_ADAPTER_NAME_LENGTH + 4 ? MAX_ADAPTER_NAME_LENGTH + 4 : specific_len) == SUCCESS) {
+
+			if (MIB_IF_TYPE_ETHERNET != pAdapter->Type && MIB_IF_TYPE_PPP != pAdapter->Type && MIB_IF_TYPE_LOOPBACK != pAdapter->Type) {
+				/* XXX are these the only useful? */
+				pAdapter = pAdapter->Next;
+				continue;
+			}
+
+			array_init(&next);
+
+			add_assoc_string_ex(&next, "name", sizeof("name"), pAdapter->AdapterName);
+			add_assoc_string_ex(&next, "description", sizeof("description"), pAdapter->Description);
+			/* XXX IPv4 only supported */
+			add_assoc_long_ex(&next, "family", sizeof("family"), AF_INET);
+
+			/*printf("Adapter Name: %s\n", pAdapter->AdapterName);
+			printf("Adapter Desc: %s\n", pAdapter->Description);
+			printf("\tAdapter Addr: \t");
+			for (UINT i = 0; i < pAdapter->AddressLength; i++) {
+				if (i == (pAdapter->AddressLength - 1))
+				    printf("%.2X\n",(int)pAdapter->Address[i]);
+				else
+				    printf("%.2X-",(int)pAdapter->Address[i]);
+			}
+			printf("IP Address: %s\n", pAdapter->IpAddressList.IpAddress.String);
+			printf("IP Mask: %s\n", pAdapter->IpAddressList.IpMask.String);
+			printf("\tGateway: \t%s\n", pAdapter->GatewayList.IpAddress.String);
+			printf("\t***\n");
+			if (pAdapter->DhcpEnabled) {
+				printf("\tDHCP Enabled: Yes\n");
+				printf("\t\tDHCP Server: \t%s\n", pAdapter->DhcpServer.IpAddress.String);
+			}
+			else
+				printf("\tDHCP Enabled: No\n");*/
+
+			add_next_index_zval(return_value, &next);
+		}
+
+		pAdapter = pAdapter->Next;
+	}
+
+	if (pAdapterInfo) {
+		free(pAdapterInfo);
+	}
 #endif
 } /* }}} */
-
-#ifdef ZTS
-ZEND_FUNCTION(zend_thread_id)
-{
-	RETURN_LONG((zend_long)tsrm_thread_id());
-}
-#endif
-#endif
 
 /* {{{ proto string get_resource_type(resource res)
    Get the resource type name for a given resource */

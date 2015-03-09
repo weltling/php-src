@@ -76,6 +76,9 @@
 
 #if defined(ZEND_WIN32)
 #include <intrin.h>
+#include <winsock2.h>
+#include <ws2ipdef.h>
+#include <iphlpapi.h>
 #endif
 
 #ifdef HAVE_IFADDRS_H
