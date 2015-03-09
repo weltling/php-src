@@ -78,6 +78,11 @@
 #include <intrin.h>
 #endif
 
+#ifdef HAVE_IFADDRS_H
+# include <ifaddrs.h>
+# include <netdb.h>
+#endif
+
 /* Only use this macro if you know for sure that all of the switches values
    are covered by its case statements */
 #if ZEND_DEBUG
