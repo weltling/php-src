@@ -192,7 +192,6 @@ struct _zend_executor_globals {
 	zend_bool no_extensions;
 
 #ifdef ZEND_WIN32
-	zend_bool timed_out;
 	OSVERSIONINFOEX windows_version_info;
 #endif
 
