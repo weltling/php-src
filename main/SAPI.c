@@ -59,7 +59,7 @@ sapi_globals_struct sapi_globals;
 
 static void _type_dtor(zval *zv)
 {
-	free(Z_PTR_P(zv));
+	pefree(Z_PTR_P(zv), 1);
 }
 
 static void sapi_globals_ctor(sapi_globals_struct *sapi_globals)

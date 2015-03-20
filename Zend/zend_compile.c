@@ -77,7 +77,7 @@ static void zend_destroy_property_info_internal(zval *zv) /* {{{ */
 	zend_property_info *property_info = Z_PTR_P(zv);
 
 	zend_string_release(property_info->name);
-	free(property_info);
+	pefree(property_info, 1);
 }
 /* }}} */
 

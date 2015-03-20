@@ -1529,7 +1529,7 @@ ZEND_TSRMLS_CACHE_UPDATE();
 static PHP_GSHUTDOWN_FUNCTION(mbstring)
 {
 	if (mbstring_globals->http_input_list) {
-		free(mbstring_globals->http_input_list);
+		pefree(mbstring_globals->http_input_list, 1);
 	}
 	if (mbstring_globals->detect_order_list) {
 		free(mbstring_globals->detect_order_list);

@@ -3332,7 +3332,7 @@ typedef zend_compile_t* (compile_hook)(zend_compile_t *ptr);
 
 static void mime_type_dtor(zval *zv)
 {
-	free(Z_PTR_P(zv));
+	pefree(Z_PTR_P(zv), 1);
 }
 
 PHP_GINIT_FUNCTION(phar) /* {{{ */

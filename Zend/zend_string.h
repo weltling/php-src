@@ -345,8 +345,8 @@ static zend_always_inline void zend_interned_empty_string_init(zend_string **s)
 
 static zend_always_inline void zend_interned_empty_string_free(zend_string **s)
 {
-	if (NULL != *s) {
-		free(*s);
+	if (NULL != s && NULL != *s) {
+		zend_string_free(*s);
 		*s = NULL;
 	}
 }

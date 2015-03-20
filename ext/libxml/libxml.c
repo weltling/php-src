@@ -743,7 +743,7 @@ PHP_LIBXML_API void php_libxml_error_handler(void *ctx, const char *msg, ...)
 
 static void php_libxml_exports_dtor(zval *zv)
 {
-	free(Z_PTR_P(zv));
+	pefree(Z_PTR_P(zv), 1);
 }
 
 PHP_LIBXML_API void php_libxml_initialize(void)

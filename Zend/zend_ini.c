@@ -95,7 +95,7 @@ static void free_ini_entry(zval *zv) /* {{{ */
 	if (entry->orig_value) {
 		zend_string_release(entry->orig_value);
 	}
-	free(entry);
+	pefree(entry, 1);
 }
 /* }}} */
 

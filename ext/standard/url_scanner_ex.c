@@ -46,7 +46,7 @@
 
 static void tag_dtor(zval *zv)
 {
-	free(Z_PTR_P(zv));
+	pefree(Z_PTR_P(zv), 1);
 }
 
 static PHP_INI_MH(OnUpdateTags)

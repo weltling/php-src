@@ -569,13 +569,13 @@ static void module_destructor_zval(zval *zv) /* {{{ */
 	zend_module_entry *module = (zend_module_entry*)Z_PTR_P(zv);
 
 	module_destructor(module);
-	free(module);
+	pefree(module, 1);
 }
 /* }}} */
 
 static void auto_global_dtor(zval *zv) /* {{{ */
 {
-	free(Z_PTR_P(zv));
+	pefree(Z_PTR_P(zv), 1);
 }
 /* }}} */
 

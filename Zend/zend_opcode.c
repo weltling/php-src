@@ -297,7 +297,7 @@ ZEND_API void destroy_zend_class(zval *zv)
 						zval_internal_ptr_dtor(&ce->default_properties_table[i]);
 					}
 				}
-				free(ce->default_properties_table);
+				pefree(ce->default_properties_table, 1);
 			}
 			if (ce->default_static_members_table) {
 				int i;

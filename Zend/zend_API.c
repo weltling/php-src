@@ -2051,7 +2051,7 @@ ZEND_API int zend_register_functions(zend_class_entry *scope, const zend_functio
 		lowercase_name = zend_string_alloc(fname_len, 1);
 		zend_str_tolower_copy(lowercase_name->val, ptr->fname, fname_len);
 		lowercase_name = zend_new_interned_string(lowercase_name);
-		reg_function = malloc(sizeof(zend_internal_function));
+		reg_function = pemalloc(sizeof(zend_internal_function), 1);
 		memcpy(reg_function, &function, sizeof(zend_internal_function));
 		if (zend_hash_add_ptr(target_function_table, lowercase_name, reg_function) == NULL) {
 			unload=1;
