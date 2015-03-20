@@ -169,17 +169,27 @@ ZEND_API void ZEND_FASTCALL _efree_huge(void *, size_t size);
 #define estrndup_rel(s, length)					_estrndup((s), (length) ZEND_FILE_LINE_RELAY_CC ZEND_FILE_LINE_CC)
 #define zend_mem_block_size_rel(ptr)			_zend_mem_block_size((ptr) ZEND_FILE_LINE_RELAY_CC ZEND_FILE_LINE_CC)
 
-zend_always_inline static void * __zend_malloc(size_t len)
-{
+
 #ifdef ZEND_WIN32
 #if ZEND_DEBUG
-	void *tmp = _aligned_malloc_dbg(len, ZEND_MM_ALIGNMENT ZEND_FILE_LINE_CC);
+#define zend_aligned_malloc(len) _aligned_malloc_dbg(len, ZEND_MM_ALIGNMENT ZEND_FILE_LINE_CC)
+#define zend_aligned_realloc(p, len) _aligned_realloc_dbg(p, len, ZEND_MM_ALIGNMENT ZEND_FILE_LINE_CC)
+#define zend_aligned_free(p) _aligned_free_dbg(p)
 #else
-	void *tmp = _aligned_malloc(len, ZEND_MM_ALIGNMENT);
+#define zend_aligned_malloc(len) _aligned_malloc(len, ZEND_MM_ALIGNMENT)
+#define zend_aligned_realloc(p, len) _aligned_realloc(p, len, ZEND_MM_ALIGNMENT)
+#define zend_aligned_free(p) _aligned_free(p)
 #endif
 #else
-	void *tmp = malloc(len);
+#define zend_aligned_malloc malloc(len)
+#define zend_aligned_realloc(p, len) realloc(p, len)
+#define zend_aligned_free(p) free(p)
 #endif
+
+zend_always_inline static void * __zend_malloc(size_t len)
+{
+	void *tmp = zend_aligned_malloc(len);
+
 	if (tmp) {
 		return tmp;
 	}
@@ -196,15 +206,8 @@ zend_always_inline static void * __zend_calloc(size_t nmemb, size_t len)
 
 zend_always_inline static void * __zend_realloc(void *p, size_t len)
 {
-#ifdef ZEND_WIN32
-#if ZEND_DEBUG
-	p = _aligned_realloc_dbg(p, len, ZEND_MM_ALIGNMENT ZEND_FILE_LINE_CC);
-#else
-	p = _aligned_realloc(p, len, ZEND_MM_ALIGNMENT);
-#endif
-#else
-	p = realloc(p, len);
-#endif
+	p = zend_aligned_realloc(p, len);
+
 	if (p) {
 		return p;
 	}
@@ -216,18 +219,8 @@ zend_always_inline static void * __zend_realloc(void *p, size_t len)
 /* Selective persistent/non persistent allocation macros */
 #define pemalloc(size, persistent) ((persistent)?__zend_malloc(size):emalloc(size))
 #define safe_pemalloc(nmemb, size, offset, persistent)	((persistent)?_safe_malloc(nmemb, size, offset):safe_emalloc(nmemb, size, offset))
-#ifdef ZEND_WIN32
-#if ZEND_DEBUG
-#define pefree(ptr, persistent)  ((persistent)?_aligned_free_dbg(ptr):efree(ptr))
-#define pefree_size(ptr, size, persistent)  ((persistent)?_aligned_free_dbg(ptr):efree_size(ptr, size))
-#else
-#define pefree(ptr, persistent)  ((persistent)?_aligned_free(ptr):efree(ptr))
-#define pefree_size(ptr, size, persistent)  ((persistent)?_aligned_free(ptr):efree_size(ptr, size))
-#endif
-#else
-#define pefree(ptr, persistent)  ((persistent)?free(ptr):efree(ptr))
-#define pefree_size(ptr, size, persistent)  ((persistent)?free(ptr):efree_size(ptr, size))
-#endif
+#define pefree(ptr, persistent)  ((persistent)?zend_aligned_free(ptr):efree(ptr))
+#define pefree_size(ptr, size, persistent)  ((persistent)?zend_aligned_free(ptr):efree_size(ptr, size))
 #define pecalloc(nmemb, size, persistent) ((persistent)?__zend_calloc((nmemb), (size)):ecalloc((nmemb), (size)))
 #define perealloc(ptr, size, persistent) ((persistent)?__zend_realloc((ptr), (size)):erealloc((ptr), (size)))
 #define perealloc2(ptr, size, copy_size, persistent) ((persistent)?__zend_realloc((ptr), (size)):erealloc2((ptr), (size), (copy_size)))
@@ -238,15 +231,7 @@ zend_always_inline static void * __zend_realloc(void *p, size_t len)
 #define pestrndup(s, length, persistent) ((persistent)?zend_strndup((s),(length)):estrndup((s),(length)))
 
 #define pemalloc_rel(size, persistent) ((persistent)?__zend_malloc(size):emalloc_rel(size))
-#ifdef ZEND_WIN32
-#if ZEND_DEBUG
-#define pefree_rel(ptr, persistent)	((persistent)?_aligned_free_dbg(ptr):efree_rel(ptr))
-#else
-#define pefree_rel(ptr, persistent)	((persistent)?_aligned_free(ptr):efree_rel(ptr))
-#endif
-#else
-#define pefree_rel(ptr, persistent)	((persistent)?free(ptr):efree_rel(ptr))
-#endif
+#define pefree_rel(ptr, persistent)	((persistent)?zend_aligned_free(ptr):efree_rel(ptr))
 #define pecalloc_rel(nmemb, size, persistent) ((persistent)?__zend_calloc((nmemb), (size)):ecalloc_rel((nmemb), (size)))
 #define perealloc_rel(ptr, size, persistent) ((persistent)?__zend_realloc((ptr), (size)):erealloc_rel((ptr), (size)))
 #define perealloc2_rel(ptr, size, copy_size, persistent) ((persistent)?__zend_realloc((ptr), (size)):erealloc2_rel((ptr), (size), (copy_size)))
