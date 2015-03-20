@@ -19,6 +19,10 @@ toolset_setup_arch();
 toolset_setup_linker();
 toolset_setup_project_tools();
 
+/* Only support MASM now */
+ARG_ENABLE("asm", "Enable assembler optimizations", "no");
+asm_option_handle();
+
 // stick objects somewhere outside of the source tree
 ARG_ENABLE('object-out-dir', 'Alternate location for binary objects during build', '');
 object_out_dir_option_handle();
@@ -260,4 +264,8 @@ if (CLANG_TOOLSET) {
 
 ARG_WITH("codegen-arch", "Architecture for code generation: ia32, sse, sse2, avx, avx2", "no");
 toolset_setup_codegen_arch();
+
+if ("no" != PHP_ASM) {
+	ADD_SOURCES("win32/asm/x64", "zend_executor.asm");
+}
 

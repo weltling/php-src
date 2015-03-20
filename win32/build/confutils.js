@@ -1463,23 +1463,29 @@ function ADD_SOURCES(dir, file_list, target, obj_dir)
 		obj = src.replace(re, ".obj");
 		tv += " " + sub_build + obj;
 		resp += " " + sub_build.replace('$(BUILD_DIR)', bd) + obj;
+		var is_asm = !!src.match(/.*\.asm/);
 
-		if (!PHP_MP_DISABLED) {
-			if (i > 0) {
-				objs_line += " " + sub_build + obj;	
-				srcs_line += " " + dir + "\\" + src;
-			} else {
-				objs_line = sub_build + obj;	
-				srcs_line = dir + "\\" + src;
-			}
+		if (is_asm) {
+				MFO.WriteLine(sub_build + obj + ": " + dir + "\\" + src);
+				MFO.WriteLine("\t@$(PHP_ML) $(" + flags + ") $(CFLAGS) $(" + bd_flags_name + ") /c " + dir + "\\" + src + " /Fo" + sub_build + obj);
 		} else {
-			MFO.WriteLine(sub_build + obj + ": " + dir + "\\" + src);
+			if (!PHP_MP_DISABLED) {
+				if (i > 0) {
+					objs_line += " " + sub_build + obj;	
+					srcs_line += " " + dir + "\\" + src;
+				} else {
+					objs_line = sub_build + obj;	
+					srcs_line = dir + "\\" + src;
+				}
+			} else {
+				MFO.WriteLine(sub_build + obj + ": " + dir + "\\" + src);
 
-			if (PHP_ANALYZER == "pvs") {
-				MFO.WriteLine("\t@\"$(PVS_STUDIO)\" --cl-params $(" + flags + ") $(CFLAGS) $(" + bd_flags_name + ") /c " + dir + "\\" + src + " --source-file "  + dir + "\\" + src
-					+ " --cfg PVS-Studio.conf --errors-off \"V122 V117 V111\" ");
+				if (PHP_ANALYZER == "pvs") {
+					MFO.WriteLine("\t@\"$(PVS_STUDIO)\" --cl-params $(" + flags + ") $(CFLAGS) $(" + bd_flags_name + ") /c " + dir + "\\" + src + " --source-file "  + dir + "\\" + src
+						+ " --cfg PVS-Studio.conf --errors-off \"V122 V117 V111\" ");
+				}
+				MFO.WriteLine("\t@$(CC) $(" + flags + ") $(CFLAGS) $(" + bd_flags_name + ") /c " + dir + "\\" + src + " /Fo" + sub_build + obj);
 			}
-			MFO.WriteLine("\t@$(CC) $(" + flags + ") $(CFLAGS) $(" + bd_flags_name + ") /c " + dir + "\\" + src + " /Fo" + sub_build + obj);
 		}
 	}
 
@@ -1657,20 +1663,21 @@ function write_summary()
 	ar[0] = ['Build type', PHP_DEBUG == "yes" ? "Debug" : "Release"];
 	ar[1] = ['Thread Safety', PHP_ZTS == "yes" ? "Yes" : "No"];
 	ar[2] = ['Compiler', COMPILER_NAME];
-	ar[3] = ['Architecture', X64 ? 'x64' : 'x86'];
+	ar[3] = ['ASM improvements', PHP_ASM == "no" ? "disabled" : "enabled"];
+	ar[4] = ['Architecture', X64 ? 'x64' : 'x86'];
 	if (PHP_PGO == "yes") {
-		ar[4] = ['Optimization', "PGO"];
+		ar[5] = ['Optimization', "PGO"];
 	} else if (PHP_PGI == "yes") {
-		ar[4] = ['Optimization', "PGI"];
+		ar[5] = ['Optimization', "PGI"];
 	} else {
-		ar[4] = ['Optimization', PHP_DEBUG == "yes" ? "disabled" : "PGO disabled"];
+		ar[5] = ['Optimization', PHP_DEBUG == "yes" ? "disabled" : "PGO disabled"];
 	}
 	if (PHP_ANALYZER == "vs") {
-		ar[5] = ['Static analyzer', 'Visual Studio'];
+		ar[6] = ['Static analyzer', 'Visual Studio'];
 	} else if (PHP_ANALYZER == "pvs") {
-		ar[5] = ['Static analyzer', 'PVS-Studio'];
+		ar[6] = ['Static analyzer', 'PVS-Studio'];
 	} else {
-		ar[5] = ['Static analyzer', 'disabled'];
+		ar[6] = ['Static analyzer', 'disabled'];
 	}
 
 	output_as_table(["",""], ar);
@@ -2823,3 +2830,35 @@ function trim(s)
 {
 	return s.replace(/^\s+/, "").replace(/\s+$/, "");
 }
+
+function asm_option_handle()
+{
+	if (PHP_ASM != "yes") {
+		return;
+	}
+	PHP_ML = toolset_get_ml();
+	if (!PHP_ML) {
+		ERROR("Assembler compiler not found");
+	}
+
+	if (X64) {
+		//ADD_DEF_FILE("win32\\asm\\x64\\asm.def");
+	} else {
+		ERROR("No ASM optimizations yet implemented for x86, please disable asm.");
+		//ADD_DEF_FILE("win32\\asm\\x86\\asm.def");
+	}
+}
+
+function toolset_get_ml()
+{
+	if (!VS_TOOLSET) {
+		ERROR("Assembler optimizations are only supported with the Visual Studio toolset");
+	}
+
+	if (X64) {
+		return PATH_PROG('ml64', null, 'PHP_ML')
+	} else {
+		return PATH_PROG('ml', null, 'PHP_ML')
+	}
+}
+
