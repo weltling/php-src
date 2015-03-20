@@ -170,6 +170,7 @@ ZEND_API void ZEND_FASTCALL _efree_huge(void *, size_t size);
 #define zend_mem_block_size_rel(ptr)			_zend_mem_block_size((ptr) ZEND_FILE_LINE_RELAY_CC ZEND_FILE_LINE_CC)
 
 
+/* XXX make zend_aligned_malloc accept alignment and do sanity checks */
 #ifdef ZEND_WIN32
 #if ZEND_DEBUG
 #define zend_aligned_malloc(len) _aligned_malloc_dbg(len, ZEND_MM_ALIGNMENT ZEND_FILE_LINE_CC)
