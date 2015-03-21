@@ -2336,6 +2336,7 @@ ZEND_API void zend_update_current_locale(void) /* {{{ */
 /* }}} */
 #endif
 
+#ifndef HAVE_ASM_DROPS
 ZEND_API char* ZEND_FASTCALL zend_str_tolower_copy(char *dest, const char *source, size_t length) /* {{{ */
 {
 	register unsigned char *str = (unsigned char*)source;
@@ -2350,6 +2351,7 @@ ZEND_API char* ZEND_FASTCALL zend_str_tolower_copy(char *dest, const char *sourc
 	return dest;
 }
 /* }}} */
+#endif
 
 ZEND_API char* ZEND_FASTCALL zend_str_tolower_dup(const char *source, size_t length) /* {{{ */
 {
