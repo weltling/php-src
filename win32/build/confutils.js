@@ -1467,7 +1467,7 @@ function ADD_SOURCES(dir, file_list, target, obj_dir)
 
 		if (is_asm) {
 				MFO.WriteLine(sub_build + obj + ": " + dir + "\\" + src);
-				MFO.WriteLine("\t@$(PHP_ML) $(" + flags + ") $(CFLAGS) $(" + bd_flags_name + ") /c " + dir + "\\" + src + " /Fo" + sub_build + obj);
+				MFO.WriteLine("\t@$(PHP_ML) $(BASE_INCLUDES) /c /Fo" + sub_build + obj + " " + dir + "\\" + src);
 		} else {
 			if (!PHP_MP_DISABLED) {
 				if (i > 0) {
@@ -1489,7 +1489,7 @@ function ADD_SOURCES(dir, file_list, target, obj_dir)
 		}
 	}
 
-	if (!PHP_MP_DISABLED) {
+	if (!PHP_MP_DISABLED && objs_line.length > 0) {
 		MFO.WriteLine(objs_line + ": " + srcs_line);
 		MFO.WriteLine("\t$(CC) $(" + flags + ") $(CFLAGS) /Fo" + sub_build + " $(" + bd_flags_name + ") /c " + srcs_line);
 	}
@@ -2842,6 +2842,7 @@ function asm_option_handle()
 	}
 
 	if (X64) {
+		AC_DEFINE("HAVE_ASM_DROPS", 1);
 		//ADD_DEF_FILE("win32\\asm\\x64\\asm.def");
 	} else {
 		ERROR("No ASM optimizations yet implemented for x86, please disable asm.");

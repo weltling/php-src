@@ -266,6 +266,8 @@ ARG_WITH("codegen-arch", "Architecture for code generation: ia32, sse, sse2, avx
 toolset_setup_codegen_arch();
 
 if ("no" != PHP_ASM) {
-	ADD_SOURCES("win32/asm/x64", "zend_executor.asm");
+	if (X64) {
+		ADD_SOURCES("win32/asm/x64/Zend", "zend_operators.asm");
+	}
 }
 
