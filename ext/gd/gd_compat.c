@@ -33,15 +33,15 @@ const char * gdJpegGetVersionString()
 			break;
 
 		case 70:
-			return "7";
+			return "7 compatible";
 			break;
 
 		case 80:
-			return "8";
+			return "8 compatible";
 			break;
 
 		case 90:
-			return "9";
+			return "9 compatible";
 			break;
 
 		default:
