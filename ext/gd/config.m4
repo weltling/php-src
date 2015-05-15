@@ -151,6 +151,7 @@ AC_DEFUN([PHP_GD_PNG],[
       PHP_ADD_INCLUDE($GD_PNG_DIR/include)
       PHP_ADD_LIBRARY_WITH_PATH(z, $PHP_ZLIB_DIR/$PHP_LIBDIR, GD_SHARED_LIBADD)
       PHP_ADD_LIBRARY_WITH_PATH(png, $GD_PNG_DIR/$PHP_LIBDIR, GD_SHARED_LIBADD)
+      GDLIB_CFLAGS="$GDLIB_CFLAGS -DHAVE_LIBZ"
     ],[
       AC_MSG_ERROR([Problem with libpng.(a|so) or libz.(a|so). Please check config.log for more information.])
     ],[
@@ -288,7 +289,7 @@ fi
 
 if test "$PHP_GD" = "yes"; then
   GD_MODULE_TYPE=builtin
-  extra_sources="libgd/gd.c libgd/gd_gd.c libgd/gd_gd2.c libgd/gd_io.c libgd/gd_io_dp.c \
+  extra_sources="gd_compat.c libgd/gd.c libgd/gd_gd.c libgd/gd_gd2.c libgd/gd_io.c libgd/gd_io_dp.c \
                  libgd/gd_io_file.c libgd/gd_ss.c libgd/gd_io_ss.c libgd/gd_webp.c \
                  libgd/gd_png.c libgd/gd_jpeg.c libgd/gdxpm.c libgd/gdfontt.c libgd/gdfonts.c \
                  libgd/gdfontmb.c libgd/gdfontl.c libgd/gdfontg.c libgd/gdtables.c libgd/gdft.c \
@@ -296,10 +297,8 @@ if test "$PHP_GD" = "yes"; then
                  libgd/gd_topal.c libgd/gd_gif_in.c libgd/gd_gif_out.c libgd/gd_security.c \
                  libgd/gd_filter.c libgd/gd_rotate.c libgd/gd_color.c libgd/gd_webp.c \
                  libgd/gd_transform.c libgd/gd_crop.c libgd/gd_interpolation.c libgd/gd_matrix.c \
-                 libgd/annotate.c libgd/gd_tga.c libgd/gd_tiff.c libgd/gd_version.c \
-                 libgd/gd_xbm.c libgd/gdfx.c  \
-                 libgd/gd_crop.c libgd/gd_interpolation.c libgd/gd_matrix.c
-		"
+                 libgd/gd_tga.c libgd/gd_tiff.c libgd/gd_version.c libgd/gd_color_match.c \
+                 libgd/gd_xbm.c libgd/gdfx.c libgd/gd_nnquant.c"
 
 
 dnl check for fabsf and floorf which are available since C99
@@ -311,7 +310,7 @@ dnl These are always available with bundled library
   AC_DEFINE(HAVE_GD_CACHE_CREATE,     1, [ ])
 
 dnl Make sure the libgd/ is first in the include path
-  GDLIB_CFLAGS="-DHAVE_LIBPNG -DHAVE_CONFIG_H"
+  GDLIB_CFLAGS="$GDLIB_CFLAGS -DHAVE_LIBPNG -DHAVE_CONFIG_H"
 
 dnl Depending which libraries were included to PHP configure,
 dnl enable the support in bundled GD library
