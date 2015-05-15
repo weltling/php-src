@@ -277,7 +277,7 @@ dnl PNG is required by GD library
 dnl Various checks for GD features
   PHP_GD_ZLIB
   PHP_GD_TTSTR
-  PHP_GD_VPX
+  PHP_GD_WEBP
   PHP_GD_JPEG
   PHP_GD_PNG
   PHP_GD_XPM
@@ -311,14 +311,14 @@ dnl These are always available with bundled library
   AC_DEFINE(HAVE_GD_CACHE_CREATE,     1, [ ])
 
 dnl Make sure the libgd/ is first in the include path
-  GDLIB_CFLAGS="-DHAVE_LIBPNG"
+  GDLIB_CFLAGS="-DHAVE_LIBPNG -DHAVE_CONFIG_H"
 
 dnl Depending which libraries were included to PHP configure,
 dnl enable the support in bundled GD library
 
-  if test -n "$GD_VPX_DIR"; then
+  if test -n "$GD_WEBP_DIR"; then
     AC_DEFINE(HAVE_GD_WEBP, 1, [ ])
-    GDLIB_CFLAGS="$GDLIB_CFLAGS -DHAVE_LIBVPX"
+    GDLIB_CFLAGS="$GDLIB_CFLAGS -DHAVE_LIBWEBP"
   fi
 
   if test -n "$GD_JPEG_DIR"; then
@@ -351,7 +351,7 @@ else
 dnl Various checks for GD features
   PHP_GD_ZLIB
   PHP_GD_TTSTR
-  PHP_GD_VPX
+  PHP_GD_WEBP
   PHP_GD_JPEG
   PHP_GD_PNG
   PHP_GD_XPM
