@@ -1,67 +1,30 @@
-#if HAVE_GD_BUNDLED
-# include "gd.h"
-# include "gdhelpers.h"
-#else
-# include <gd.h>
-# include "libgd/gdhelpers.h"
+#ifdef HAVE_CONFIG_H
+#include "config.h"
 #endif
 
-#include "gd_intern.h"
-#include "php.h"
+#include "gd.h"
+#include "gd_color.h"
 
-/* bring the palette colors in im2 to be closer to im1
- *
- */
-int gdImageColorMatch (gdImagePtr im1, gdImagePtr im2)
+int gdColorMatch(gdImagePtr im, int col1, int col2, float threshold)
 {
-	unsigned long *buf; /* stores our calculations */
-	unsigned long *bp; /* buf ptr */
-	int color, rgb;
-	int x,y;
-	int count;
+	const int dr = gdImageRed(im, col1) - gdImageRed(im, col2);
+	const int dg = gdImageGreen(im, col1) - gdImageGreen(im, col2);
+	const int db = gdImageBlue(im, col1) - gdImageBlue(im, col2);
+	const int da = gdImageAlpha(im, col1) - gdImageAlpha(im, col2);
+	const int dist = dr * dr + dg * dg + db * db + da * da;
 
-	if( !im1->trueColor ) {
-		return -1; /* im1 must be True Color */
-	}
-	if( im2->trueColor ) {
-		return -2; /* im2 must be indexed */
-	}
-	if( (im1->sx != im2->sx) || (im1->sy != im2->sy) ) {
-		return -3; /* the images are meant to be the same dimensions */
-	}
-	if (im2->colorsTotal<1) {
-		return -4; /* At least 1 color must be allocated */
-	}
-
-	buf = (unsigned long *)safe_emalloc(sizeof(unsigned long), 5 * im2->colorsTotal, 0);
-	memset( buf, 0, sizeof(unsigned long) * 5 * im2->colorsTotal );
-
-	for (x=0; x<im1->sx; x++) {
-		for( y=0; y<im1->sy; y++ ) {
-			color = im2->pixels[y][x];
-			rgb = im1->tpixels[y][x];
-			bp = buf + (color * 5);
-			(*(bp++))++;
-			*(bp++) += gdTrueColorGetRed(rgb);
-			*(bp++) += gdTrueColorGetGreen(rgb);
-			*(bp++) += gdTrueColorGetBlue(rgb);
-			*(bp++) += gdTrueColorGetAlpha(rgb);
-		}
-	}
-	bp = buf;
-	for (color=0; color<im2->colorsTotal; color++) {
-		count = *(bp++);
-		if( count > 0 ) {
-			im2->red[color]		= *(bp++) / count;
-			im2->green[color]	= *(bp++) / count;
-			im2->blue[color]	= *(bp++) / count;
-			im2->alpha[color]	= *(bp++) / count;
-		} else {
-			bp += 4;
-		}
-	}
-	gdFree(buf);
-	return 0;
+	return (100.0 * dist / 195075) < threshold;
 }
 
+/*
+ * To be implemented when we have more image formats.
+ * Buffer like gray8 gray16 or rgb8 will require some tweak
+ * and can be done in this function (called from the autocrop
+ * function. (Pierre)
+ */
+#if 0
+static int colors_equal (const int col1, const in col2)
+{
 
+}
+#endif

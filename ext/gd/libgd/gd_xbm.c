@@ -1,36 +1,58 @@
-/*
-   +----------------------------------------------------------------------+
-   | PHP Version 7                                                        |
-   +----------------------------------------------------------------------+
-   | Copyright (c) 1997-2015 The PHP Group                                |
-   +----------------------------------------------------------------------+
-   | This source file is subject to version 3.01 of the PHP license,      |
-   | that is bundled with this package in the file LICENSE, and is        |
-   | available through the world-wide-web at the following url:           |
-   | http://www.php.net/license/3_01.txt                                  |
-   | If you did not receive a copy of the PHP license and are unable to   |
-   | obtain it through the world-wide-web, please send a note to          |
-   | license@php.net so we can mail you a copy immediately.               |
-   +----------------------------------------------------------------------+
-   | Author: Marcus Boerger <helly@php.net>                               |
-   +----------------------------------------------------------------------+
- */
+#ifdef HAVE_CONFIG_H
+#	include "config.h"
+#endif
 
-/* $Id$ */
-
+#include <ctype.h>
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include "gd.h"
+#include "gd_errors.h"
 #include "gdhelpers.h"
 
-#include "php.h"
+#ifdef _MSC_VER
+# define strcasecmp _stricmp
+#endif
 
 #define MAX_XBM_LINE_SIZE 255
 
-/* {{{ gdImagePtr gdImageCreateFromXbm */
-gdImagePtr gdImageCreateFromXbm(FILE * fd)
+
+/*
+  Function: gdImageCreateFromXbm
+
+    <gdImageCreateFromXbm> is called to load images from X bitmap
+    format files. Invoke <gdImageCreateFromXbm> with an already opened
+    pointer to a file containing the desired
+    image. <gdImageCreateFromXbm> returns a <gdImagePtr> to the new
+    image, or NULL if unable to load the image (most often because the
+    file is corrupt or does not contain an X bitmap format
+    image). <gdImageCreateFromXbm> does not close the file.
+
+    You can inspect the sx and sy members of the image to determine
+    its size. The image must eventually be destroyed using
+    <gdImageDestroy>.
+
+  Parameters:
+
+    fd - The input FILE pointer
+
+  Returns:
+
+    A pointer to the new image or NULL if an error occurred.
+
+  Example:
+
+    > gdImagePtr im;
+    > FILE *in;
+    > in = fopen("myxbm.xbm", "rb");
+    > im = gdImageCreateFromXbm(in);
+    > fclose(in);
+    > // ... Use the image ...
+    > gdImageDestroy(im);
+*/
+BGD_DECLARE(gdImagePtr) gdImageCreateFromXbm(FILE * fd)
 {
 	char fline[MAX_XBM_LINE_SIZE];
 	char iname[MAX_XBM_LINE_SIZE];
@@ -149,29 +171,28 @@ gdImagePtr gdImageCreateFromXbm(FILE * fd)
 		}
 	}
 
-	php_gd_error("EOF before image was complete");
+	gd_error("EOF before image was complete");
 	gdImageDestroy(im);
 	return 0;
 }
-/* }}} */
+
 
 /* {{{ gdCtxPrintf */
-void gdCtxPrintf(gdIOCtx * out, const char *format, ...)
+static void gdCtxPrintf(gdIOCtx * out, const char *format, ...)
 {
-	char *buf;
+	char buf[4096];
 	int len;
 	va_list args;
 
 	va_start(args, format);
-	len = vspprintf(&buf, 0, format, args);
+	len = vsnprintf(buf, sizeof(buf)-1, format, args);
 	va_end(args);
 	out->putBuf(out, buf, len);
-	efree(buf);
 }
 /* }}} */
 
 /* {{{ gdImageXbmCtx */
-void gdImageXbmCtx(gdImagePtr image, char* file_name, int fg, gdIOCtx * out)
+BGD_DECLARE(void) gdImageXbmCtx(gdImagePtr image, char* file_name, int fg, gdIOCtx * out)
 {
 	int x, y, c, b, sx, sy, p;
 	char *name, *f;
@@ -180,11 +201,11 @@ void gdImageXbmCtx(gdImagePtr image, char* file_name, int fg, gdIOCtx * out)
 	name = file_name;
 	if ((f = strrchr(name, '/')) != NULL) name = f+1;
 	if ((f = strrchr(name, '\\')) != NULL) name = f+1;
-	name = estrdup(name);
+	name = strdup(name);
 	if ((f = strrchr(name, '.')) != NULL && !strcasecmp(f, ".XBM")) *f = '\0';
 	if ((l = strlen(name)) == 0) {
-		efree(name);
-		name = estrdup("image");
+		free(name);
+		name = strdup("image");
 	} else {
 		for (i=0; i<l; i++) {
 			/* only in C-locale isalnum() would work */
@@ -198,7 +219,7 @@ void gdImageXbmCtx(gdImagePtr image, char* file_name, int fg, gdIOCtx * out)
 	gdCtxPrintf(out, "#define %s_height %d\n", name, gdImageSY(image));
 	gdCtxPrintf(out, "static unsigned char %s_bits[] = {\n  ", name);
 
-	efree(name);
+	free(name);
 
 	b = 1;
 	p = 0;
@@ -230,12 +251,3 @@ void gdImageXbmCtx(gdImagePtr image, char* file_name, int fg, gdIOCtx * out)
 	gdCtxPrintf(out, "};\n");
 }
 /* }}} */
-
-/*
- * Local variables:
- * tab-width: 4
- * c-basic-offset: 4
- * End:
- * vim600: sw=4 ts=4 fdm=marker
- * vim<600: sw=4 ts=4
- */

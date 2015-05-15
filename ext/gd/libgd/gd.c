@@ -1,41 +1,25 @@
+/* $Id$ */
 
+#include <stdio.h>
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdarg.h>
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include "gd_intern.h"
+
+/* 2.03: don't include zlib here or we can't build without PNG */
 #include "gd.h"
 #include "gdhelpers.h"
+#include "gd_color.h"
+#include "gd_errors.h"
 
-#include "php.h"
-
-#ifdef _MSC_VER
-# if _MSC_VER >= 1300
-/* in MSVC.NET these are available but only for __cplusplus and not _MSC_EXTENSIONS */
-#  if !defined(_MSC_EXTENSIONS) && defined(__cplusplus)
-#   define HAVE_FABSF 1
-extern float fabsf(float x);
-#   define HAVE_FLOORF 1
-extern float floorf(float x);
-#  endif /*MSVC.NET */
-# endif /* MSC */
-#endif
-#ifndef HAVE_FABSF
-# define HAVE_FABSF 0
-#endif
-#ifndef HAVE_FLOORF
-# define HAVE_FLOORF 0
-#endif
-#if HAVE_FABSF == 0
-/* float fabsf(float x); */
-# ifndef fabsf
-#  define fabsf(x) ((float)(fabs(x)))
-# endif
-#endif
-#if HAVE_FLOORF == 0
-# ifndef floorf
-/* float floorf(float x);*/
-#  define floorf(x) ((float)(floor(x)))
-# endif
-#endif
+/* 2.0.12: this now checks the clipping rectangle */
+#define gdImageBoundsSafeMacro(im, x, y) (!((((y) < (im)->cy1) || ((y) > (im)->cy2)) || (((x) < (im)->cx1) || ((x) > (im)->cx2))))
 
 #ifdef _OSD_POSIX		/* BS2000 uses the EBCDIC char set instead of ASCII */
 #define CHARSET_EBCDIC
@@ -47,104 +31,174 @@ extern float floorf(float x);
 #define ASC(ch)  ch
 #else /*CHARSET_EBCDIC */
 #define ASC(ch) gd_toascii[(unsigned char)ch]
-static const unsigned char gd_toascii[256] =
-{
-/*00 */ 0x00, 0x01, 0x02, 0x03, 0x85, 0x09, 0x86, 0x7f,
-  0x87, 0x8d, 0x8e, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,	/*................ */
-/*10 */ 0x10, 0x11, 0x12, 0x13, 0x8f, 0x0a, 0x08, 0x97,
-  0x18, 0x19, 0x9c, 0x9d, 0x1c, 0x1d, 0x1e, 0x1f,	/*................ */
-/*20 */ 0x80, 0x81, 0x82, 0x83, 0x84, 0x92, 0x17, 0x1b,
-  0x88, 0x89, 0x8a, 0x8b, 0x8c, 0x05, 0x06, 0x07,	/*................ */
-/*30 */ 0x90, 0x91, 0x16, 0x93, 0x94, 0x95, 0x96, 0x04,
-  0x98, 0x99, 0x9a, 0x9b, 0x14, 0x15, 0x9e, 0x1a,	/*................ */
-/*40 */ 0x20, 0xa0, 0xe2, 0xe4, 0xe0, 0xe1, 0xe3, 0xe5,
-  0xe7, 0xf1, 0x60, 0x2e, 0x3c, 0x28, 0x2b, 0x7c,	/* .........`.<(+| */
-/*50 */ 0x26, 0xe9, 0xea, 0xeb, 0xe8, 0xed, 0xee, 0xef,
-  0xec, 0xdf, 0x21, 0x24, 0x2a, 0x29, 0x3b, 0x9f,	/*&.........!$*);. */
-/*60 */ 0x2d, 0x2f, 0xc2, 0xc4, 0xc0, 0xc1, 0xc3, 0xc5,
-  0xc7, 0xd1, 0x5e, 0x2c, 0x25, 0x5f, 0x3e, 0x3f,
-/*-/........^,%_>?*/
-/*70 */ 0xf8, 0xc9, 0xca, 0xcb, 0xc8, 0xcd, 0xce, 0xcf,
-  0xcc, 0xa8, 0x3a, 0x23, 0x40, 0x27, 0x3d, 0x22,	/*..........:#@'=" */
-/*80 */ 0xd8, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67,
-  0x68, 0x69, 0xab, 0xbb, 0xf0, 0xfd, 0xfe, 0xb1,	/*.abcdefghi...... */
-/*90 */ 0xb0, 0x6a, 0x6b, 0x6c, 0x6d, 0x6e, 0x6f, 0x70,
-  0x71, 0x72, 0xaa, 0xba, 0xe6, 0xb8, 0xc6, 0xa4,	/*.jklmnopqr...... */
-/*a0 */ 0xb5, 0xaf, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78,
-  0x79, 0x7a, 0xa1, 0xbf, 0xd0, 0xdd, 0xde, 0xae,	/*..stuvwxyz...... */
-/*b0 */ 0xa2, 0xa3, 0xa5, 0xb7, 0xa9, 0xa7, 0xb6, 0xbc,
-  0xbd, 0xbe, 0xac, 0x5b, 0x5c, 0x5d, 0xb4, 0xd7,	/*...........[\].. */
-/*c0 */ 0xf9, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47,
-  0x48, 0x49, 0xad, 0xf4, 0xf6, 0xf2, 0xf3, 0xf5,	/*.ABCDEFGHI...... */
-/*d0 */ 0xa6, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f, 0x50,
-  0x51, 0x52, 0xb9, 0xfb, 0xfc, 0xdb, 0xfa, 0xff,	/*.JKLMNOPQR...... */
-/*e0 */ 0xd9, 0xf7, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58,
-  0x59, 0x5a, 0xb2, 0xd4, 0xd6, 0xd2, 0xd3, 0xd5,	/*..STUVWXYZ...... */
-/*f0 */ 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37,
-  0x38, 0x39, 0xb3, 0x7b, 0xdc, 0x7d, 0xda, 0x7e	/*0123456789.{.}.~ */
+static const unsigned char gd_toascii[256] = {
+	/*00 */ 0x00, 0x01, 0x02, 0x03, 0x85, 0x09, 0x86, 0x7f,
+	0x87, 0x8d, 0x8e, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,	/*................ */
+	/*10 */ 0x10, 0x11, 0x12, 0x13, 0x8f, 0x0a, 0x08, 0x97,
+	0x18, 0x19, 0x9c, 0x9d, 0x1c, 0x1d, 0x1e, 0x1f,	/*................ */
+	/*20 */ 0x80, 0x81, 0x82, 0x83, 0x84, 0x92, 0x17, 0x1b,
+	0x88, 0x89, 0x8a, 0x8b, 0x8c, 0x05, 0x06, 0x07,	/*................ */
+	/*30 */ 0x90, 0x91, 0x16, 0x93, 0x94, 0x95, 0x96, 0x04,
+	0x98, 0x99, 0x9a, 0x9b, 0x14, 0x15, 0x9e, 0x1a,	/*................ */
+	/*40 */ 0x20, 0xa0, 0xe2, 0xe4, 0xe0, 0xe1, 0xe3, 0xe5,
+	0xe7, 0xf1, 0x60, 0x2e, 0x3c, 0x28, 0x2b, 0x7c,	/* .........`.<(+| */
+	/*50 */ 0x26, 0xe9, 0xea, 0xeb, 0xe8, 0xed, 0xee, 0xef,
+	0xec, 0xdf, 0x21, 0x24, 0x2a, 0x29, 0x3b, 0x9f,	/*&.........!$*);. */
+	/*60 */ 0x2d, 0x2f, 0xc2, 0xc4, 0xc0, 0xc1, 0xc3, 0xc5,
+	0xc7, 0xd1, 0x5e, 0x2c, 0x25, 0x5f, 0x3e, 0x3f,
+	/*-/........^,%_>?*/
+	/*70 */ 0xf8, 0xc9, 0xca, 0xcb, 0xc8, 0xcd, 0xce, 0xcf,
+	0xcc, 0xa8, 0x3a, 0x23, 0x40, 0x27, 0x3d, 0x22,	/*..........:#@'=" */
+	/*80 */ 0xd8, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67,
+	0x68, 0x69, 0xab, 0xbb, 0xf0, 0xfd, 0xfe, 0xb1,	/*.abcdefghi...... */
+	/*90 */ 0xb0, 0x6a, 0x6b, 0x6c, 0x6d, 0x6e, 0x6f, 0x70,
+	0x71, 0x72, 0xaa, 0xba, 0xe6, 0xb8, 0xc6, 0xa4,	/*.jklmnopqr...... */
+	/*a0 */ 0xb5, 0xaf, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78,
+	0x79, 0x7a, 0xa1, 0xbf, 0xd0, 0xdd, 0xde, 0xae,	/*..stuvwxyz...... */
+	/*b0 */ 0xa2, 0xa3, 0xa5, 0xb7, 0xa9, 0xa7, 0xb6, 0xbc,
+	0xbd, 0xbe, 0xac, 0x5b, 0x5c, 0x5d, 0xb4, 0xd7,	/*...........[\].. */
+	/*c0 */ 0xf9, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47,
+	0x48, 0x49, 0xad, 0xf4, 0xf6, 0xf2, 0xf3, 0xf5,	/*.ABCDEFGHI...... */
+	/*d0 */ 0xa6, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f, 0x50,
+	0x51, 0x52, 0xb9, 0xfb, 0xfc, 0xdb, 0xfa, 0xff,	/*.JKLMNOPQR...... */
+	/*e0 */ 0xd9, 0xf7, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58,
+	0x59, 0x5a, 0xb2, 0xd4, 0xd6, 0xd2, 0xd3, 0xd5,	/*..STUVWXYZ...... */
+	/*f0 */ 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37,
+	0x38, 0x39, 0xb3, 0x7b, 0xdc, 0x7d, 0xda, 0x7e	/*0123456789.{.}.~ */
 };
 #endif /*CHARSET_EBCDIC */
 
-/* 2.0.10: cast instead of floor() yields 35% performance improvement. Thanks to John Buckman. */
-#define floor_cast(exp) ((long) exp)
+extern const int gdCosT[];
+extern const int gdSinT[];
 
-extern int gdCosT[];
-extern int gdSinT[];
+void gd_stderr_error(int priority, const char *format, va_list args)
+{
+	switch (priority) {
+	case GD_ERROR:
+		fputs("GD Error: ", stderr);
+		break;
+	case GD_WARNING:
+		fputs("GD Warning: ", stderr);
+		break;
+	case GD_NOTICE:
+		fputs("GD Notice: ", stderr);
+		break;
+	case GD_INFO:
+		fputs("GD Info: ", stderr);
+		break;
+	case GD_DEBUG:
+		fputs("GD Debug: ", stderr);
+		break;
+	}
+	vfprintf(stderr, format, args);
+	fflush(stderr);
+}
 
-static void gdImageBrushApply(gdImagePtr im, int x, int y);
-static void gdImageTileApply(gdImagePtr im, int x, int y);
-static void gdImageAntiAliasedApply(gdImagePtr im, int x, int y);
-static int gdLayerOverlay(int dst, int src);
-static int gdAlphaOverlayColor(int src, int dst, int max);
-int gdImageGetTrueColorPixel(gdImagePtr im, int x, int y);
+static gdErrorMethod gd_error_method = gd_stderr_error;
 
-void php_gd_error_ex(int type, const char *format, ...)
+void gd_error(const char *format, ...)
 {
 	va_list args;
 
-
 	va_start(args, format);
-	php_verror(NULL, "", type, format, args);
+	gd_error_ex(GD_WARNING, format, args);
 	va_end(args);
 }
-
-void php_gd_error(const char *format, ...)
+void gd_error_ex(int priority, const char *format, ...)
 {
 	va_list args;
 
-
 	va_start(args, format);
-	php_verror(NULL, "", E_WARNING, format, args);
+	if (gd_error_method) {
+		gd_error_method(priority, format, args);
+	}
 	va_end(args);
 }
 
-gdImagePtr gdImageCreate (int sx, int sy)
+BGD_DECLARE(void) gdSetErrorMethod(gdErrorMethod error_method)
+{
+	gd_error_method = error_method;
+}
+
+BGD_DECLARE(void) gdClearErrorMethod(void)
+{
+	gd_error_method = gd_stderr_error;
+}
+
+static void gdImageBrushApply (gdImagePtr im, int x, int y);
+static void gdImageTileApply (gdImagePtr im, int x, int y);
+BGD_DECLARE(int) gdImageGetTrueColorPixel (gdImagePtr im, int x, int y);
+
+
+/*
+    Function: gdImageCreate
+
+      gdImageCreate is called to create palette-based images, with no
+      more than 256 colors. The image must eventually be destroyed using
+      gdImageDestroy().
+
+    Parameters:
+
+        sx - The image width.
+        sy - The image height.
+
+    Returns:
+
+        A pointer to the new image or NULL if an error occurred.
+
+    Example:
+
+        >   gdImagePtr im;
+        >   im = gdImageCreate(64, 64);
+        >   // ... Use the image ...
+        >   gdImageDestroy(im);
+
+    See Also:
+
+        <gdImageCreateTrueColor>        
+
+ */
+BGD_DECLARE(gdImagePtr) gdImageCreate (int sx, int sy)
 {
 	int i;
 	gdImagePtr im;
 
-	if (overflow2(sx, sy)) {
+	if (overflow2(sizeof (unsigned char *), sy)) {
 		return NULL;
 	}
-
-	if (overflow2(sizeof(unsigned char *), sy)) {
+	if (overflow2(sizeof (unsigned char *), sx)) {
 		return NULL;
 	}
 
 	im = (gdImage *) gdCalloc(1, sizeof(gdImage));
+	if (!im) {
+		return NULL;
+	}
 
 	/* Row-major ever since gd 1.3 */
-	im->pixels = (unsigned char **) gdMalloc(sizeof(unsigned char *) * sy);
-	im->AA_opacity = (unsigned char **) gdMalloc(sizeof(unsigned char *) * sy);
+	im->pixels = (unsigned char **) gdMalloc (sizeof (unsigned char *) * sy);
+	if (!im->pixels) {
+		gdFree(im);
+		return NULL;
+	}
+
 	im->polyInts = 0;
 	im->polyAllocated = 0;
 	im->brush = 0;
 	im->tile = 0;
 	im->style = 0;
-	for (i = 0; i < sy; i++) {
+	for (i = 0; (i < sy); i++) {
 		/* Row-major ever since gd 1.3 */
-		im->pixels[i] = (unsigned char *) gdCalloc(sx, sizeof(unsigned char));
-		im->AA_opacity[i] = (unsigned char *) gdCalloc(sx, sizeof(unsigned char));
+		im->pixels[i] = (unsigned char *) gdCalloc (sx, sizeof (unsigned char));
+		if (!im->pixels[i]) {
+			for (--i ; i >= 0; i--) {
+				gdFree(im->pixels[i]);
+			}
+			gdFree(im->pixels);
+			gdFree(im);
+			return NULL;
+		}
+
 	}
 	im->sx = sx;
 	im->sy = sy;
@@ -153,25 +207,59 @@ gdImagePtr gdImageCreate (int sx, int sy)
 	im->interlace = 0;
 	im->thick = 1;
 	im->AA = 0;
-	im->AA_polygon = 0;
-	for (i = 0; i < gdMaxColors; i++) {
+	for (i = 0; (i < gdMaxColors); i++) {
 		im->open[i] = 1;
-		im->red[i] = 0;
-		im->green[i] = 0;
-		im->blue[i] = 0;
-	}
+	};
 	im->trueColor = 0;
 	im->tpixels = 0;
 	im->cx1 = 0;
 	im->cy1 = 0;
 	im->cx2 = im->sx - 1;
 	im->cy2 = im->sy - 1;
+	im->res_x = GD_RESOLUTION;
+	im->res_y = GD_RESOLUTION;
 	im->interpolation = NULL;
 	im->interpolation_id = GD_BILINEAR_FIXED;
 	return im;
 }
 
-gdImagePtr gdImageCreateTrueColor (int sx, int sy)
+
+
+/*
+    Function: gdImageCreateTrueColor
+
+      <gdImageCreateTrueColor> is called to create truecolor images,
+      with an essentially unlimited number of colors. Invoke
+      <gdImageCreateTrueColor> with the x and y dimensions of the
+      desired image. <gdImageCreateTrueColor> returns a <gdImagePtr>
+      to the new image, or NULL if unable to allocate the image. The
+      image must eventually be destroyed using <gdImageDestroy>().
+
+      Truecolor images are always filled with black at creation
+      time. There is no concept of a "background" color index.
+
+    Parameters:
+
+        sx - The image width.
+        sy - The image height.
+
+    Returns:
+
+        A pointer to the new image or NULL if an error occurred.
+
+    Example:
+
+        > gdImagePtr im;
+        > im = gdImageCreateTrueColor(64, 64);
+        > // ... Use the image ...
+        > gdImageDestroy(im);
+
+    See Also:
+
+        <gdImageCreateTrueColor>        
+
+*/
+BGD_DECLARE(gdImagePtr) gdImageCreateTrueColor (int sx, int sy)
 {
 	int i;
 	gdImagePtr im;
@@ -180,26 +268,43 @@ gdImagePtr gdImageCreateTrueColor (int sx, int sy)
 		return NULL;
 	}
 
-	if (overflow2(sizeof(unsigned char *), sy)) {
-		return NULL;
+	if (overflow2(sizeof (int *), sy)) {
+		return 0;
 	}
 
 	if (overflow2(sizeof(int), sx)) {
 		return NULL;
 	}
 
-	im = (gdImage *) gdMalloc(sizeof(gdImage));
-	memset(im, 0, sizeof(gdImage));
-	im->tpixels = (int **) gdMalloc(sizeof(int *) * sy);
-	im->AA_opacity = (unsigned char **) gdMalloc(sizeof(unsigned char *) * sy);
+	im = (gdImage *) gdMalloc (sizeof (gdImage));
+	if (!im) {
+		return 0;
+	}
+	memset (im, 0, sizeof (gdImage));
+
+	im->tpixels = (int **) gdMalloc (sizeof (int *) * sy);
+	if (!im->tpixels) {
+		gdFree(im);
+		return 0;
+	}
 	im->polyInts = 0;
 	im->polyAllocated = 0;
 	im->brush = 0;
 	im->tile = 0;
 	im->style = 0;
-	for (i = 0; i < sy; i++) {
-		im->tpixels[i] = (int *) gdCalloc(sx, sizeof(int));
-		im->AA_opacity[i] = (unsigned char *) gdCalloc(sx, sizeof(unsigned char));
+	for (i = 0; (i < sy); i++) {
+		im->tpixels[i] = (int *) gdCalloc (sx, sizeof (int));
+		if (!im->tpixels[i]) {
+			/* 2.0.34 */
+			i--;
+			while (i >= 0) {
+				gdFree(im->tpixels[i]);
+				i--;
+			}
+			gdFree(im->tpixels);
+			gdFree(im);
+			return 0;
+		}
 	}
 	im->sx = sx;
 	im->sy = sy;
@@ -207,81 +312,101 @@ gdImagePtr gdImageCreateTrueColor (int sx, int sy)
 	im->interlace = 0;
 	im->trueColor = 1;
 	/* 2.0.2: alpha blending is now on by default, and saving of alpha is
-	 * off by default. This allows font antialiasing to work as expected
-	 * on the first try in JPEGs -- quite important -- and also allows
-	 * for smaller PNGs when saving of alpha channel is not really
-	 * desired, which it usually isn't!
-	 */
+	   off by default. This allows font antialiasing to work as expected
+	   on the first try in JPEGs -- quite important -- and also allows
+	   for smaller PNGs when saving of alpha channel is not really
+	   desired, which it usually isn't! */
 	im->saveAlphaFlag = 0;
 	im->alphaBlendingFlag = 1;
 	im->thick = 1;
 	im->AA = 0;
-	im->AA_polygon = 0;
 	im->cx1 = 0;
 	im->cy1 = 0;
 	im->cx2 = im->sx - 1;
 	im->cy2 = im->sy - 1;
+	im->res_x = GD_RESOLUTION;
+	im->res_y = GD_RESOLUTION;
 	im->interpolation = NULL;
 	im->interpolation_id = GD_BILINEAR_FIXED;
 	return im;
 }
 
-void gdImageDestroy (gdImagePtr im)
+/*
+  Function: gdImageDestroy
+
+    <gdImageDestroy> is used to free the memory associated with an
+    image. It is important to invoke <gdImageDestroy> before exiting
+    your program or assigning a new image to a <gdImagePtr> variable.
+
+  Parameters:
+
+    im  - Pointer to the gdImage to delete.
+
+  Returns:
+
+    Nothing.
+
+  Example:
+
+    > gdImagePtr im;
+    > im = gdImageCreate(10, 10);
+    > // ... Use the image ...
+    > // Now destroy it
+    > gdImageDestroy(im);
+
+*/
+
+BGD_DECLARE(void) gdImageDestroy (gdImagePtr im)
 {
 	int i;
 	if (im->pixels) {
-		for (i = 0; i < im->sy; i++) {
-			gdFree(im->pixels[i]);
+		for (i = 0; (i < im->sy); i++) {
+			gdFree (im->pixels[i]);
 		}
-		gdFree(im->pixels);
+		gdFree (im->pixels);
 	}
 	if (im->tpixels) {
-		for (i = 0; i < im->sy; i++) {
-			gdFree(im->tpixels[i]);
+		for (i = 0; (i < im->sy); i++) {
+			gdFree (im->tpixels[i]);
 		}
-		gdFree(im->tpixels);
-	}
-	if (im->AA_opacity) {
-		for (i = 0; i < im->sy; i++) {
-			gdFree(im->AA_opacity[i]);
-		}
-		gdFree(im->AA_opacity);
+		gdFree (im->tpixels);
 	}
 	if (im->polyInts) {
-		gdFree(im->polyInts);
+		gdFree (im->polyInts);
 	}
 	if (im->style) {
-		gdFree(im->style);
+		gdFree (im->style);
 	}
-	gdFree(im);
+	gdFree (im);
 }
 
-int gdImageColorClosest (gdImagePtr im, int r, int g, int b)
+BGD_DECLARE(int) gdImageColorClosest (gdImagePtr im, int r, int g, int b)
 {
 	return gdImageColorClosestAlpha (im, r, g, b, gdAlphaOpaque);
 }
 
-int gdImageColorClosestAlpha (gdImagePtr im, int r, int g, int b, int a)
+BGD_DECLARE(int) gdImageColorClosestAlpha (gdImagePtr im, int r, int g, int b, int a)
 {
 	int i;
 	long rd, gd, bd, ad;
 	int ct = (-1);
 	int first = 1;
 	long mindist = 0;
-
 	if (im->trueColor) {
-		return gdTrueColorAlpha(r, g, b, a);
+		return gdTrueColorAlpha (r, g, b, a);
 	}
-	for (i = 0; i < im->colorsTotal; i++) {
+	for (i = 0; (i < (im->colorsTotal)); i++) {
 		long dist;
 		if (im->open[i]) {
 			continue;
 		}
-		rd = im->red[i] - r;
-		gd = im->green[i] - g;
-		bd = im->blue[i] - b;
+		rd = (im->red[i] - r);
+		gd = (im->green[i] - g);
+		bd = (im->blue[i] - b);
 		/* gd 2.02: whoops, was - b (thanks to David Marwood) */
-		ad = im->alpha[i] - a;
+		/* gd 2.16: was blue rather than alpha! Geez! Thanks to
+		   Artur Jakub Jerzak */
+		ad = (im->alpha[i] - a);
 		dist = rd * rd + gd * gd + bd * bd + ad * ad;
 		if (first || (dist < mindist)) {
 			mindist = dist;
@@ -300,15 +425,11 @@ int gdImageColorClosestAlpha (gdImagePtr im, int r, int g, int b, int a)
 #define RETURN_HWB(h, w, b) {HWB->H = h; HWB->W = w; HWB->B = b; return HWB;}
 #define RETURN_RGB(r, g, b) {RGB->R = r; RGB->G = g; RGB->B = b; return RGB;}
 #define HWB_UNDEFINED -1
-#define SETUP_RGB(s, r, g, b) {s.R = r/255.0f; s.G = g/255.0f; s.B = b/255.0f;}
+#define SETUP_RGB(s, r, g, b) {s.R = r/255.0; s.G = g/255.0; s.B = b/255.0;}
 
-#ifndef MIN
 #define MIN(a,b) ((a)<(b)?(a):(b))
-#endif
 #define MIN3(a,b,c) ((a)<(b)?(MIN(a,c)):(MIN(b,c)))
-#ifndef MAX
 #define MAX(a,b) ((a)<(b)?(b):(a))
-#endif
 #define MAX3(a,b,c) ((a)<(b)?(MAX(b,c)):(MAX(a,c)))
 
 
@@ -317,19 +438,19 @@ int gdImageColorClosestAlpha (gdImagePtr im, int r, int g, int b, int a)
  * red always maps to 6 in this implementation. Therefore UNDEFINED can be
  * defined as 0 in situations where only unsigned numbers are desired.
  */
-typedef struct
-{
+typedef struct {
 	float R, G, B;
 }
 RGBType;
-typedef struct
-{
+typedef struct {
 	float H, W, B;
 }
 HWBType;
 
-static HWBType * RGB_to_HWB (RGBType RGB, HWBType * HWB)
+static HWBType *
+RGB_to_HWB (RGBType RGB, HWBType * HWB)
 {
+
 	/*
 	 * RGB are each on [0, 1]. W and B are returned on [0, 1] and H is
 	 * returned on [0, 6]. Exception: H is returned UNDEFINED if W == 1 - B.
@@ -341,26 +462,26 @@ static HWBType * RGB_to_HWB (RGBType RGB, HWBType * HWB)
 	w = MIN3 (R, G, B);
 	v = MAX3 (R, G, B);
 	b = 1 - v;
-	if (v == w) {
-		RETURN_HWB(HWB_UNDEFINED, w, b);
-	}
+	if (v == w)
+		RETURN_HWB (HWB_UNDEFINED, w, b);
 	f = (R == w) ? G - B : ((G == w) ? B - R : R - G);
 	i = (R == w) ? 3 : ((G == w) ? 5 : 1);
+	RETURN_HWB (i - f / (v - w), w, b);
 
-	RETURN_HWB(i - f / (v - w), w, b);
 }
 
-static float HWB_Diff (int r1, int g1, int b1, int r2, int g2, int b2)
+static float
+HWB_Diff (int r1, int g1, int b1, int r2, int g2, int b2)
 {
 	RGBType RGB1, RGB2;
 	HWBType HWB1, HWB2;
 	float diff;
 
-	SETUP_RGB(RGB1, r1, g1, b1);
-	SETUP_RGB(RGB2, r2, g2, b2);
+	SETUP_RGB (RGB1, r1, g1, b1);
+	SETUP_RGB (RGB2, r2, g2, b2);
 
-	RGB_to_HWB(RGB1, &HWB1);
-	RGB_to_HWB(RGB2, &HWB2);
+	RGB_to_HWB (RGB1, &HWB1);
+	RGB_to_HWB (RGB2, &HWB2);
 
 	/*
 	 * I made this bit up; it seems to produce OK results, and it is certainly
@@ -368,15 +489,18 @@ static float HWB_Diff (int r1, int g1, int b1, int r2, int g2, int b2)
 	 */
 
 	if ((HWB1.H == HWB_UNDEFINED) || (HWB2.H == HWB_UNDEFINED)) {
-		diff = 0.0f;	/* Undefined hues always match... */
+		diff = 0;			/* Undefined hues always match... */
 	} else {
-		diff = fabsf(HWB1.H - HWB2.H);
-		if (diff > 3.0f) {
-			diff = 6.0f - diff;	/* Remember, it's a colour circle */
+		diff = fabs (HWB1.H - HWB2.H);
+		if (diff > 3) {
+			diff = 6 - diff;	/* Remember, it's a colour circle */
 		}
 	}
 
-	diff = diff * diff + (HWB1.W - HWB2.W) * (HWB1.W - HWB2.W) + (HWB1.B - HWB2.B) * (HWB1.B - HWB2.B);
+	diff =
+	    diff * diff + (HWB1.W - HWB2.W) * (HWB1.W - HWB2.W) + (HWB1.B -
+	            HWB2.B) * (HWB1.B -
+	                       HWB2.B);
 
 	return diff;
 }
@@ -387,8 +511,10 @@ static float HWB_Diff (int r1, int g1, int b1, int r2, int g2, int b2)
  * This is not actually used, but is here for completeness, in case someone wants to
  * use the HWB stuff for anything else...
  */
-static RGBType * HWB_to_RGB (HWBType HWB, RGBType * RGB)
+static RGBType *
+HWB_to_RGB (HWBType HWB, RGBType * RGB)
 {
+
 	/*
 	 * H is given on [0, 6] or UNDEFINED. W and B are given on [0, 1].
 	 * RGB are each returned on [0, 1].
@@ -398,36 +524,35 @@ static RGBType * HWB_to_RGB (HWBType HWB, RGBType * RGB)
 	int i;
 
 	v = 1 - b;
-	if (h == HWB_UNDEFINED) {
-		RETURN_RGB(v, v, v);
-	}
-	i = floor(h);
+	if (h == HWB_UNDEFINED)
+		RETURN_RGB (v, v, v);
+	i = floor (h);
 	f = h - i;
-	if (i & 1) {
-		f = 1 - f; /* if i is odd */
-	}
+	if (i & 1)
+		f = 1 - f;			/* if i is odd */
 	n = w + f * (v - w);		/* linear interpolation between w and v */
 	switch (i) {
-		case 6:
-		case 0:
-			RETURN_RGB(v, n, w);
-		case 1:
-			RETURN_RGB(n, v, w);
-		case 2:
-			RETURN_RGB(w, v, n);
-		case 3:
-			RETURN_RGB(w, n, v);
-		case 4:
-			RETURN_RGB(n, w, v);
-		case 5:
-			RETURN_RGB(v, w, n);
+	case 6:
+	case 0:
+		RETURN_RGB (v, n, w);
+	case 1:
+		RETURN_RGB (n, v, w);
+	case 2:
+		RETURN_RGB (w, v, n);
+	case 3:
+		RETURN_RGB (w, n, v);
+	case 4:
+		RETURN_RGB (n, w, v);
+	case 5:
+		RETURN_RGB (v, w, n);
 	}
 
 	return RGB;
+
 }
 #endif
 
-int gdImageColorClosestHWB (gdImagePtr im, int r, int g, int b)
+BGD_DECLARE(int) gdImageColorClosestHWB (gdImagePtr im, int r, int g, int b)
 {
 	int i;
 	/* long rd, gd, bd; */
@@ -435,14 +560,14 @@ int gdImageColorClosestHWB (gdImagePtr im, int r, int g, int b)
 	int first = 1;
 	float mindist = 0;
 	if (im->trueColor) {
-		return gdTrueColor(r, g, b);
+		return gdTrueColor (r, g, b);
 	}
-	for (i = 0; i < im->colorsTotal; i++) {
+	for (i = 0; (i < (im->colorsTotal)); i++) {
 		float dist;
 		if (im->open[i]) {
 			continue;
 		}
-		dist = HWB_Diff(im->red[i], im->green[i], im->blue[i], r, g, b);
+		dist = HWB_Diff (im->red[i], im->green[i], im->blue[i], r, g, b);
 		if (first || (dist < mindist)) {
 			mindist = dist;
 			ct = i;
@@ -452,41 +577,42 @@ int gdImageColorClosestHWB (gdImagePtr im, int r, int g, int b)
 	return ct;
 }
 
-int gdImageColorExact (gdImagePtr im, int r, int g, int b)
+BGD_DECLARE(int) gdImageColorExact (gdImagePtr im, int r, int g, int b)
 {
 	return gdImageColorExactAlpha (im, r, g, b, gdAlphaOpaque);
 }
 
-int gdImageColorExactAlpha (gdImagePtr im, int r, int g, int b, int a)
+BGD_DECLARE(int) gdImageColorExactAlpha (gdImagePtr im, int r, int g, int b, int a)
 {
 	int i;
 	if (im->trueColor) {
-		return gdTrueColorAlpha(r, g, b, a);
+		return gdTrueColorAlpha (r, g, b, a);
 	}
-	for (i = 0; i < im->colorsTotal; i++) {
+	for (i = 0; (i < (im->colorsTotal)); i++) {
 		if (im->open[i]) {
 			continue;
 		}
-		if ((im->red[i] == r) && (im->green[i] == g) && (im->blue[i] == b) && (im->alpha[i] == a)) {
+		if ((im->red[i] == r) &&
+		        (im->green[i] == g) && (im->blue[i] == b) && (im->alpha[i] == a)) {
 			return i;
 		}
 	}
 	return -1;
 }
 
-int gdImageColorAllocate (gdImagePtr im, int r, int g, int b)
+BGD_DECLARE(int) gdImageColorAllocate (gdImagePtr im, int r, int g, int b)
 {
 	return gdImageColorAllocateAlpha (im, r, g, b, gdAlphaOpaque);
 }
 
-int gdImageColorAllocateAlpha (gdImagePtr im, int r, int g, int b, int a)
+BGD_DECLARE(int) gdImageColorAllocateAlpha (gdImagePtr im, int r, int g, int b, int a)
 {
 	int i;
 	int ct = (-1);
 	if (im->trueColor) {
-		return gdTrueColorAlpha(r, g, b, a);
+		return gdTrueColorAlpha (r, g, b, a);
 	}
-	for (i = 0; i < im->colorsTotal; i++) {
+	for (i = 0; (i < (im->colorsTotal)); i++) {
 		if (im->open[i]) {
 			ct = i;
 			break;
@@ -504,7 +630,6 @@ int gdImageColorAllocateAlpha (gdImagePtr im, int r, int g, int b, int a)
 	im->blue[ct] = b;
 	im->alpha[ct] = a;
 	im->open[ct] = 0;
-
 	return ct;
 }
 
@@ -519,130 +644,302 @@ int gdImageColorAllocateAlpha (gdImagePtr im, int r, int g, int b, int a)
  * return a color index in one search over the color table.
  */
 
-int gdImageColorResolve (gdImagePtr im, int r, int g, int b)
+BGD_DECLARE(int) gdImageColorResolve (gdImagePtr im, int r, int g, int b)
 {
-	return gdImageColorResolveAlpha(im, r, g, b, gdAlphaOpaque);
+	return gdImageColorResolveAlpha (im, r, g, b, gdAlphaOpaque);
 }
 
-int gdImageColorResolveAlpha (gdImagePtr im, int r, int g, int b, int a)
+BGD_DECLARE(int) gdImageColorResolveAlpha (gdImagePtr im, int r, int g, int b, int a)
 {
-  int c;
-  int ct = -1;
-  int op = -1;
-  long rd, gd, bd, ad, dist;
-  long mindist = 4 * 255 * 255;	/* init to max poss dist */
-  if (im->trueColor)
-    {
-      return gdTrueColorAlpha (r, g, b, a);
-    }
-
-  for (c = 0; c < im->colorsTotal; c++)
-    {
-      if (im->open[c])
-	{
-	  op = c;		/* Save open slot */
-	  continue;		/* Color not in use */
-	}
-      if (c == im->transparent)
-        {
-          /* don't ever resolve to the color that has
-           * been designated as the transparent color */
-          continue;
-	}
-      rd = (long) (im->red[c] - r);
-      gd = (long) (im->green[c] - g);
-      bd = (long) (im->blue[c] - b);
-      ad = (long) (im->alpha[c] - a);
-      dist = rd * rd + gd * gd + bd * bd + ad * ad;
-      if (dist < mindist)
-	{
-	  if (dist == 0)
-	    {
-	      return c;		/* Return exact match color */
-	    }
-	  mindist = dist;
-	  ct = c;
-	}
-    }
-  /* no exact match.  We now know closest, but first try to allocate exact */
-  if (op == -1)
-    {
-      op = im->colorsTotal;
-      if (op == gdMaxColors)
-	{			/* No room for more colors */
-	  return ct;		/* Return closest available color */
-	}
-      im->colorsTotal++;
-    }
-  im->red[op] = r;
-  im->green[op] = g;
-  im->blue[op] = b;
-  im->alpha[op] = a;
-  im->open[op] = 0;
-  return op;			/* Return newly allocated color */
-}
-
-void gdImageColorDeallocate (gdImagePtr im, int color)
-{
+	int c;
+	int ct = -1;
+	int op = -1;
+	long rd, gd, bd, ad, dist;
+	long mindist = 4 * 255 * 255;	/* init to max poss dist */
 	if (im->trueColor) {
+		return gdTrueColorAlpha (r, g, b, a);
+	}
+
+	for (c = 0; c < im->colorsTotal; c++) {
+		if (im->open[c]) {
+			op = c;		/* Save open slot */
+			continue;		/* Color not in use */
+		}
+		if (c == im->transparent) {
+			/* don't ever resolve to the color that has
+			 * been designated as the transparent color */
+			continue;
+		}
+		rd = (long) (im->red[c] - r);
+		gd = (long) (im->green[c] - g);
+		bd = (long) (im->blue[c] - b);
+		ad = (long) (im->alpha[c] - a);
+		dist = rd * rd + gd * gd + bd * bd + ad * ad;
+		if (dist < mindist) {
+			if (dist == 0) {
+				return c;		/* Return exact match color */
+			}
+			mindist = dist;
+			ct = c;
+		}
+	}
+	/* no exact match.  We now know closest, but first try to allocate exact */
+	if (op == -1) {
+		op = im->colorsTotal;
+		if (op == gdMaxColors) {
+			/* No room for more colors */
+			return ct;		/* Return closest available color */
+		}
+		im->colorsTotal++;
+	}
+	im->red[op] = r;
+	im->green[op] = g;
+	im->blue[op] = b;
+	im->alpha[op] = a;
+	im->open[op] = 0;
+	return op;			/* Return newly allocated color */
+}
+
+BGD_DECLARE(void) gdImageColorDeallocate (gdImagePtr im, int color)
+{
+	if (im->trueColor || (color >= gdMaxColors) || (color < 0)) {
 		return;
 	}
 	/* Mark it open. */
 	im->open[color] = 1;
 }
 
-void gdImageColorTransparent (gdImagePtr im, int color)
+BGD_DECLARE(void) gdImageColorTransparent (gdImagePtr im, int color)
 {
 	if (!im->trueColor) {
+		if((color < -1) || (color >= gdMaxColors)) {
+			return;
+		}
 		if (im->transparent != -1) {
 			im->alpha[im->transparent] = gdAlphaOpaque;
 		}
-		if (color > -1 && color < im->colorsTotal && color < gdMaxColors) {
+		if (color != -1) {
 			im->alpha[color] = gdAlphaTransparent;
-		} else {
-			return;
 		}
 	}
 	im->transparent = color;
 }
 
-void gdImagePaletteCopy (gdImagePtr to, gdImagePtr from)
+BGD_DECLARE(void) gdImagePaletteCopy (gdImagePtr to, gdImagePtr from)
 {
 	int i;
 	int x, y, p;
 	int xlate[256];
-	if (to->trueColor || from->trueColor) {
+	if (to->trueColor) {
+		return;
+	}
+	if (from->trueColor) {
 		return;
 	}
 
 	for (i = 0; i < 256; i++) {
 		xlate[i] = -1;
-	}
+	};
 
-	for (y = 0; y < to->sy; y++) {
-		for (x = 0; x < to->sx; x++) {
-			p = gdImageGetPixel(to, x, y);
+	for (y = 0; y < (to->sy); y++) {
+		for (x = 0; x < (to->sx); x++) {
+			/* Optimization: no gdImageGetPixel */
+			p = to->pixels[y][x];
 			if (xlate[p] == -1) {
-				/* This ought to use HWB, but we don't have an alpha-aware version of that yet. */
-				xlate[p] = gdImageColorClosestAlpha (from, to->red[p], to->green[p], to->blue[p], to->alpha[p]);
-			}
-			gdImageSetPixel(to, x, y, xlate[p]);
-		}
-	}
+				/* This ought to use HWB, but we don't have an alpha-aware
+				   version of that yet. */
+				xlate[p] =
+				    gdImageColorClosestAlpha (from, to->red[p], to->green[p],
+				                              to->blue[p], to->alpha[p]);
+				/*printf("Mapping %d (%d, %d, %d, %d) to %d (%d, %d, %d, %d)\n", */
+				/*      p,  to->red[p], to->green[p], to->blue[p], to->alpha[p], */
+				/*      xlate[p], from->red[xlate[p]], from->green[xlate[p]], from->blue[xlate[p]], from->alpha[xlate[p]]); */
+			};
+			/* Optimization: no gdImageSetPixel */
+			to->pixels[y][x] = xlate[p];
+		};
+	};
 
-	for (i = 0; i < from->colorsTotal; i++) {
+	for (i = 0; (i < (from->colorsTotal)); i++) {
+		/*printf("Copying color %d (%d, %d, %d, %d)\n", i, from->red[i], from->blue[i], from->green[i], from->alpha[i]); */
 		to->red[i] = from->red[i];
 		to->blue[i] = from->blue[i];
 		to->green[i] = from->green[i];
 		to->alpha[i] = from->alpha[i];
 		to->open[i] = 0;
-	}
+	};
 
-	for (i = from->colorsTotal; i < to->colorsTotal; i++) {
+	for (i = from->colorsTotal; (i < to->colorsTotal); i++) {
 		to->open[i] = 1;
-	}
+	};
 
 	to->colorsTotal = from->colorsTotal;
+
+}
+
+BGD_DECLARE(int) gdImageColorReplace (gdImagePtr im, int src, int dst)
+{
+	register int x, y;
+	int n = 0;
+
+	if (src == dst) {
+		return 0;
+	}
+
+#define REPLACING_LOOP(pixel) do {								\
+		for (y = im->cy1; y <= im->cy2; y++) {					\
+			for (x = im->cx1; x <= im->cx2; x++) {				\
+				if (pixel(im, x, y) == src) {					\
+					gdImageSetPixel(im, x, y, dst);				\
+					n++;										\
+				}												\
+			}													\
+		}														\
+	} while (0)
+
+	if (im->trueColor) {
+		REPLACING_LOOP(gdImageTrueColorPixel);
+	} else {
+		REPLACING_LOOP(gdImagePalettePixel);
+	}
+
+#undef REPLACING_LOOP
+
+	return n;
+}
+
+BGD_DECLARE(int) gdImageColorReplaceThreshold (gdImagePtr im, int src, int dst, float threshold)
+{
+	register int x, y;
+	int n = 0;
+
+	if (src == dst) {
+		return 0;
+	}
+
+#define REPLACING_LOOP(pixel) do {										\
+		for (y = im->cy1; y <= im->cy2; y++) {							\
+			for (x = im->cx1; x <= im->cx2; x++) {						\
+				if (gdColorMatch(im, src, pixel(im, x, y), threshold)) { \
+					gdImageSetPixel(im, x, y, dst);						\
+					n++;												\
+				}														\
+			}															\
+		}																\
+	} while (0)
+
+	if (im->trueColor) {
+		REPLACING_LOOP(gdImageTrueColorPixel);
+	} else {
+		REPLACING_LOOP(gdImagePalettePixel);
+	}
+
+#undef REPLACING_LOOP
+
+	return n;
+}
+
+static int colorCmp (const void *x, const void *y)
+{
+	int a = *(int const *)x;
+	int b = *(int const *)y;
+	return (a > b) - (a < b);
+}
+
+BGD_DECLARE(int) gdImageColorReplaceArray (gdImagePtr im, int len, int *src, int *dst)
+{
+	register int x, y;
+	int c, *d, *base;
+	int i, n = 0;
+
+	if (len <= 0 || src == dst) {
+		return 0;
+	}
+	if (len == 1) {
+		return gdImageColorReplace(im, src[0], dst[0]);
+	}
+	if (overflow2(len, sizeof(int)<<1)) {
+		return -1;
+	}
+	base = (int *)gdMalloc(len * (sizeof(int)<<1));
+	if (!base) {
+		return -1;
+	}
+	for (i = 0; i < len; i++) {
+		base[(i<<1)]   = src[i];
+		base[(i<<1)+1] = dst[i];
+	}
+	qsort(base, len, sizeof(int)<<1, colorCmp);
+
+#define REPLACING_LOOP(pixel) do {										\
+		for (y = im->cy1; y <= im->cy2; y++) {							\
+			for (x = im->cx1; x <= im->cx2; x++) {						\
+				c = pixel(im, x, y);									\
+				if ( (d = (int *)bsearch(&c, base, len, sizeof(int)<<1, colorCmp)) ) { \
+					gdImageSetPixel(im, x, y, d[1]);					\
+					n++;												\
+				}														\
+			}															\
+		}																\
+	} while (0)
+
+	if (im->trueColor) {
+		REPLACING_LOOP(gdImageTrueColorPixel);
+	} else {
+		REPLACING_LOOP(gdImagePalettePixel);
+	}
+
+#undef REPLACING_LOOP
+
+	gdFree(base);
+	return n;
+}
+
+BGD_DECLARE(int) gdImageColorReplaceCallback (gdImagePtr im, gdCallbackImageColor callback)
+{
+	int c, d, n = 0;
+
+	if (!callback) {
+		return 0;
+	}
+	if (im->trueColor) {
+		register int x, y;
+
+		for (y = im->cy1; y <= im->cy2; y++) {
+			for (x = im->cx1; x <= im->cx2; x++) {
+				c = gdImageTrueColorPixel(im, x, y);
+				if ( (d = callback(im, c)) != c) {
+					gdImageSetPixel(im, x, y, d);
+					n++;
+				}
+			}
+		}
+	} else { /* palette */
+		int *sarr, *darr;
+		int k, len = 0;
+
+		sarr = (int *)gdCalloc(im->colorsTotal, sizeof(int));
+		if (!sarr) {
+			return -1;
+		}
+		for (c = 0; c < im->colorsTotal; c++) {
+			if (!im->open[c]) {
+				sarr[len++] = c;
+			}
+		}
+		darr = (int *)gdCalloc(len, sizeof(int));
+		if (!darr) {
+			gdFree(sarr);
+			return -1;
+		}
+		for (k = 0; k < len; k++) {
+			darr[k] = callback(im, sarr[k]);
+		}
+		n = gdImageColorReplaceArray(im, k, sarr, darr);
+		gdFree(darr);
+		gdFree(sarr);
+	}
+	return n;
 }
 
 /* 2.0.10: before the drawing routines, some code to clip points that are
@@ -655,184 +952,184 @@ void gdImagePaletteCopy (gdImagePtr to, gdImagePtr from)
  * Given the end points of a line, and a bounding rectangle (which we
  * know to be from (0,0) to (SX,SY)), adjust the endpoints to be on
  * the edges of the rectangle if the line should be drawn at all,
- * otherwise return a failure code
- */
+ * otherwise return a failure code */
 
 /* this does "one-dimensional" clipping: note that the second time it
- *  is called, all the x parameters refer to height and the y to width
- *  - the comments ignore this (if you can understand it when it's
- *  looking at the X parameters, it should become clear what happens on
- *  the second call!)  The code is simplified from that in the article,
- *  as we know that gd images always start at (0,0)
- */
+   is called, all the x parameters refer to height and the y to width
+   - the comments ignore this (if you can understand it when it's
+   looking at the X parameters, it should become clear what happens on
+   the second call!)  The code is simplified from that in the article,
+   as we know that gd images always start at (0,0) */
 
-static int clip_1d(int *x0, int *y0, int *x1, int *y1, int maxdim) {
-	double m;      /* gradient of line */
+/* 2.0.26, TBB: we now have to respect a clipping rectangle, it won't
+	necessarily start at 0. */
 
-	if (*x0 < 0) {  /* start of line is left of window */
-		if(*x1 < 0) { /* as is the end, so the line never cuts the window */
+static int
+clip_1d (int *x0, int *y0, int *x1, int *y1, int mindim, int maxdim)
+{
+	double m;			/* gradient of line */
+	if (*x0 < mindim) {
+		/* start of line is left of window */
+		if (*x1 < mindim)		/* as is the end, so the line never cuts the window */
 			return 0;
-		}
-		m = (*y1 - *y0)/(double)(*x1 - *x0); /* calculate the slope of the line */
+		m = (*y1 - *y0) / (double) (*x1 - *x0);	/* calculate the slope of the line */
 		/* adjust x0 to be on the left boundary (ie to be zero), and y0 to match */
-		*y0 -= (int)(m * *x0);
-		*x0 = 0;
+		*y0 -= (int)(m * (*x0 - mindim));
+		*x0 = mindim;
 		/* now, perhaps, adjust the far end of the line as well */
 		if (*x1 > maxdim) {
-			*y1 += (int)(m * (maxdim - *x1));
+			*y1 += m * (maxdim - *x1);
 			*x1 = maxdim;
 		}
 		return 1;
 	}
-	if (*x0 > maxdim) { /* start of line is right of window - complement of above */
-		if (*x1 > maxdim) { /* as is the end, so the line misses the window */
+	if (*x0 > maxdim) {
+		/* start of line is right of window -
+		complement of above */
+		if (*x1 > maxdim)		/* as is the end, so the line misses the window */
 			return 0;
-		}
-		m = (*y1 - *y0)/(double)(*x1 - *x0);  /* calculate the slope of the line */
-		*y0 += (int)(m * (maxdim - *x0)); /* adjust so point is on the right boundary */
+		m = (*y1 - *y0) / (double) (*x1 - *x0);	/* calculate the slope of the line */
+		*y0 += (int)(m * (maxdim - *x0));	/* adjust so point is on the right
+							   boundary */
 		*x0 = maxdim;
 		/* now, perhaps, adjust the end of the line */
-		if (*x1 < 0) {
-			*y1 -= (int)(m * *x1);
-			*x1 = 0;
+		if (*x1 < mindim) {
+			*y1 -= (int)(m * (*x1 - mindim));
+			*x1 = mindim;
 		}
 		return 1;
 	}
 	/* the final case - the start of the line is inside the window */
-	if (*x1 > maxdim) { /* other end is outside to the right */
-		m = (*y1 - *y0)/(double)(*x1 - *x0);  /* calculate the slope of the line */
+	if (*x1 > maxdim) {
+		/* other end is outside to the right */
+		m = (*y1 - *y0) / (double) (*x1 - *x0);	/* calculate the slope of the line */
 		*y1 += (int)(m * (maxdim - *x1));
 		*x1 = maxdim;
 		return 1;
 	}
-	if (*x1 < 0) { /* other end is outside to the left */
-		m = (*y1 - *y0)/(double)(*x1 - *x0);  /* calculate the slope of the line */
-		*y1 -= (int)(m * *x1);
-		*x1 = 0;
+	if (*x1 < mindim) {
+		/* other end is outside to the left */
+		m = (*y1 - *y0) / (double) (*x1 - *x0);	/* calculate the slope of the line */
+		*y1 -= (int)(m * (*x1 - mindim));
+		*x1 = mindim;
 		return 1;
 	}
 	/* only get here if both points are inside the window */
 	return 1;
 }
 
-void gdImageSetPixel (gdImagePtr im, int x, int y, int color)
+/* end of line clipping code */
+
+BGD_DECLARE(void) gdImageSetPixel (gdImagePtr im, int x, int y, int color)
 {
 	int p;
 	switch (color) {
-		case gdStyled:
-			if (!im->style) {
-				/* Refuse to draw if no style is set. */
-				return;
-			} else {
-				p = im->style[im->stylePos++];
-			}
-			if (p != gdTransparent) {
-				gdImageSetPixel(im, x, y, p);
-			}
-			im->stylePos = im->stylePos % im->styleLength;
-			break;
-		case gdStyledBrushed:
-			if (!im->style) {
-				/* Refuse to draw if no style is set. */
-				return;
-			}
+	case gdStyled:
+		if (!im->style) {
+			/* Refuse to draw if no style is set. */
+			return;
+		} else {
 			p = im->style[im->stylePos++];
-			if (p != gdTransparent && p != 0) {
-				gdImageSetPixel(im, x, y, gdBrushed);
-			}
-			im->stylePos = im->stylePos % im->styleLength;
-			break;
-		case gdBrushed:
-			gdImageBrushApply(im, x, y);
-			break;
-		case gdTiled:
-			gdImageTileApply(im, x, y);
-			break;
-		case gdAntiAliased:
-			gdImageAntiAliasedApply(im, x, y);
-			break;
-		default:
-			if (gdImageBoundsSafe(im, x, y)) {
-				if (im->trueColor) {
-					switch (im->alphaBlendingFlag) {
-						default:
-						case gdEffectReplace:
-							im->tpixels[y][x] = color;
-							break;
-						case gdEffectAlphaBlend:
-							im->tpixels[y][x] = gdAlphaBlend(im->tpixels[y][x], color);
-							break;
-						case gdEffectNormal:
-							im->tpixels[y][x] = gdAlphaBlend(im->tpixels[y][x], color);
-							break;
-						case gdEffectOverlay :
-							im->tpixels[y][x] = gdLayerOverlay(im->tpixels[y][x], color);
-							break;
-					}
-				} else {
-					im->pixels[y][x] = color;
+		}
+		if (p != (gdTransparent)) {
+			gdImageSetPixel (im, x, y, p);
+		}
+		im->stylePos = im->stylePos % im->styleLength;
+		break;
+	case gdStyledBrushed:
+		if (!im->style) {
+			/* Refuse to draw if no style is set. */
+			return;
+		}
+		p = im->style[im->stylePos++];
+		if ((p != gdTransparent) && (p != 0)) {
+			gdImageSetPixel (im, x, y, gdBrushed);
+		}
+		im->stylePos = im->stylePos % im->styleLength;
+		break;
+	case gdBrushed:
+		gdImageBrushApply (im, x, y);
+		break;
+	case gdTiled:
+		gdImageTileApply (im, x, y);
+		break;
+	case gdAntiAliased:
+		/* This shouldn't happen (2.0.26) because we just call
+		  gdImageAALine now, but do something sane. */
+		gdImageSetPixel(im, x, y, im->AA_color);
+		break;
+	default:
+		if (gdImageBoundsSafeMacro (im, x, y)) {
+			if (im->trueColor) {
+				switch (im->alphaBlendingFlag) {
+					default:
+					case gdEffectReplace:
+						im->tpixels[y][x] = color;
+						break;
+					case gdEffectAlphaBlend:
+					case gdEffectNormal:
+						im->tpixels[y][x] = gdAlphaBlend(im->tpixels[y][x], color);
+						break;
+					case gdEffectOverlay :
+						im->tpixels[y][x] = gdLayerOverlay(im->tpixels[y][x], color);
+						break;
+					case gdEffectMultiply :
+						im->tpixels[y][x] = gdLayerMultiply(im->tpixels[y][x], color);
+						break;
 				}
+			} else {
+				im->pixels[y][x] = color;
 			}
-			break;
+		}
+		break;
 	}
 }
 
-int gdImageGetTrueColorPixel (gdImagePtr im, int x, int y)
-{
-	int p = gdImageGetPixel(im, x, y);
-
-	if (!im->trueColor)  {
-		return gdTrueColorAlpha(im->red[p], im->green[p], im->blue[p], (im->transparent == p) ? gdAlphaTransparent : im->alpha[p]);
-	} else {
-		return p;
-	}
-}
-
-static void gdImageBrushApply (gdImagePtr im, int x, int y)
+static void
+gdImageBrushApply (gdImagePtr im, int x, int y)
 {
 	int lx, ly;
-	int hy, hx;
+	int hy;
+	int hx;
 	int x1, y1, x2, y2;
 	int srcx, srcy;
-
 	if (!im->brush) {
 		return;
 	}
-
-	hy = gdImageSY(im->brush) / 2;
+	hy = gdImageSY (im->brush) / 2;
 	y1 = y - hy;
-	y2 = y1 + gdImageSY(im->brush);
-	hx = gdImageSX(im->brush) / 2;
+	y2 = y1 + gdImageSY (im->brush);
+	hx = gdImageSX (im->brush) / 2;
 	x1 = x - hx;
-	x2 = x1 + gdImageSX(im->brush);
+	x2 = x1 + gdImageSX (im->brush);
 	srcy = 0;
-
 	if (im->trueColor) {
 		if (im->brush->trueColor) {
-			for (ly = y1; ly < y2; ly++) {
+			for (ly = y1; (ly < y2); ly++) {
 				srcx = 0;
 				for (lx = x1; (lx < x2); lx++) {
 					int p;
-					p = gdImageGetTrueColorPixel(im->brush, srcx, srcy);
+					p = gdImageGetTrueColorPixel (im->brush, srcx, srcy);
 					/* 2.0.9, Thomas Winzig: apply simple full transparency */
-					if (p != gdImageGetTransparent(im->brush)) {
-						gdImageSetPixel(im, lx, ly, p);
+					if (p != gdImageGetTransparent (im->brush)) {
+						gdImageSetPixel (im, lx, ly, p);
 					}
 					srcx++;
 				}
 				srcy++;
 			}
 		} else {
-			/* 2.0.12: Brush palette, image truecolor (thanks to Thorben Kundinger for pointing out the issue) */
-			for (ly = y1; ly < y2; ly++) {
+			/* 2.0.12: Brush palette, image truecolor (thanks to Thorben Kundinger
+			   for pointing out the issue) */
+			for (ly = y1; (ly < y2); ly++) {
 				srcx = 0;
-				for (lx = x1; lx < x2; lx++) {
+				for (lx = x1; (lx < x2); lx++) {
 					int p, tc;
-					p = gdImageGetPixel(im->brush, srcx, srcy);
-					tc = gdImageGetTrueColorPixel(im->brush, srcx, srcy);
+					p = gdImageGetPixel (im->brush, srcx, srcy);
+					tc = gdImageGetTrueColorPixel (im->brush, srcx, srcy);
 					/* 2.0.9, Thomas Winzig: apply simple full transparency */
-					if (p != gdImageGetTransparent(im->brush)) {
-						gdImageSetPixel(im, lx, ly, tc);
+					if (p != gdImageGetTransparent (im->brush)) {
+						gdImageSetPixel (im, lx, ly, tc);
 					}
 					srcx++;
 				}
@@ -840,21 +1137,28 @@ static void gdImageBrushApply (gdImagePtr im, int x, int y)
 			}
 		}
 	} else {
-		for (ly = y1; ly < y2; ly++) {
+		for (ly = y1; (ly < y2); ly++) {
 			srcx = 0;
-			for (lx = x1; lx < x2; lx++) {
+			for (lx = x1; (lx < x2); lx++) {
 				int p;
-				p = gdImageGetPixel(im->brush, srcx, srcy);
+				p = gdImageGetPixel (im->brush, srcx, srcy);
 				/* Allow for non-square brushes! */
-				if (p != gdImageGetTransparent(im->brush)) {
-					/* Truecolor brush. Very slow on a palette destination. */
+				if (p != gdImageGetTransparent (im->brush)) {
+					/* Truecolor brush. Very slow
+					   on a palette destination. */
 					if (im->brush->trueColor) {
-						gdImageSetPixel(im, lx, ly, gdImageColorResolveAlpha(im, gdTrueColorGetRed(p),
-													 gdTrueColorGetGreen(p),
-													 gdTrueColorGetBlue(p),
-													 gdTrueColorGetAlpha(p)));
+						gdImageSetPixel (im, lx, ly,
+						                 gdImageColorResolveAlpha (im,
+						                         gdTrueColorGetRed
+						                         (p),
+						                         gdTrueColorGetGreen
+						                         (p),
+						                         gdTrueColorGetBlue
+						                         (p),
+						                         gdTrueColorGetAlpha
+						                         (p)));
 					} else {
-						gdImageSetPixel(im, lx, ly, im->brushColorMap[p]);
+						gdImageSetPixel (im, lx, ly, im->brushColorMap[p]);
 					}
 				}
 				srcx++;
@@ -864,7 +1168,8 @@ static void gdImageBrushApply (gdImagePtr im, int x, int y)
 	}
 }
 
-static void gdImageTileApply (gdImagePtr im, int x, int y)
+static void
+gdImageTileApply (gdImagePtr im, int x, int y)
 {
 	gdImagePtr tile = im->tile;
 	int srcx, srcy;
@@ -872,129 +1177,43 @@ static void gdImageTileApply (gdImagePtr im, int x, int y)
 	if (!tile) {
 		return;
 	}
-	srcx = x % gdImageSX(tile);
-	srcy = y % gdImageSY(tile);
+	srcx = x % gdImageSX (tile);
+	srcy = y % gdImageSY (tile);
 	if (im->trueColor) {
-		p = gdImageGetPixel(tile, srcx, srcy);
+		p = gdImageGetPixel (tile, srcx, srcy);
 		if (p != gdImageGetTransparent (tile)) {
 			if (!tile->trueColor) {
 				p = gdTrueColorAlpha(tile->red[p], tile->green[p], tile->blue[p], tile->alpha[p]);
 			}
-			gdImageSetPixel(im, x, y, p);
+			gdImageSetPixel (im, x, y, p);
 		}
 	} else {
-		p = gdImageGetPixel(tile, srcx, srcy);
+		p = gdImageGetPixel (tile, srcx, srcy);
 		/* Allow for transparency */
-		if (p != gdImageGetTransparent(tile)) {
+		if (p != gdImageGetTransparent (tile)) {
 			if (tile->trueColor) {
-				/* Truecolor tile. Very slow on a palette destination. */
-				gdImageSetPixel(im, x, y, gdImageColorResolveAlpha(im,
-											gdTrueColorGetRed(p),
-											gdTrueColorGetGreen(p),
-											gdTrueColorGetBlue(p),
-											gdTrueColorGetAlpha(p)));
+				/* Truecolor tile. Very slow
+				   on a palette destination. */
+				gdImageSetPixel (im, x, y,
+				                 gdImageColorResolveAlpha (im,
+				                         gdTrueColorGetRed
+				                         (p),
+				                         gdTrueColorGetGreen
+				                         (p),
+				                         gdTrueColorGetBlue
+				                         (p),
+				                         gdTrueColorGetAlpha
+				                         (p)));
 			} else {
-				gdImageSetPixel(im, x, y, im->tileColorMap[p]);
+				gdImageSetPixel (im, x, y, im->tileColorMap[p]);
 			}
 		}
 	}
 }
 
-
-static int gdImageTileGet (gdImagePtr im, int x, int y)
+BGD_DECLARE(int) gdImageGetPixel (gdImagePtr im, int x, int y)
 {
-	int srcx, srcy;
-	int tileColor,p;
-	if (!im->tile) {
-		return -1;
-	}
-	srcx = x % gdImageSX(im->tile);
-	srcy = y % gdImageSY(im->tile);
-	p = gdImageGetPixel(im->tile, srcx, srcy);
-
-	if (im->trueColor) {
-		if (im->tile->trueColor) {
-			tileColor = p;
-		} else {
-			tileColor = gdTrueColorAlpha( gdImageRed(im->tile,p), gdImageGreen(im->tile,p), gdImageBlue (im->tile,p), gdImageAlpha (im->tile,p));
-		}
-	} else {
-		if (im->tile->trueColor) {
-			tileColor = gdImageColorResolveAlpha(im, gdTrueColorGetRed (p), gdTrueColorGetGreen (p), gdTrueColorGetBlue (p), gdTrueColorGetAlpha (p));
-		} else {
-			tileColor = p;
-			tileColor = gdImageColorResolveAlpha(im, gdImageRed (im->tile,p), gdImageGreen (im->tile,p), gdImageBlue (im->tile,p), gdImageAlpha (im->tile,p));
-		}
-	}
-	return tileColor;
-}
-
-
-static void gdImageAntiAliasedApply (gdImagePtr im, int px, int py)
-{
-	float p_dist, p_alpha;
-	unsigned char opacity;
-
-	/*
-	 * Find the perpendicular distance from point C (px, py) to the line
-	 * segment AB that is being drawn.  (Adapted from an algorithm from the
-	 * comp.graphics.algorithms FAQ.)
-	 */
-
-	int LAC_2, LBC_2;
-
-	int Ax_Cx = im->AAL_x1 - px;
-	int Ay_Cy = im->AAL_y1 - py;
-
-	int Bx_Cx = im->AAL_x2 - px;
-	int By_Cy = im->AAL_y2 - py;
-
-	/* 2.0.13: bounds check! AA_opacity is just as capable of
-	 * overflowing as the main pixel array. Arne Jorgensen.
-	 * 2.0.14: typo fixed. 2.0.15: moved down below declarations
-	 * to satisfy non-C++ compilers.
-	 */
-	if (!gdImageBoundsSafe(im, px, py)) {
-		return;
-	}
-
-	/* Get the squares of the lengths of the segemnts AC and BC. */
-	LAC_2 = (Ax_Cx * Ax_Cx) + (Ay_Cy * Ay_Cy);
-	LBC_2 = (Bx_Cx * Bx_Cx) + (By_Cy * By_Cy);
-
-	if (((im->AAL_LAB_2 + LAC_2) >= LBC_2) && ((im->AAL_LAB_2 + LBC_2) >= LAC_2)) {
-		/* The two angles are acute.  The point lies inside the portion of the
-		 * plane spanned by the line segment.
-		 */
-		p_dist = fabs ((float) ((Ay_Cy * im->AAL_Bx_Ax) - (Ax_Cx * im->AAL_By_Ay)) / im->AAL_LAB);
-	} else {
-		/* The point is past an end of the line segment.  It's length from the
-		 * segment is the shorter of the lengths from the endpoints, but call
-		 * the distance -1, so as not to compute the alpha nor draw the pixel.
-		 */
-		p_dist = -1;
-	}
-
-	if ((p_dist >= 0) && (p_dist <= (float) (im->thick))) {
-		p_alpha = pow (1.0 - (p_dist / 1.5), 2);
-
-		if (p_alpha > 0) {
-			if (p_alpha >= 1) {
-				opacity = 255;
-			} else {
-				opacity = (unsigned char) (p_alpha * 255.0);
-			}
-			if (!im->AA_polygon || (im->AA_opacity[py][px] < opacity)) {
-				im->AA_opacity[py][px] = opacity;
-			}
-		}
-	}
-}
-
-
-int gdImageGetPixel (gdImagePtr im, int x, int y)
-{
-	if (gdImageBoundsSafe(im, x, y)) {
+	if (gdImageBoundsSafeMacro (im, x, y)) {
 		if (im->trueColor) {
 			return im->tpixels[y][x];
 		} else {
@@ -1005,49 +1224,25 @@ int gdImageGetPixel (gdImagePtr im, int x, int y)
 	}
 }
 
-void gdImageAABlend (gdImagePtr im)
+BGD_DECLARE(int) gdImageGetTrueColorPixel (gdImagePtr im, int x, int y)
 {
-	float p_alpha, old_alpha;
-	int color = im->AA_color, color_red, color_green, color_blue;
-	int old_color, old_red, old_green, old_blue;
-	int p_color, p_red, p_green, p_blue;
-	int px, py;
-
-	color_red = gdImageRed(im, color);
-	color_green = gdImageGreen(im, color);
-	color_blue = gdImageBlue(im, color);
-
-	/* Impose the anti-aliased drawing on the image. */
-	for (py = 0; py < im->sy; py++) {
-		for (px = 0; px < im->sx; px++) {
-			if (im->AA_opacity[py][px] != 0) {
-				old_color = gdImageGetPixel(im, px, py);
-
-				if ((old_color != color) && ((old_color != im->AA_dont_blend) || (im->AA_opacity[py][px] == 255))) {
-					/* Only blend with different colors that aren't the dont_blend color. */
-					p_alpha = (float) (im->AA_opacity[py][px]) / 255.0;
-					old_alpha = 1.0 - p_alpha;
-
-					if (p_alpha >= 1.0) {
-						p_color = color;
-					} else {
-						old_red = gdImageRed(im, old_color);
-						old_green = gdImageGreen(im, old_color);
-						old_blue = gdImageBlue(im, old_color);
-
-						p_red = (int) (((float) color_red * p_alpha) + ((float) old_red * old_alpha));
-						p_green = (int) (((float) color_green * p_alpha) + ((float) old_green * old_alpha));
-						p_blue = (int) (((float) color_blue * p_alpha) + ((float) old_blue * old_alpha));
-						p_color = gdImageColorResolve(im, p_red, p_green, p_blue);
-					}
-					gdImageSetPixel(im, px, py, p_color);
-				}
-			}
-		}
-		/* Clear the AA_opacity array behind us. */
-		memset(im->AA_opacity[py], 0, im->sx);
+	int p = gdImageGetPixel (im, x, y);
+	if (!im->trueColor) {
+		return gdTrueColorAlpha (im->red[p], im->green[p], im->blue[p],
+		                         (im->transparent == p) ? gdAlphaTransparent :
+		                         im->alpha[p]);
+	} else {
+		return p;
 	}
 }
+
+BGD_DECLARE(void) gdImageAABlend (gdImagePtr im)
+{
+	/* NO-OP, kept for library compatibility. */
+	(void)im;
+}
+
+static void gdImageAALine (gdImagePtr im, int x1, int y1, int x2, int y2, int col);
 
 static void gdImageHLine(gdImagePtr im, int y, int x1, int x2, int col)
 {
@@ -1061,7 +1256,7 @@ static void gdImageHLine(gdImagePtr im, int y, int x1, int x2, int col)
 			x1 = t;
 		}
 
-		for (;x1 <= x2; x1++) {
+		for (; x1 <= x2; x1++) {
 			gdImageSetPixel(im, x1, y, col);
 		}
 	}
@@ -1080,7 +1275,7 @@ static void gdImageVLine(gdImagePtr im, int x, int y1, int y2, int col)
 			y2 = t;
 		}
 
-		for (;y1 <= y2; y1++) {
+		for (; y1 <= y2; y1++) {
 			gdImageSetPixel(im, x, y1, col);
 		}
 	}
@@ -1088,27 +1283,33 @@ static void gdImageVLine(gdImagePtr im, int x, int y1, int y2, int col)
 }
 
 /* Bresenham as presented in Foley & Van Dam */
-void gdImageLine (gdImagePtr im, int x1, int y1, int x2, int y2, int color)
+BGD_DECLARE(void) gdImageLine (gdImagePtr im, int x1, int y1, int x2, int y2, int color)
 {
 	int dx, dy, incr1, incr2, d, x, y, xend, yend, xdirflag, ydirflag;
 	int wid;
 	int w, wstart;
-	int thick = im->thick;
+	int thick;
 
 	if (color == gdAntiAliased) {
 		/*
-		   gdAntiAliased passed as color: use the much faster, much cheaper
-		   and equally attractive gdImageAALine implementation. That
-		   clips too, so don't clip twice.
-		   */
+		  gdAntiAliased passed as color: use the much faster, much cheaper
+		  and equally attractive gdImageAALine implementation. That
+		  clips too, so don't clip twice.
+		*/
 		gdImageAALine(im, x1, y1, x2, y2, im->AA_color);
 		return;
 	}
+	/* 2.0.10: Nick Atty: clip to edges of drawing rectangle, return if no
+	   points need to be drawn. 2.0.26, TBB: clip to edges of clipping
+	   rectangle. We were getting away with this because gdImageSetPixel
+	   is used for actual drawing, but this is still more efficient and opens
+	   the way to skip per-pixel bounds checking in the future. */
 
-	/* 2.0.10: Nick Atty: clip to edges of drawing rectangle, return if no points need to be drawn */
-	if (!clip_1d(&x1,&y1,&x2,&y2,gdImageSX(im)) || !clip_1d(&y1,&x1,&y2,&x2,gdImageSY(im))) {
+	if (clip_1d (&x1, &y1, &x2, &y2, im->cx1, im->cx2) == 0)
 		return;
-	}
+	if (clip_1d (&y1, &x1, &y2, &x2, im->cy1, im->cy2) == 0)
+		return;
+	thick = im->thick;
 
 	dx = abs (x2 - x1);
 	dy = abs (y2 - y1);
@@ -1128,7 +1329,7 @@ void gdImageLine (gdImagePtr im, int x1, int y1, int x2, int y2, int color)
 			wid = 1;
 		} else {
 			/* 2.0.12: Michael Schwartz: divide rather than multiply;
-TBB: but watch out for /0! */
+			   TBB: but watch out for /0! */
 			double ac = cos (atan2 (dy, dx));
 			if (ac != 0) {
 				wid = thick / ac;
@@ -1156,9 +1357,8 @@ TBB: but watch out for /0! */
 
 		/* Set up line thickness */
 		wstart = y - wid / 2;
-		for (w = wstart; w < wstart + wid; w++) {
-			gdImageSetPixel(im, x, w, color);
-		}
+		for (w = wstart; w < wstart + wid; w++)
+			gdImageSetPixel (im, x, w, color);
 
 		if (((y2 - y1) * ydirflag) > 0) {
 			while (x < xend) {
@@ -1170,9 +1370,8 @@ TBB: but watch out for /0! */
 					d += incr2;
 				}
 				wstart = y - wid / 2;
-				for (w = wstart; w < wstart + wid; w++) {
+				for (w = wstart; w < wstart + wid; w++)
 					gdImageSetPixel (im, x, w, color);
-				}
 			}
 		} else {
 			while (x < xend) {
@@ -1184,9 +1383,8 @@ TBB: but watch out for /0! */
 					d += incr2;
 				}
 				wstart = y - wid / 2;
-				for (w = wstart; w < wstart + wid; w++) {
+				for (w = wstart; w < wstart + wid; w++)
 					gdImageSetPixel (im, x, w, color);
-				}
 			}
 		}
 	} else {
@@ -1199,9 +1397,8 @@ TBB: but watch out for /0! */
 		} else {
 			wid = 1;
 		}
-		if (wid == 0) {
+		if (wid == 0)
 			wid = 1;
-		}
 
 		d = 2 * dx - dy;
 		incr1 = 2 * dx;
@@ -1220,9 +1417,8 @@ TBB: but watch out for /0! */
 
 		/* Set up line thickness */
 		wstart = x - wid / 2;
-		for (w = wstart; w < wstart + wid; w++) {
+		for (w = wstart; w < wstart + wid; w++)
 			gdImageSetPixel (im, w, y, color);
-		}
 
 		if (((x2 - x1) * xdirflag) > 0) {
 			while (y < yend) {
@@ -1234,9 +1430,8 @@ TBB: but watch out for /0! */
 					d += incr2;
 				}
 				wstart = x - wid / 2;
-				for (w = wstart; w < wstart + wid; w++) {
+				for (w = wstart; w < wstart + wid; w++)
 					gdImageSetPixel (im, w, y, color);
-				}
 			}
 		} else {
 			while (y < yend) {
@@ -1248,154 +1443,17 @@ TBB: but watch out for /0! */
 					d += incr2;
 				}
 				wstart = x - wid / 2;
-				for (w = wstart; w < wstart + wid; w++) {
+				for (w = wstart; w < wstart + wid; w++)
 					gdImageSetPixel (im, w, y, color);
-				}
 			}
 		}
 	}
+
 }
+static void dashedSet (gdImagePtr im, int x, int y, int color,
+					   int *onP, int *dashStepP, int wid, int vert);
 
-
-/*
- * Added on 2003/12 by Pierre-Alain Joye (pajoye@pearfr.org)
- * */
-#define BLEND_COLOR(a, nc, c, cc) \
-nc = (cc) + (((((c) - (cc)) * (a)) + ((((c) - (cc)) * (a)) >> 8) + 0x80) >> 8);
-
-inline static void gdImageSetAAPixelColor(gdImagePtr im, int x, int y, int color, int t)
-{
-	int dr,dg,db,p,r,g,b;
-	dr = gdTrueColorGetRed(color);
-	dg = gdTrueColorGetGreen(color);
-	db = gdTrueColorGetBlue(color);
-
-	p = gdImageGetPixel(im,x,y);
-	r = gdTrueColorGetRed(p);
-	g = gdTrueColorGetGreen(p);
-	b = gdTrueColorGetBlue(p);
-
-	BLEND_COLOR(t, dr, r, dr);
-	BLEND_COLOR(t, dg, g, dg);
-	BLEND_COLOR(t, db, b, db);
-	im->tpixels[y][x]=gdTrueColorAlpha(dr, dg, db,  gdAlphaOpaque);
-}
-
-/*
- * Added on 2003/12 by Pierre-Alain Joye (pajoye@pearfr.org)
- **/
-void gdImageAALine (gdImagePtr im, int x1, int y1, int x2, int y2, int col)
-{
-	/* keep them as 32bits */
-	long x, y, inc;
-	long dx, dy,tmp;
-
-	if (y1 < 0 && y2 < 0) {
-		return;
-	}
-	if (y1 < 0) {
-		x1 += (y1 * (x1 - x2)) / (y2 - y1);
-		y1 = 0;
-	}
-	if (y2 < 0) {
-		x2 += (y2 * (x1 - x2)) / (y2 - y1);
-		y2 = 0;
-	}
-
-	/* bottom edge */
-	if (y1 >= im->sy && y2 >= im->sy) {
-		return;
-	}
-	if (y1 >= im->sy) {
-		x1 -= ((im->sy - y1) * (x1 - x2)) / (y2 - y1);
-		y1 = im->sy - 1;
-	}
-	if (y2 >= im->sy) {
-		x2 -= ((im->sy - y2) * (x1 - x2)) / (y2 - y1);
-		y2 = im->sy - 1;
-	}
-
-	/* left edge */
-	if (x1 < 0 && x2 < 0) {
-		return;
-	}
-	if (x1 < 0) {
-		y1 += (x1 * (y1 - y2)) / (x2 - x1);
-		x1 = 0;
-	}
-	if (x2 < 0) {
-		y2 += (x2 * (y1 - y2)) / (x2 - x1);
-		x2 = 0;
-	}
-	/* right edge */
-	if (x1 >= im->sx && x2 >= im->sx) {
-		return;
-	}
-	if (x1 >= im->sx) {
-		y1 -= ((im->sx - x1) * (y1 - y2)) / (x2 - x1);
-		x1 = im->sx - 1;
-	}
-	if (x2 >= im->sx) {
-		y2 -= ((im->sx - x2) * (y1 - y2)) / (x2 - x1);
-		x2 = im->sx - 1;
-	}
-
-	dx = x2 - x1;
-	dy = y2 - y1;
-
-	if (dx == 0 && dy == 0) {
-		return;
-	}
-	if (abs(dx) > abs(dy)) {
-		if (dx < 0) {
-			tmp = x1;
-			x1 = x2;
-			x2 = tmp;
-			tmp = y1;
-			y1 = y2;
-			y2 = tmp;
-			dx = x2 - x1;
-			dy = y2 - y1;
-		}
-		x = x1 << 16;
-		y = y1 << 16;
-		inc = (dy * 65536) / dx;
-		while ((x >> 16) <= x2) {
-			gdImageSetAAPixelColor(im, x >> 16, y >> 16, col, (y >> 8) & 0xFF);
-			if ((y >> 16) + 1 < im->sy) {
-				gdImageSetAAPixelColor(im, x >> 16, (y >> 16) + 1,col, (~y >> 8) & 0xFF);
-			}
-			x += (1 << 16);
-			y += inc;
-		}
-	} else {
-		if (dy < 0) {
-			tmp = x1;
-			x1 = x2;
-			x2 = tmp;
-			tmp = y1;
-			y1 = y2;
-			y2 = tmp;
-			dx = x2 - x1;
-			dy = y2 - y1;
-		}
-		x = x1 << 16;
-		y = y1 << 16;
-		inc = (dx * 65536) / dy;
-		while ((y>>16) <= y2) {
-			gdImageSetAAPixelColor(im, x >> 16, y >> 16, col, (x >> 8) & 0xFF);
-			if ((x >> 16) + 1 < im->sx) {
-				gdImageSetAAPixelColor(im, (x >> 16) + 1, (y >> 16),col, (~x >> 8) & 0xFF);
-			}
-			x += inc;
-			y += (1<<16);
-		}
-	}
-}
-
-static void dashedSet (gdImagePtr im, int x, int y, int color, int *onP, int *dashStepP, int wid, int vert);
-
-void gdImageDashedLine (gdImagePtr im, int x1, int y1, int x2, int y2, int color)
+BGD_DECLARE(void) gdImageDashedLine (gdImagePtr im, int x1, int y1, int x2, int y2, int color)
 {
 	int dx, dy, incr1, incr2, d, x, y, xend, yend, xdirflag, ydirflag;
 	int dashStep = 0;
@@ -1404,19 +1462,18 @@ void gdImageDashedLine (gdImagePtr im, int x1, int y1, int x2, int y2, int color
 	int vert;
 	int thick = im->thick;
 
-	dx = abs(x2 - x1);
-	dy = abs(y2 - y1);
+	dx = abs (x2 - x1);
+	dy = abs (y2 - y1);
 	if (dy <= dx) {
 		/* More-or-less horizontal. use wid for vertical stroke */
 		/* 2.0.12: Michael Schwartz: divide rather than multiply;
-		TBB: but watch out for /0! */
-		double as = sin(atan2(dy, dx));
+		   TBB: but watch out for /0! */
+		double as = sin (atan2 (dy, dx));
 		if (as != 0) {
 			wid = thick / as;
 		} else {
 			wid = 1;
 		}
-		wid = (int)(thick * sin(atan2(dy, dx)));
 		vert = 1;
 
 		d = 2 * dy - dx;
@@ -1433,7 +1490,7 @@ void gdImageDashedLine (gdImagePtr im, int x1, int y1, int x2, int y2, int color
 			ydirflag = 1;
 			xend = x2;
 		}
-		dashedSet(im, x, y, color, &on, &dashStep, wid, vert);
+		dashedSet (im, x, y, color, &on, &dashStep, wid, vert);
 		if (((y2 - y1) * ydirflag) > 0) {
 			while (x < xend) {
 				x++;
@@ -1443,7 +1500,7 @@ void gdImageDashedLine (gdImagePtr im, int x1, int y1, int x2, int y2, int color
 					y++;
 					d += incr2;
 				}
-				dashedSet(im, x, y, color, &on, &dashStep, wid, vert);
+				dashedSet (im, x, y, color, &on, &dashStep, wid, vert);
 			}
 		} else {
 			while (x < xend) {
@@ -1454,12 +1511,12 @@ void gdImageDashedLine (gdImagePtr im, int x1, int y1, int x2, int y2, int color
 					y--;
 					d += incr2;
 				}
-				dashedSet(im, x, y, color, &on, &dashStep, wid, vert);
+				dashedSet (im, x, y, color, &on, &dashStep, wid, vert);
 			}
 		}
 	} else {
 		/* 2.0.12: Michael Schwartz: divide rather than multiply;
-		TBB: but watch out for /0! */
+		   TBB: but watch out for /0! */
 		double as = sin (atan2 (dy, dx));
 		if (as != 0) {
 			wid = thick / as;
@@ -1482,7 +1539,7 @@ void gdImageDashedLine (gdImagePtr im, int x1, int y1, int x2, int y2, int color
 			yend = y2;
 			xdirflag = 1;
 		}
-		dashedSet(im, x, y, color, &on, &dashStep, wid, vert);
+		dashedSet (im, x, y, color, &on, &dashStep, wid, vert);
 		if (((x2 - x1) * xdirflag) > 0) {
 			while (y < yend) {
 				y++;
@@ -1492,7 +1549,7 @@ void gdImageDashedLine (gdImagePtr im, int x1, int y1, int x2, int y2, int color
 					x++;
 					d += incr2;
 				}
-				dashedSet(im, x, y, color, &on, &dashStep, wid, vert);
+				dashedSet (im, x, y, color, &on, &dashStep, wid, vert);
 			}
 		} else {
 			while (y < yend) {
@@ -1503,13 +1560,15 @@ void gdImageDashedLine (gdImagePtr im, int x1, int y1, int x2, int y2, int color
 					x--;
 					d += incr2;
 				}
-				dashedSet(im, x, y, color, &on, &dashStep, wid, vert);
+				dashedSet (im, x, y, color, &on, &dashStep, wid, vert);
 			}
 		}
 	}
 }
 
-static void dashedSet (gdImagePtr im, int x, int y, int color, int *onP, int *dashStepP, int wid, int vert)
+static void
+dashedSet (gdImagePtr im, int x, int y, int color,
+		   int *onP, int *dashStepP, int wid, int vert)
 {
 	int dashStep = *dashStepP;
 	int on = *onP;
@@ -1523,21 +1582,24 @@ static void dashedSet (gdImagePtr im, int x, int y, int color, int *onP, int *da
 	if (on) {
 		if (vert) {
 			wstart = y - wid / 2;
-			for (w = wstart; w < wstart + wid; w++) {
-				gdImageSetPixel(im, x, w, color);
-			}
+			for (w = wstart; w < wstart + wid; w++)
+				gdImageSetPixel (im, x, w, color);
 		} else {
 			wstart = x - wid / 2;
-			for (w = wstart; w < wstart + wid; w++) {
-				gdImageSetPixel(im, w, y, color);
-			}
+			for (w = wstart; w < wstart + wid; w++)
+				gdImageSetPixel (im, w, y, color);
 		}
 	}
 	*dashStepP = dashStep;
 	*onP = on;
 }
 
-void gdImageChar (gdImagePtr im, gdFontPtr f, int x, int y, int c, int color)
+BGD_DECLARE(int) gdImageBoundsSafe (gdImagePtr im, int x, int y)
+{
+	return gdImageBoundsSafeMacro (im, x, y);
+}
+
+BGD_DECLARE(void) gdImageChar (gdImagePtr im, gdFontPtr f, int x, int y, int c, int color)
 {
 	int cx, cy;
 	int px, py;
@@ -1554,7 +1616,7 @@ void gdImageChar (gdImagePtr im, gdFontPtr f, int x, int y, int c, int color)
 	for (py = y; (py < (y + f->h)); py++) {
 		for (px = x; (px < (x + f->w)); px++) {
 			if (f->data[fline + cy * f->w + cx]) {
-				gdImageSetPixel(im, px, py, color);
+				gdImageSetPixel (im, px, py, color);
 			}
 			cx++;
 		}
@@ -1563,7 +1625,7 @@ void gdImageChar (gdImagePtr im, gdFontPtr f, int x, int y, int c, int color)
 	}
 }
 
-void gdImageCharUp (gdImagePtr im, gdFontPtr f, int x, int y, int c, int color)
+BGD_DECLARE(void) gdImageCharUp (gdImagePtr im, gdFontPtr f, int x, int y, int c, int color)
 {
 	int cx, cy;
 	int px, py;
@@ -1577,10 +1639,10 @@ void gdImageCharUp (gdImagePtr im, gdFontPtr f, int x, int y, int c, int color)
 		return;
 	}
 	fline = (c - f->offset) * f->h * f->w;
-	for (py = y; py > (y - f->w); py--) {
-		for (px = x; px < (x + f->h); px++) {
+	for (py = y; (py > (y - f->w)); py--) {
+		for (px = x; (px < (x + f->h)); px++) {
 			if (f->data[fline + cy * f->w + cx]) {
-				gdImageSetPixel(im, px, py, color);
+				gdImageSetPixel (im, px, py, color);
 			}
 			cy++;
 		}
@@ -1589,53 +1651,58 @@ void gdImageCharUp (gdImagePtr im, gdFontPtr f, int x, int y, int c, int color)
 	}
 }
 
-void gdImageString (gdImagePtr im, gdFontPtr f, int x, int y, unsigned char *s, int color)
+BGD_DECLARE(void) gdImageString (gdImagePtr im, gdFontPtr f,
+								 int x, int y, unsigned char *s, int color)
 {
 	int i;
 	int l;
 	l = strlen ((char *) s);
 	for (i = 0; (i < l); i++) {
-		gdImageChar(im, f, x, y, s[i], color);
+		gdImageChar (im, f, x, y, s[i], color);
 		x += f->w;
 	}
 }
 
-void gdImageStringUp (gdImagePtr im, gdFontPtr f, int x, int y, unsigned char *s, int color)
+BGD_DECLARE(void) gdImageStringUp (gdImagePtr im, gdFontPtr f,
+								   int x, int y, unsigned char *s, int color)
 {
 	int i;
 	int l;
 	l = strlen ((char *) s);
 	for (i = 0; (i < l); i++) {
-		gdImageCharUp(im, f, x, y, s[i], color);
+		gdImageCharUp (im, f, x, y, s[i], color);
 		y -= f->w;
 	}
 }
 
 static int strlen16 (unsigned short *s);
 
-void gdImageString16 (gdImagePtr im, gdFontPtr f, int x, int y, unsigned short *s, int color)
+BGD_DECLARE(void) gdImageString16 (gdImagePtr im, gdFontPtr f,
+								   int x, int y, unsigned short *s, int color)
 {
 	int i;
 	int l;
-	l = strlen16(s);
+	l = strlen16 (s);
 	for (i = 0; (i < l); i++) {
-		gdImageChar(im, f, x, y, s[i], color);
+		gdImageChar (im, f, x, y, s[i], color);
 		x += f->w;
 	}
 }
 
-void gdImageStringUp16 (gdImagePtr im, gdFontPtr f, int x, int y, unsigned short *s, int color)
+BGD_DECLARE(void) gdImageStringUp16 (gdImagePtr im, gdFontPtr f,
+									 int x, int y, unsigned short *s, int color)
 {
 	int i;
 	int l;
-	l = strlen16(s);
-	for (i = 0; i < l; i++) {
-		gdImageCharUp(im, f, x, y, s[i], color);
+	l = strlen16 (s);
+	for (i = 0; (i < l); i++) {
+		gdImageCharUp (im, f, x, y, s[i], color);
 		y -= f->w;
 	}
 }
 
-static int strlen16 (unsigned short *s)
+static int
+strlen16 (unsigned short *s)
 {
 	int len = 0;
 	while (*s) {
@@ -1649,9 +1716,10 @@ static int strlen16 (unsigned short *s)
 /* If you don't have a nice square root function for longs, you can use
    ** this hack
  */
-long lsqrt (long n)
+long
+lsqrt (long n)
 {
- 	long result = (long) sqrt ((double) n);
+	long result = (long) sqrt ((double) n);
 	return result;
 }
 #endif
@@ -1663,25 +1731,23 @@ long lsqrt (long n)
    See gd_arc_f_buggy.c for a better version that doesn't
    seem to be bug-free yet. */
 
-void gdImageArc (gdImagePtr im, int cx, int cy, int w, int h, int s, int e, int color)
+BGD_DECLARE(void) gdImageArc (gdImagePtr im, int cx, int cy, int w, int h, int s, int e,
+							  int color)
 {
-	if ((s % 360) == (e % 360)) {
-		gdImageEllipse(im, cx, cy, w, h, color);
-	} else {
-		gdImageFilledArc(im, cx, cy, w, h, s, e, color, gdNoFill);
-	}
+	gdImageFilledArc (im, cx, cy, w, h, s, e, color, gdNoFill);
 }
 
-void gdImageFilledArc (gdImagePtr im, int cx, int cy, int w, int h, int s, int e, int color, int style)
+BGD_DECLARE(void) gdImageFilledArc (gdImagePtr im, int cx, int cy, int w, int h, int s, int e,
+									int color, int style)
 {
 	gdPoint pts[3];
 	int i;
 	int lx = 0, ly = 0;
 	int fx = 0, fy = 0;
 
-
-    if ((s % 360)  == (e % 360)) {
-		s = 0; e = 360;
+	if ((s % 360)  == (e % 360)) {
+		s = 0;
+		e = 360;
 	} else {
 		if (s > 360) {
 			s = s % 360;
@@ -1698,19 +1764,21 @@ void gdImageFilledArc (gdImagePtr im, int cx, int cy, int w, int h, int s, int e
 		while (e < s) {
 			e += 360;
 		}
+
 		if (s == e) {
-			s = 0; e = 360;
+			s = 0;
+			e = 360;
 		}
 	}
 
-	for (i = s; i <= e; i++) {
+	for (i = s; (i <= e); i++) {
 		int x, y;
 		x = ((long) gdCosT[i % 360] * (long) w / (2 * 1024)) + cx;
 		y = ((long) gdSinT[i % 360] * (long) h / (2 * 1024)) + cy;
 		if (i != s) {
 			if (!(style & gdChord)) {
 				if (style & gdNoFill) {
-					gdImageLine(im, lx, ly, x, y, color);
+					gdImageLine (im, lx, ly, x, y, color);
 				} else {
 					/* This is expensive! */
 					pts[0].x = lx;
@@ -1719,7 +1787,7 @@ void gdImageFilledArc (gdImagePtr im, int cx, int cy, int w, int h, int s, int e
 					pts[1].y = y;
 					pts[2].x = cx;
 					pts[2].y = cy;
-					gdImageFilledPolygon(im, pts, 3, color);
+					gdImageFilledPolygon (im, pts, 3, color);
 				}
 			}
 		} else {
@@ -1732,10 +1800,10 @@ void gdImageFilledArc (gdImagePtr im, int cx, int cy, int w, int h, int s, int e
 	if (style & gdChord) {
 		if (style & gdNoFill) {
 			if (style & gdEdged) {
-				gdImageLine(im, cx, cy, lx, ly, color);
-				gdImageLine(im, cx, cy, fx, fy, color);
+				gdImageLine (im, cx, cy, lx, ly, color);
+				gdImageLine (im, cx, cy, fx, fy, color);
 			}
-			gdImageLine(im, fx, fy, lx, ly, color);
+			gdImageLine (im, fx, fy, lx, ly, color);
 		} else {
 			pts[0].x = fx;
 			pts[0].y = fy;
@@ -1743,69 +1811,166 @@ void gdImageFilledArc (gdImagePtr im, int cx, int cy, int w, int h, int s, int e
 			pts[1].y = ly;
 			pts[2].x = cx;
 			pts[2].y = cy;
-			gdImageFilledPolygon(im, pts, 3, color);
+			gdImageFilledPolygon (im, pts, 3, color);
 		}
 	} else {
 		if (style & gdNoFill) {
 			if (style & gdEdged) {
-				gdImageLine(im, cx, cy, lx, ly, color);
-				gdImageLine(im, cx, cy, fx, fy, color);
+				gdImageLine (im, cx, cy, lx, ly, color);
+				gdImageLine (im, cx, cy, fx, fy, color);
 			}
 		}
 	}
 }
 
-void gdImageFillToBorder (gdImagePtr im, int x, int y, int border, int color)
+BGD_DECLARE(void) gdImageEllipse(gdImagePtr im, int mx, int my, int w, int h, int c)
+{
+	int x=0,mx1=0,mx2=0,my1=0,my2=0;
+	long aq,bq,dx,dy,r,rx,ry,a,b;
+
+	a=w>>1;
+	b=h>>1;
+	gdImageSetPixel(im,mx+a, my, c);
+	gdImageSetPixel(im,mx-a, my, c);
+	mx1 = mx-a;
+	my1 = my;
+	mx2 = mx+a;
+	my2 = my;
+
+	aq = a * a;
+	bq = b * b;
+	dx = aq << 1;
+	dy = bq << 1;
+	r  = a * bq;
+	rx = r << 1;
+	ry = 0;
+	x = a;
+	while (x > 0) {
+		if (r > 0) {
+			my1++;
+			my2--;
+			ry +=dx;
+			r  -=ry;
+		}
+		if (r <= 0) {
+			x--;
+			mx1++;
+			mx2--;
+			rx -=dy;
+			r  +=rx;
+		}
+		gdImageSetPixel(im,mx1, my1, c);
+		gdImageSetPixel(im,mx1, my2, c);
+		gdImageSetPixel(im,mx2, my1, c);
+		gdImageSetPixel(im,mx2, my2, c);
+	}
+}
+
+
+BGD_DECLARE(void) gdImageFilledEllipse (gdImagePtr im, int mx, int my, int w, int h, int c)
+{
+	int x=0,mx1=0,mx2=0,my1=0,my2=0;
+	long aq,bq,dx,dy,r,rx,ry,a,b;
+	int i;
+	int old_y2;
+
+	a=w>>1;
+	b=h>>1;
+
+	for (x = mx-a; x <= mx+a; x++) {
+		gdImageSetPixel(im, x, my, c);
+	}
+
+	mx1 = mx-a;
+	my1 = my;
+	mx2 = mx+a;
+	my2 = my;
+
+	aq = a * a;
+	bq = b * b;
+	dx = aq << 1;
+	dy = bq << 1;
+	r  = a * bq;
+	rx = r << 1;
+	ry = 0;
+	x = a;
+	old_y2=-2;
+	while (x > 0) {
+		if (r > 0) {
+			my1++;
+			my2--;
+			ry +=dx;
+			r  -=ry;
+		}
+		if (r <= 0) {
+			x--;
+			mx1++;
+			mx2--;
+			rx -=dy;
+			r  +=rx;
+		}
+		if(old_y2!=my2) {
+			for(i=mx1; i<=mx2; i++) {
+				gdImageSetPixel(im,i,my1,c);
+			}
+		}
+		if(old_y2!=my2) {
+			for(i=mx1; i<=mx2; i++) {
+				gdImageSetPixel(im,i,my2,c);
+			}
+		}
+		old_y2 = my2;
+	}
+}
+
+BGD_DECLARE(void) gdImageFillToBorder (gdImagePtr im, int x, int y, int border, int color)
 {
 	int lastBorder;
 	/* Seek left */
-	int leftLimit = -1, rightLimit;
-	int i, restoreAlphaBlending = 0;
+	int leftLimit, rightLimit;
+	int i;
+	int restoreAlphaBleding;
 
 	if (border < 0) {
 		/* Refuse to fill to a non-solid border */
 		return;
 	}
 
-	restoreAlphaBlending = im->alphaBlendingFlag;
+	leftLimit = (-1);
+
+	restoreAlphaBleding = im->alphaBlendingFlag;
 	im->alphaBlendingFlag = 0;
 
-	if (x >= im->sx) {
-		x = im->sx - 1;
-	}
-	if (y >= im->sy) {
-		y = im->sy - 1;
-	}
-
-	for (i = x; i >= 0; i--) {
-		if (gdImageGetPixel(im, i, y) == border) {
+	for (i = x; (i >= 0); i--) {
+		if (gdImageGetPixel (im, i, y) == border) {
 			break;
 		}
-		gdImageSetPixel(im, i, y, color);
+		gdImageSetPixel (im, i, y, color);
 		leftLimit = i;
 	}
-	if (leftLimit == -1) {
-		im->alphaBlendingFlag = restoreAlphaBlending;
+	if (leftLimit == (-1)) {
+		im->alphaBlendingFlag = restoreAlphaBleding;
 		return;
 	}
 	/* Seek right */
 	rightLimit = x;
-	for (i = (x + 1); i < im->sx; i++) {
-		if (gdImageGetPixel(im, i, y) == border) {
+	for (i = (x + 1); (i < im->sx); i++) {
+		if (gdImageGetPixel (im, i, y) == border) {
 			break;
 		}
-		gdImageSetPixel(im, i, y, color);
+		gdImageSetPixel (im, i, y, color);
 		rightLimit = i;
 	}
 	/* Look at lines above and below and start paints */
 	/* Above */
 	if (y > 0) {
 		lastBorder = 1;
-		for (i = leftLimit; i <= rightLimit; i++) {
-			int c = gdImageGetPixel(im, i, y - 1);
+		for (i = leftLimit; (i <= rightLimit); i++) {
+			int c;
+			c = gdImageGetPixel (im, i, y - 1);
 			if (lastBorder) {
 				if ((c != border) && (c != color)) {
-					gdImageFillToBorder(im, i, y - 1, border, color);
+					gdImageFillToBorder (im, i, y - 1, border, color);
 					lastBorder = 0;
 				}
 			} else if ((c == border) || (c == color)) {
@@ -1813,16 +1978,14 @@ void gdImageFillToBorder (gdImagePtr im, int x, int y, int border, int color)
 			}
 		}
 	}
-
 	/* Below */
 	if (y < ((im->sy) - 1)) {
 		lastBorder = 1;
-		for (i = leftLimit; i <= rightLimit; i++) {
-			int c = gdImageGetPixel(im, i, y + 1);
-
+		for (i = leftLimit; (i <= rightLimit); i++) {
+			int c = gdImageGetPixel (im, i, y + 1);
 			if (lastBorder) {
 				if ((c != border) && (c != color)) {
-					gdImageFillToBorder(im, i, y + 1, border, color);
+					gdImageFillToBorder (im, i, y + 1, border, color);
 					lastBorder = 0;
 				}
 			} else if ((c == border) || (c == color)) {
@@ -1830,7 +1993,7 @@ void gdImageFillToBorder (gdImagePtr im, int x, int y, int border, int color)
 			}
 		}
 	}
-	im->alphaBlendingFlag = restoreAlphaBlending;
+	im->alphaBlendingFlag = restoreAlphaBleding;
 }
 
 /*
@@ -1843,21 +2006,52 @@ void gdImageFillToBorder (gdImagePtr im, int x, int y, int border, int color)
  * code I added a 2nd private function.
  */
 
+static int gdImageTileGet (gdImagePtr im, int x, int y)
+{
+	int srcx, srcy;
+	int tileColor,p;
+	if (!im->tile) {
+		return -1;
+	}
+	srcx = x % gdImageSX(im->tile);
+	srcy = y % gdImageSY(im->tile);
+	p = gdImageGetPixel(im->tile, srcx, srcy);
+	if (p == im->tile->transparent) {
+		tileColor = im->transparent;
+	} else if (im->trueColor) {
+		if (im->tile->trueColor) {
+			tileColor = p;
+		} else {
+			tileColor = gdTrueColorAlpha( gdImageRed(im->tile,p), gdImageGreen(im->tile,p), gdImageBlue (im->tile,p), gdImageAlpha (im->tile,p));
+		}
+	} else {
+		if (im->tile->trueColor) {
+			tileColor = gdImageColorResolveAlpha(im, gdTrueColorGetRed (p), gdTrueColorGetGreen (p), gdTrueColorGetBlue (p), gdTrueColorGetAlpha (p));
+		} else {
+			tileColor = gdImageColorResolveAlpha(im, gdImageRed (im->tile,p), gdImageGreen (im->tile,p), gdImageBlue (im->tile,p), gdImageAlpha (im->tile,p));
+		}
+	}
+	return tileColor;
+}
+
+
+
 /* horizontal segment of scan line y */
-struct seg {int y, xl, xr, dy;};
+struct seg {
+	int y, xl, xr, dy;
+};
 
 /* max depth of stack */
 #define FILL_MAX ((int)(im->sy*im->sx)/4)
 #define FILL_PUSH(Y, XL, XR, DY) \
-    if (sp<stack+FILL_MAX && Y+(DY)>=0 && Y+(DY)<wy2) \
-    {sp->y = Y; sp->xl = XL; sp->xr = XR; sp->dy = DY; sp++;}
+	if (sp<stack+FILL_MAX && Y+(DY)>=0 && Y+(DY)<wy2) \
+	{sp->y = Y; sp->xl = XL; sp->xr = XR; sp->dy = DY; sp++;}
 
 #define FILL_POP(Y, XL, XR, DY) \
-    {sp--; Y = sp->y+(DY = sp->dy); XL = sp->xl; XR = sp->xr;}
+	{sp--; Y = sp->y+(DY = sp->dy); XL = sp->xl; XR = sp->xr;}
 
 static void _gdImageFillTiled(gdImagePtr im, int x, int y, int nc);
-
-void gdImageFill(gdImagePtr im, int x, int y, int nc)
+BGD_DECLARE(void) gdImageFill(gdImagePtr im, int x, int y, int nc)
 {
 	int l, x1, x2, dy;
 	int oc;   /* old pixel value */
@@ -1866,24 +2060,25 @@ void gdImageFill(gdImagePtr im, int x, int y, int nc)
 	int alphablending_bak;
 
 	/* stack of filled segments */
-	/* struct seg stack[FILL_MAX],*sp = stack;; */
-	struct seg *stack = NULL;
+	/* struct seg stack[FILL_MAX],*sp = stack; */
+	struct seg *stack;
 	struct seg *sp;
 
-	if (!im->trueColor && nc > (im->colorsTotal -1)) {
+	if (!im->trueColor && nc > (im->colorsTotal - 1)) {
 		return;
 	}
 
 	alphablending_bak = im->alphaBlendingFlag;
 	im->alphaBlendingFlag = 0;
 
-	if (nc==gdTiled){
+	if (nc==gdTiled) {
 		_gdImageFillTiled(im,x,y,nc);
 		im->alphaBlendingFlag = alphablending_bak;
 		return;
 	}
 
-	wx2=im->sx;wy2=im->sy;
+	wx2=im->sx;
+	wy2=im->sy;
 	oc = gdImageGetPixel(im, x, y);
 	if (oc==nc || x<0 || x>wx2 || y<0 || y>wy2) {
 		im->alphaBlendingFlag = alphablending_bak;
@@ -1891,8 +2086,8 @@ void gdImageFill(gdImagePtr im, int x, int y, int nc)
 	}
 
 	/* Do not use the 4 neighbors implementation with
-	 * small images
-	 */
+	* small images
+	*/
 	if (im->sx < 4) {
 		int ix = x, iy = y, c;
 		do {
@@ -1908,87 +2103,28 @@ void gdImageFill(gdImagePtr im, int x, int y, int nc)
 		goto done;
 	}
 
-	stack = (struct seg *)safe_emalloc(sizeof(struct seg), ((int)(im->sy*im->sx)/4), 1);
+	if(overflow2(im->sy, im->sx)) {
+		return;
+	}
+
+	if(overflow2(sizeof(struct seg), ((im->sy * im->sx) / 4))) {
+		return;
+	}
+
+	stack = (struct seg *)gdMalloc(sizeof(struct seg) * ((int)(im->sy*im->sx)/4));
+	if (!stack) {
+		return;
+	}
 	sp = stack;
 
 	/* required! */
 	FILL_PUSH(y,x,x,1);
 	/* seed segment (popped 1st) */
- 	FILL_PUSH(y+1, x, x, -1);
+	FILL_PUSH(y+1, x, x, -1);
 	while (sp>stack) {
 		FILL_POP(y, x1, x2, dy);
 
 		for (x=x1; x>=0 && gdImageGetPixel(im,x, y)==oc; x--) {
-			gdImageSetPixel(im,x, y, nc);
-		}
-		if (x>=x1) {
-			goto skip;
-		}
-		l = x+1;
-
-                /* leak on left? */
-		if (l<x1) {
-			FILL_PUSH(y, l, x1-1, -dy);
-		}
-		x = x1+1;
-		do {
-			for (; x<=wx2 && gdImageGetPixel(im,x, y)==oc; x++) {
-				gdImageSetPixel(im, x, y, nc);
-			}
-			FILL_PUSH(y, l, x-1, dy);
-			/* leak on right? */
-			if (x>x2+1) {
-				FILL_PUSH(y, x2+1, x-1, -dy);
-			}
-skip:			for (x++; x<=x2 && (gdImageGetPixel(im, x, y)!=oc); x++);
-
-			l = x;
-		} while (x<=x2);
-	}
-
-	efree(stack);
-
-done:
-	im->alphaBlendingFlag = alphablending_bak;
-}
-
-static void _gdImageFillTiled(gdImagePtr im, int x, int y, int nc)
-{
-	int i, l, x1, x2, dy;
-	int oc;   /* old pixel value */
-	int wx2,wy2;
-	/* stack of filled segments */
-	struct seg *stack;
-	struct seg *sp;
-	char **pts;
-
-	if (!im->tile) {
-		return;
-	}
-
-	wx2=im->sx;wy2=im->sy;
-
-	nc =  gdImageTileGet(im,x,y);
-
-	pts = (char **) ecalloc(im->sy + 1, sizeof(char *));
-	for (i = 0; i < im->sy + 1; i++) {
-		pts[i] = (char *) ecalloc(im->sx + 1, sizeof(char));
-	}
-
-	stack = (struct seg *)safe_emalloc(sizeof(struct seg), ((int)(im->sy*im->sx)/4), 1);
-	sp = stack;
-
-	oc = gdImageGetPixel(im, x, y);
-
-	/* required! */
-	FILL_PUSH(y,x,x,1);
-	/* seed segment (popped 1st) */
- 	FILL_PUSH(y+1, x, x, -1);
-	while (sp>stack) {
-		FILL_POP(y, x1, x2, dy);
-		for (x=x1; x>=0 && (!pts[y][x] && gdImageGetPixel(im,x,y)==oc); x--) {
-			nc = gdImageTileGet(im,x,y);
-			pts[y][x] = 1;
 			gdImageSetPixel(im,x, y, nc);
 		}
 		if (x>=x1) {
@@ -2002,9 +2138,7 @@ static void _gdImageFillTiled(gdImagePtr im, int x, int y, int nc)
 		}
 		x = x1+1;
 		do {
-			for(; x<wx2 && (!pts[y][x] && gdImageGetPixel(im,x, y)==oc); x++) {
-				nc = gdImageTileGet(im,x,y);
-				pts[y][x] = 1;
+			for (; x<=wx2 && gdImageGetPixel(im,x, y)==oc; x++) {
 				gdImageSetPixel(im, x, y, nc);
 			}
 			FILL_PUSH(y, l, x-1, dy);
@@ -2012,26 +2146,107 @@ static void _gdImageFillTiled(gdImagePtr im, int x, int y, int nc)
 			if (x>x2+1) {
 				FILL_PUSH(y, x2+1, x-1, -dy);
 			}
-skip:		for(x++; x<=x2 && (pts[y][x] || gdImageGetPixel(im,x, y)!=oc); x++);
+skip:
+			for (x++; x<=x2 && (gdImageGetPixel(im, x, y)!=oc); x++);
+
 			l = x;
 		} while (x<=x2);
 	}
 
-	for(i = 0; i < im->sy + 1; i++) {
-		efree(pts[i]);
-	}
+	gdFree(stack);
 
-	efree(pts);
-	efree(stack);
+done:
+	im->alphaBlendingFlag = alphablending_bak;
 }
 
-
-
-void gdImageRectangle (gdImagePtr im, int x1, int y1, int x2, int y2, int color)
+static void _gdImageFillTiled(gdImagePtr im, int x, int y, int nc)
 {
-	int x1h = x1, x1v = x1, y1h = y1, y1v = y1, x2h = x2, x2v = x2, y2h = y2, y2v = y2;
+	int l, x1, x2, dy;
+	int oc;   /* old pixel value */
+	int wx2,wy2;
+	/* stack of filled segments */
+	struct seg *stack;
+	struct seg *sp;
+	char *pts;
+
+	if (!im->tile) {
+		return;
+	}
+
+	wx2=im->sx;
+	wy2=im->sy;
+
+	if(overflow2(im->sy, im->sx)) {
+		return;
+	}
+
+	if(overflow2(sizeof(struct seg), ((im->sy * im->sx) / 4))) {
+		return;
+	}
+
+	pts = (char *) gdCalloc(im->sy * im->sx, sizeof(char));
+	if (!pts) {
+		return;
+	}
+
+	stack = (struct seg *)gdMalloc(sizeof(struct seg) * ((int)(im->sy*im->sx)/4));
+	if (!stack) {
+		gdFree(pts);
+		return;
+	}
+	sp = stack;
+
+	oc = gdImageGetPixel(im, x, y);
+
+	/* required! */
+	FILL_PUSH(y,x,x,1);
+	/* seed segment (popped 1st) */
+	FILL_PUSH(y+1, x, x, -1);
+	while (sp>stack) {
+		FILL_POP(y, x1, x2, dy);
+		for (x=x1; x>=0 && (!pts[y + x*wx2] && gdImageGetPixel(im,x,y)==oc); x--) {
+			nc = gdImageTileGet(im,x,y);
+			pts[y + x*wx2]=1;
+			gdImageSetPixel(im,x, y, nc);
+		}
+		if (x>=x1) {
+			goto skip;
+		}
+		l = x+1;
+
+		/* leak on left? */
+		if (l<x1) {
+			FILL_PUSH(y, l, x1-1, -dy);
+		}
+		x = x1+1;
+		do {
+			for (; x<wx2 && (!pts[y + x*wx2] && gdImageGetPixel(im,x, y)==oc) ; x++) {
+				if (pts[y + x*wx2]) {
+					/* we should never be here */
+					break;
+				}
+				nc = gdImageTileGet(im,x,y);
+				pts[y + x*wx2]=1;
+				gdImageSetPixel(im, x, y, nc);
+			}
+			FILL_PUSH(y, l, x-1, dy);
+			/* leak on right? */
+			if (x>x2+1) {
+				FILL_PUSH(y, x2+1, x-1, -dy);
+			}
+skip:
+			for (x++; x<=x2 && (pts[y + x*wx2] || gdImageGetPixel(im,x, y)!=oc); x++);
+			l = x;
+		} while (x<=x2);
+	}
+
+	gdFree(pts);
+	gdFree(stack);
+}
+
+BGD_DECLARE(void) gdImageRectangle (gdImagePtr im, int x1, int y1, int x2, int y2, int color)
+{
 	int thick = im->thick;
-	int t;
 
 	if (x1 == x2 && y1 == y2 && thick == 1) {
 		gdImageSetPixel(im, x1, y1, color);
@@ -2039,7 +2254,8 @@ void gdImageRectangle (gdImagePtr im, int x1, int y1, int x2, int y2, int color)
 	}
 
 	if (y2 < y1) {
-		t=y1;
+		int t;
+		t = y1;
 		y1 = y2;
 		y2 = t;
 
@@ -2048,11 +2264,9 @@ void gdImageRectangle (gdImagePtr im, int x1, int y1, int x2, int y2, int color)
 		x2 = t;
 	}
 
-	x1h = x1; x1v = x1; y1h = y1; y1v = y1; x2h = x2; x2v = x2; y2h = y2; y2v = y2;
 	if (thick > 1) {
 		int cx, cy, x1ul, y1ul, x2lr, y2lr;
 		int half = thick >> 1;
-
 		x1ul = x1 - half;
 		y1ul = y1 - half;
 
@@ -2093,19 +2307,17 @@ void gdImageRectangle (gdImagePtr im, int x1, int y1, int x2, int y2, int color)
 
 		return;
 	} else {
-		y1v = y1h + 1;
-		y2v = y2h - 1;
-		gdImageLine(im, x1h, y1h, x2h, y1h, color);
-		gdImageLine(im, x1h, y2h, x2h, y2h, color);
-		gdImageLine(im, x1v, y1v, x1v, y2v, color);
-		gdImageLine(im, x2v, y1v, x2v, y2v, color);
+		gdImageLine(im, x1, y1, x2, y1, color);
+		gdImageLine(im, x1, y2, x2, y2, color);
+		gdImageLine(im, x1, y1 + 1, x1, y2 - 1, color);
+		gdImageLine(im, x2, y1 + 1, x2, y2 - 1, color);
 	}
 }
 
-void gdImageFilledRectangle (gdImagePtr im, int x1, int y1, int x2, int y2, int color)
+BGD_DECLARE(void) gdImageFilledRectangle (gdImagePtr im, int x1, int y1, int x2, int y2,
+		int color)
 {
 	int x, y;
-
 
 	if (x1 == x2 && y1 == y2) {
 		gdImageSetPixel(im, x1, y1, color);
@@ -2147,7 +2359,103 @@ void gdImageFilledRectangle (gdImagePtr im, int x1, int y1, int x2, int y2, int 
 	}
 }
 
-void gdImageCopy (gdImagePtr dst, gdImagePtr src, int dstX, int dstY, int srcX, int srcY, int w, int h)
+BGD_DECLARE(gdImagePtr) gdImageClone (gdImagePtr src) {
+	gdImagePtr dst;
+	register int i, x;
+
+	if (src->trueColor) {
+		dst = gdImageCreateTrueColor(src->sx , src->sy);
+	} else {
+		dst = gdImageCreate(src->sx , src->sy);
+	}
+
+	if (dst == NULL) {
+		return NULL;
+	}
+
+	if (src->trueColor == 0) {
+		dst->colorsTotal = src->colorsTotal;
+		for (i = 0; i < gdMaxColors; i++) {
+			dst->red[i]   = src->red[i];
+			dst->green[i] = src->green[i];
+			dst->blue[i]  = src->blue[i];
+			dst->alpha[i] = src->alpha[i];
+			dst->open[i]  = src->open[i];
+		}
+		for (i = 0; i < src->sy; i++) {
+			for (x = 0; x < src->sx; x++) {
+				dst->pixels[i][x] = src->pixels[i][x];
+			}
+		}
+	} else {
+		for (i = 0; i < src->sy; i++) {
+			for (x = 0; x < src->sx; x++) {
+				dst->tpixels[i][x] = src->tpixels[i][x];
+			}
+		}
+	}
+
+	if (src->styleLength > 0) {
+		dst->styleLength = src->styleLength;
+		dst->stylePos    = src->stylePos;
+		for (i = 0; i < src->styleLength; i++) {
+			dst->style[i] = src->style[i];
+		}
+	}
+
+	dst->interlace   = src->interlace;
+
+	dst->alphaBlendingFlag = src->alphaBlendingFlag;
+	dst->saveAlphaFlag     = src->saveAlphaFlag;
+	dst->AA                = src->AA;
+	dst->AA_color          = src->AA_color;
+	dst->AA_dont_blend     = src->AA_dont_blend;
+
+	dst->cx1 = src->cx1;
+	dst->cy1 = src->cy1;
+	dst->cx2 = src->cx2;
+	dst->cy2 = src->cy2;
+
+	dst->res_x = src->res_x;
+	dst->res_y = src->res_x;
+
+	dst->paletteQuantizationMethod     = src->paletteQuantizationMethod;
+	dst->paletteQuantizationSpeed      = src->paletteQuantizationSpeed;
+	dst->paletteQuantizationMinQuality = src->paletteQuantizationMinQuality;
+	dst->paletteQuantizationMinQuality = src->paletteQuantizationMinQuality;
+
+	dst->interpolation_id = src->interpolation_id;
+	dst->interpolation    = src->interpolation;
+
+	if (src->brush) {
+		dst->brush = gdImageClone(src->brush);
+	}
+
+	if (src->tile) {
+		dst->tile = gdImageClone(src->tile);
+	}
+
+	if (src->style) {
+		gdImageSetStyle(dst, src->style, src->styleLength);
+	}
+
+	for (i = 0; i < gdMaxColors; i++) {
+		dst->brushColorMap[i] = src->brushColorMap[i];
+		dst->tileColorMap[i] = src->tileColorMap[i];
+	}
+
+	if (src->polyAllocated > 0) {
+		dst->polyAllocated = src->polyAllocated;
+		for (i = 0; i < src->polyAllocated; i++) {
+			dst->polyInts[i] = src->polyInts[i];
+		}
+	}
+
+	return dst;
+}
+
+BGD_DECLARE(void) gdImageCopy (gdImagePtr dst, gdImagePtr src, int dstX, int dstY, int srcX,
+							   int srcY, int w, int h)
 {
 	int c;
 	int x, y;
@@ -2158,14 +2466,16 @@ void gdImageCopy (gdImagePtr dst, gdImagePtr src, int dstX, int dstY, int srcX, 
 	if (dst->trueColor) {
 		/* 2.0: much easier when the destination is truecolor. */
 		/* 2.0.10: needs a transparent-index check that is still valid if
-		 * the source is not truecolor. Thanks to Frank Warmerdam.
+		 *          * the source is not truecolor. Thanks to Frank Warmerdam.
 		 */
 
 		if (src->trueColor) {
 			for (y = 0; (y < h); y++) {
 				for (x = 0; (x < w); x++) {
 					int c = gdImageGetTrueColorPixel (src, srcX + x, srcY + y);
-					gdImageSetPixel (dst, dstX + x, dstY + y, c);
+					if (c != src->transparent) {
+						gdImageSetPixel (dst, dstX + x, dstY + y, c);
+					}
 				}
 			}
 		} else {
@@ -2182,34 +2492,13 @@ void gdImageCopy (gdImagePtr dst, gdImagePtr src, int dstX, int dstY, int srcX, 
 		return;
 	}
 
-	/* Destination is palette based */
-	if (src->trueColor) { /* But source is truecolor (Ouch!) */
-		toy = dstY;
-		for (y = srcY; (y < (srcY + h)); y++) {
-			tox = dstX;
-			for (x = srcX; x < (srcX + w); x++) {
-				int nc;
-				c = gdImageGetPixel (src, x, y);
-
-				/* Get best match possible. */
-				nc = gdImageColorResolveAlpha(dst, gdTrueColorGetRed(c), gdTrueColorGetGreen(c), gdTrueColorGetBlue(c), gdTrueColorGetAlpha(c));
-
-				gdImageSetPixel(dst, tox, toy, nc);
-				tox++;
-			}
-			toy++;
-		}
-		return;
-	}
-
-	/* Palette based to palette based */
-	for (i = 0; i < gdMaxColors; i++) {
+	for (i = 0; (i < gdMaxColors); i++) {
 		colorMap[i] = (-1);
 	}
 	toy = dstY;
-	for (y = srcY; y < (srcY + h); y++) {
+	for (y = srcY; (y < (srcY + h)); y++) {
 		tox = dstX;
-		for (x = srcX; x < (srcX + w); x++) {
+		for (x = srcX; (x < (srcX + w)); x++) {
 			int nc;
 			int mapTo;
 			c = gdImageGetPixel (src, x, y);
@@ -2220,17 +2509,25 @@ void gdImageCopy (gdImagePtr dst, gdImagePtr src, int dstX, int dstY, int srcX, 
 			}
 			/* Have we established a mapping for this color? */
 			if (src->trueColor) {
-				/* 2.05: remap to the palette available in the destination image. This is slow and
-				 * works badly, but it beats crashing! Thanks to Padhrig McCarthy.
-				 */
-				mapTo = gdImageColorResolveAlpha (dst, gdTrueColorGetRed (c), gdTrueColorGetGreen (c), gdTrueColorGetBlue (c), gdTrueColorGetAlpha (c));
+				/* 2.05: remap to the palette available in the
+				 destination image. This is slow and
+				 works badly, but it beats crashing! Thanks
+				 to Padhrig McCarthy. */
+				mapTo = gdImageColorResolveAlpha (dst,
+				                                  gdTrueColorGetRed (c),
+				                                  gdTrueColorGetGreen (c),
+				                                  gdTrueColorGetBlue (c),
+				                                  gdTrueColorGetAlpha (c));
 			} else if (colorMap[c] == (-1)) {
 				/* If it's the same image, mapping is trivial */
 				if (dst == src) {
 					nc = c;
 				} else {
-					/* Get best match possible. This function never returns error. */
-					nc = gdImageColorResolveAlpha (dst, src->red[c], src->green[c], src->blue[c], src->alpha[c]);
+					/* Get best match possible. This
+					   function never returns error. */
+					nc = gdImageColorResolveAlpha (dst,
+					                               src->red[c], src->green[c],
+					                               src->blue[c], src->alpha[c]);
 				}
 				colorMap[c] = nc;
 				mapTo = colorMap[c];
@@ -2246,21 +2543,22 @@ void gdImageCopy (gdImagePtr dst, gdImagePtr src, int dstX, int dstY, int srcX, 
 
 /* This function is a substitute for real alpha channel operations,
    so it doesn't pay attention to the alpha channel. */
-void gdImageCopyMerge (gdImagePtr dst, gdImagePtr src, int dstX, int dstY, int srcX, int srcY, int w, int h, int pct)
+BGD_DECLARE(void) gdImageCopyMerge (gdImagePtr dst, gdImagePtr src, int dstX, int dstY,
+									int srcX, int srcY, int w, int h, int pct)
 {
+
 	int c, dc;
 	int x, y;
 	int tox, toy;
 	int ncR, ncG, ncB;
 	toy = dstY;
-
-	for (y = srcY; y < (srcY + h); y++) {
+	for (y = srcY; (y < (srcY + h)); y++) {
 		tox = dstX;
-		for (x = srcX; x < (srcX + w); x++) {
+		for (x = srcX; (x < (srcX + w)); x++) {
 			int nc;
-			c = gdImageGetPixel(src, x, y);
+			c = gdImageGetPixel (src, x, y);
 			/* Added 7/24/95: support transparent copies */
-			if (gdImageGetTransparent(src) == c) {
+			if (gdImageGetTransparent (src) == c) {
 				tox++;
 				continue;
 			}
@@ -2268,11 +2566,14 @@ void gdImageCopyMerge (gdImagePtr dst, gdImagePtr src, int dstX, int dstY, int s
 			if (dst == src) {
 				nc = c;
 			} else {
-				dc = gdImageGetPixel(dst, tox, toy);
+				dc = gdImageGetPixel (dst, tox, toy);
 
- 				ncR = (int)(gdImageRed (src, c) * (pct / 100.0) + gdImageRed (dst, dc) * ((100 - pct) / 100.0));
- 				ncG = (int)(gdImageGreen (src, c) * (pct / 100.0) + gdImageGreen (dst, dc) * ((100 - pct) / 100.0));
- 				ncB = (int)(gdImageBlue (src, c) * (pct / 100.0) + gdImageBlue (dst, dc) * ((100 - pct) / 100.0));
+				ncR = gdImageRed (src, c) * (pct / 100.0)
+				      + gdImageRed (dst, dc) * ((100 - pct) / 100.0);
+				ncG = gdImageGreen (src, c) * (pct / 100.0)
+				      + gdImageGreen (dst, dc) * ((100 - pct) / 100.0);
+				ncB = gdImageBlue (src, c) * (pct / 100.0)
+				      + gdImageBlue (dst, dc) * ((100 - pct) / 100.0);
 
 				/* Find a reasonable color */
 				nc = gdImageColorResolve (dst, ncR, ncG, ncB);
@@ -2286,26 +2587,26 @@ void gdImageCopyMerge (gdImagePtr dst, gdImagePtr src, int dstX, int dstY, int s
 
 /* This function is a substitute for real alpha channel operations,
    so it doesn't pay attention to the alpha channel. */
-void gdImageCopyMergeGray (gdImagePtr dst, gdImagePtr src, int dstX, int dstY, int srcX, int srcY, int w, int h, int pct)
+BGD_DECLARE(void) gdImageCopyMergeGray (gdImagePtr dst, gdImagePtr src, int dstX, int dstY,
+										int srcX, int srcY, int w, int h, int pct)
 {
+
 	int c, dc;
 	int x, y;
 	int tox, toy;
 	int ncR, ncG, ncB;
 	float g;
 	toy = dstY;
-
 	for (y = srcY; (y < (srcY + h)); y++) {
 		tox = dstX;
 		for (x = srcX; (x < (srcX + w)); x++) {
 			int nc;
 			c = gdImageGetPixel (src, x, y);
 			/* Added 7/24/95: support transparent copies */
-			if (gdImageGetTransparent(src) == c) {
+			if (gdImageGetTransparent (src) == c) {
 				tox++;
 				continue;
 			}
-
 			/*
 			 * If it's the same image, mapping is NOT trivial since we
 			 * merge with greyscale target, but if pct is 100, the grey
@@ -2314,33 +2615,39 @@ void gdImageCopyMergeGray (gdImagePtr dst, gdImagePtr src, int dstX, int dstY, i
 			if (dst == src && pct == 100) {
 				nc = c;
 			} else {
-				dc = gdImageGetPixel(dst, tox, toy);
-				g = (0.29900f * gdImageRed(dst, dc)) + (0.58700f * gdImageGreen(dst, dc)) + (0.11400f * gdImageBlue(dst, dc));
+				dc = gdImageGetPixel (dst, tox, toy);
+				g = 0.29900 * gdImageRed(dst, dc)
+				    + 0.58700 * gdImageGreen(dst, dc) + 0.11400 * gdImageBlue(dst, dc);
 
-				ncR = (int)(gdImageRed (src, c) * (pct / 100.0f) + g * ((100 - pct) / 100.0));
-				ncG = (int)(gdImageGreen (src, c) * (pct / 100.0f) + g * ((100 - pct) / 100.0));
-				ncB = (int)(gdImageBlue (src, c) * (pct / 100.0f) + g * ((100 - pct) / 100.0));
-
+				ncR = gdImageRed (src, c) * (pct / 100.0)
+				      + g * ((100 - pct) / 100.0);
+				ncG = gdImageGreen (src, c) * (pct / 100.0)
+				      + g * ((100 - pct) / 100.0);
+				ncB = gdImageBlue (src, c) * (pct / 100.0)
+				      + g * ((100 - pct) / 100.0);
 
 				/* First look for an exact match */
-				nc = gdImageColorExact(dst, ncR, ncG, ncB);
+				nc = gdImageColorExact (dst, ncR, ncG, ncB);
 				if (nc == (-1)) {
 					/* No, so try to allocate it */
-					nc = gdImageColorAllocate(dst, ncR, ncG, ncB);
-					/* If we're out of colors, go for the closest color */
+					nc = gdImageColorAllocate (dst, ncR, ncG, ncB);
+					/* If we're out of colors, go for the
+					   closest color */
 					if (nc == (-1)) {
-						nc = gdImageColorClosest(dst, ncR, ncG, ncB);
+						nc = gdImageColorClosest (dst, ncR, ncG, ncB);
 					}
 				}
 			}
-			gdImageSetPixel(dst, tox, toy, nc);
+			gdImageSetPixel (dst, tox, toy, nc);
 			tox++;
 		}
 		toy++;
 	}
 }
 
-void gdImageCopyResized (gdImagePtr dst, gdImagePtr src, int dstX, int dstY, int srcX, int srcY, int dstW, int dstH, int srcW, int srcH)
+BGD_DECLARE(void) gdImageCopyResized (gdImagePtr dst, gdImagePtr src, int dstX, int dstY,
+									  int srcX, int srcY, int dstW, int dstH, int srcW,
+									  int srcH)
 {
 	int c;
 	int x, y;
@@ -2349,24 +2656,33 @@ void gdImageCopyResized (gdImagePtr dst, gdImagePtr src, int dstX, int dstY, int
 	int i;
 	int colorMap[gdMaxColors];
 	/* Stretch vectors */
-	int *stx, *sty;
-
-	if (overflow2(sizeof(int), srcW)) {
+	int *stx;
+	int *sty;
+	/* We only need to use floating point to determine the correct
+	   stretch vector for one line's worth. */
+	if (overflow2(sizeof (int), srcW)) {
 		return;
 	}
-	if (overflow2(sizeof(int), srcH)) {
+	if (overflow2(sizeof (int), srcH)) {
 		return;
 	}
-
 	stx = (int *) gdMalloc (sizeof (int) * srcW);
+	if (!stx) {
+		return;
+	}
+
 	sty = (int *) gdMalloc (sizeof (int) * srcH);
+	if (!sty) {
+		gdFree(stx);
+		return;
+	}
 
 	/* Fixed by Mao Morimoto 2.0.16 */
 	for (i = 0; (i < srcW); i++) {
-		stx[i] = dstW * (i+1) / srcW - dstW * i / srcW ;
+		stx[i] = dstW * (i + 1) / srcW - dstW * i / srcW;
 	}
 	for (i = 0; (i < srcH); i++) {
-		sty[i] = dstH * (i+1) / srcH - dstH * i / srcH ;
+		sty[i] = dstH * (i + 1) / srcH - dstH * i / srcH;
 	}
 	for (i = 0; (i < gdMaxColors); i++) {
 		colorMap[i] = (-1);
@@ -2382,18 +2698,19 @@ void gdImageCopyResized (gdImagePtr dst, gdImagePtr src, int dstX, int dstY, int
 					continue;
 				}
 				if (dst->trueColor) {
-					/* 2.0.9: Thorben Kundinger: Maybe the source image is not a truecolor image */
+					/* 2.0.9: Thorben Kundinger: Maybe the source image is not
+					   a truecolor image */
 					if (!src->trueColor) {
-					  	int tmp = gdImageGetPixel (src, x, y);
-		  				mapTo = gdImageGetTrueColorPixel (src, x, y);
-					  	if (gdImageGetTransparent (src) == tmp) {
+						int tmp = gdImageGetPixel (src, x, y);
+						mapTo = gdImageGetTrueColorPixel (src, x, y);
+						if (gdImageGetTransparent (src) == tmp) {
 							/* 2.0.21, TK: not tox++ */
 							tox += stx[x - srcX];
-					  		continue;
-					  	}
+							continue;
+						}
 					} else {
 						/* TK: old code follows */
-					  	mapTo = gdImageGetTrueColorPixel (src, x, y);
+						mapTo = gdImageGetTrueColorPixel (src, x, y);
 						/* Added 7/24/95: support transparent copies */
 						if (gdImageGetTransparent (src) == mapTo) {
 							/* 2.0.21, TK: not tox++ */
@@ -2405,15 +2722,21 @@ void gdImageCopyResized (gdImagePtr dst, gdImagePtr src, int dstX, int dstY, int
 					c = gdImageGetPixel (src, x, y);
 					/* Added 7/24/95: support transparent copies */
 					if (gdImageGetTransparent (src) == c) {
-					      tox += stx[x - srcX];
-					      continue;
+						tox += stx[x - srcX];
+						continue;
 					}
 					if (src->trueColor) {
-					      /* Remap to the palette available in the destination image. This is slow and works badly. */
-					      mapTo = gdImageColorResolveAlpha(dst, gdTrueColorGetRed(c),
-					      					    gdTrueColorGetGreen(c),
-					      					    gdTrueColorGetBlue(c),
-					      					    gdTrueColorGetAlpha (c));
+						/* Remap to the palette available in the
+						   destination image. This is slow and
+						   works badly. */
+						mapTo = gdImageColorResolveAlpha (dst,
+						                                  gdTrueColorGetRed (c),
+						                                  gdTrueColorGetGreen
+						                                  (c),
+						                                  gdTrueColorGetBlue
+						                                  (c),
+						                                  gdTrueColorGetAlpha
+						                                  (c));
 					} else {
 						/* Have we established a mapping for this color? */
 						if (colorMap[c] == (-1)) {
@@ -2423,10 +2746,15 @@ void gdImageCopyResized (gdImagePtr dst, gdImagePtr src, int dstX, int dstY, int
 							} else {
 								/* Find or create the best match */
 								/* 2.0.5: can't use gdTrueColorGetRed, etc with palette */
-								nc = gdImageColorResolveAlpha(dst, gdImageRed(src, c),
-												   gdImageGreen(src, c),
-												   gdImageBlue(src, c),
-												   gdImageAlpha(src, c));
+								nc = gdImageColorResolveAlpha (dst,
+								                               gdImageRed (src,
+								                                       c),
+								                               gdImageGreen
+								                               (src, c),
+								                               gdImageBlue (src,
+								                                       c),
+								                               gdImageAlpha
+								                               (src, c));
 							}
 							colorMap[c] = nc;
 						}
@@ -2445,81 +2773,168 @@ void gdImageCopyResized (gdImagePtr dst, gdImagePtr src, int dstX, int dstY, int
 	gdFree (sty);
 }
 
+/* gd 2.0.8: gdImageCopyRotated is added. Source
+	is a rectangle, with its upper left corner at
+	srcX and srcY. Destination is the *center* of
+		the rotated copy. Angle is in degrees, same as
+		gdImageArc. Floating point destination center
+	coordinates allow accurate rotation of
+	objects of odd-numbered width or height. */
+
+BGD_DECLARE(void) gdImageCopyRotated (gdImagePtr dst,
+									  gdImagePtr src,
+									  double dstX, double dstY,
+									  int srcX, int srcY,
+									  int srcWidth, int srcHeight, int angle)
+{
+	double dx, dy;
+	double radius = sqrt (srcWidth * srcWidth + srcHeight * srcHeight);
+	double aCos = cos (angle * .0174532925);
+	double aSin = sin (angle * .0174532925);
+	double scX = srcX + ((double) srcWidth) / 2;
+	double scY = srcY + ((double) srcHeight) / 2;
+	int cmap[gdMaxColors];
+	int i;
+
+	/*
+		 2.0.34: transparency preservation. The transparentness of
+		 the transparent color is more important than its hue.
+	*/
+	if (src->transparent != -1) {
+		if (dst->transparent == -1) {
+			dst->transparent = src->transparent;
+		}
+	}
+
+	for (i = 0; (i < gdMaxColors); i++) {
+		cmap[i] = (-1);
+	}
+	for (dy = dstY - radius; (dy <= dstY + radius); dy++) {
+		for (dx = dstX - radius; (dx <= dstX + radius); dx++) {
+			double sxd = (dx - dstX) * aCos - (dy - dstY) * aSin;
+			double syd = (dy - dstY) * aCos + (dx - dstX) * aSin;
+			int sx = sxd + scX;
+			int sy = syd + scY;
+			if ((sx >= srcX) && (sx < srcX + srcWidth) &&
+			        (sy >= srcY) && (sy < srcY + srcHeight)) {
+				int c = gdImageGetPixel (src, sx, sy);
+				/* 2.0.34: transparency wins */
+				if (c == src->transparent) {
+					gdImageSetPixel (dst, dx, dy, dst->transparent);
+				} else if (!src->trueColor) {
+					/* Use a table to avoid an expensive
+					   lookup on every single pixel */
+					if (cmap[c] == -1) {
+						cmap[c] = gdImageColorResolveAlpha (dst,
+						                                    gdImageRed (src, c),
+						                                    gdImageGreen (src,
+						                                            c),
+						                                    gdImageBlue (src,
+						                                            c),
+						                                    gdImageAlpha (src,
+						                                            c));
+					}
+					gdImageSetPixel (dst, dx, dy, cmap[c]);
+				} else {
+					gdImageSetPixel (dst,
+					                 dx, dy,
+					                 gdImageColorResolveAlpha (dst,
+					                         gdImageRed (src,
+					                                     c),
+					                         gdImageGreen
+					                         (src, c),
+					                         gdImageBlue (src,
+					                                      c),
+					                         gdImageAlpha
+					                         (src, c)));
+				}
+			}
+		}
+	}
+}
+
 /* When gd 1.x was first created, floating point was to be avoided.
    These days it is often faster than table lookups or integer
    arithmetic. The routine below is shamelessly, gloriously
    floating point. TBB */
 
-void gdImageCopyResampled (gdImagePtr dst, gdImagePtr src, int dstX, int dstY, int srcX, int srcY, int dstW, int dstH, int srcW, int srcH)
+/* 2.0.10: cast instead of floor() yields 35% performance improvement.
+	Thanks to John Buckman. */
+
+#define floor2(exp) ((long) exp)
+/*#define floor2(exp) floor(exp)*/
+
+BGD_DECLARE(void) gdImageCopyResampled (gdImagePtr dst,
+										gdImagePtr src,
+										int dstX, int dstY,
+										int srcX, int srcY,
+										int dstW, int dstH, int srcW, int srcH)
 {
 	int x, y;
 	double sy1, sy2, sx1, sx2;
-
 	if (!dst->trueColor) {
-		gdImageCopyResized (dst, src, dstX, dstY, srcX, srcY, dstW, dstH, srcW, srcH);
+		gdImageCopyResized (dst, src, dstX, dstY, srcX, srcY, dstW, dstH,
+		                    srcW, srcH);
 		return;
 	}
 	for (y = dstY; (y < dstY + dstH); y++) {
 		sy1 = ((double) y - (double) dstY) * (double) srcH / (double) dstH;
-		sy2 = ((double) (y + 1) - (double) dstY) * (double) srcH / (double) dstH;
+		sy2 = ((double) (y + 1) - (double) dstY) * (double) srcH /
+		      (double) dstH;
 		for (x = dstX; (x < dstX + dstW); x++) {
 			double sx, sy;
 			double spixels = 0;
 			double red = 0.0, green = 0.0, blue = 0.0, alpha = 0.0;
-			double alpha_factor, alpha_sum = 0.0, contrib_sum = 0.0;
+			double alpha_sum = 0.0, contrib_sum = 0.0;
+
 			sx1 = ((double) x - (double) dstX) * (double) srcW / dstW;
 			sx2 = ((double) (x + 1) - (double) dstX) * (double) srcW / dstW;
 			sy = sy1;
 			do {
 				double yportion;
-				if (floor_cast(sy) == floor_cast(sy1)) {
-					yportion = 1.0f - (sy - floor_cast(sy));
+				if (floor2 (sy) == floor2 (sy1)) {
+					yportion = 1.0 - (sy - floor2 (sy));
 					if (yportion > sy2 - sy1) {
 						yportion = sy2 - sy1;
 					}
-					sy = floor_cast(sy);
-				} else if (sy == floorf(sy2)) {
-					yportion = sy2 - floor_cast(sy2);
+					sy = floor2 (sy);
+				} else if (sy == floor2 (sy2)) {
+					yportion = sy2 - floor2 (sy2);
 				} else {
-					yportion = 1.0f;
+					yportion = 1.0;
 				}
 				sx = sx1;
 				do {
 					double xportion;
 					double pcontribution;
 					int p;
-					if (floorf(sx) == floor_cast(sx1)) {
-						xportion = 1.0f - (sx - floor_cast(sx));
+					if (floor2 (sx) == floor2 (sx1)) {
+						xportion = 1.0 - (sx - floor2 (sx));
 						if (xportion > sx2 - sx1) {
 							xportion = sx2 - sx1;
 						}
-						sx = floor_cast(sx);
-					} else if (sx == floorf(sx2)) {
-						xportion = sx2 - floor_cast(sx2);
+						sx = floor2 (sx);
+					} else if (sx == floor2 (sx2)) {
+						xportion = sx2 - floor2 (sx2);
 					} else {
-						xportion = 1.0f;
+						xportion = 1.0;
 					}
 					pcontribution = xportion * yportion;
-					p = gdImageGetTrueColorPixel(src, (int) sx + srcX, (int) sy + srcY);
-
-					alpha_factor = ((gdAlphaMax - gdTrueColorGetAlpha(p))) * pcontribution;
-					red += gdTrueColorGetRed (p) * alpha_factor;
-					green += gdTrueColorGetGreen (p) * alpha_factor;
-					blue += gdTrueColorGetBlue (p) * alpha_factor;
+					/* 2.08: previously srcX and srcY were ignored.
+					   Andrew Pattison */
+					p = gdImageGetTrueColorPixel (src,
+					                              (int) sx + srcX,
+					                              (int) sy + srcY);
+					red += gdTrueColorGetRed (p) * pcontribution;
+					green += gdTrueColorGetGreen (p) * pcontribution;
+					blue += gdTrueColorGetBlue (p) * pcontribution;
 					alpha += gdTrueColorGetAlpha (p) * pcontribution;
-					alpha_sum += alpha_factor;
-					contrib_sum += pcontribution;
 					spixels += xportion * yportion;
-					sx += 1.0f;
-				}
-				while (sx < sx2);
-
-				sy += 1.0f;
-			}
-
-			while (sy < sy2);
-
-			if (spixels != 0.0f) {
+					sx += 1.0;
+				} while (sx < sx2);
+				sy += 1.0;
+			} while (sy < sy2);
+			if (spixels != 0.0) {
 				red /= spixels;
 				green /= spixels;
 				blue /= spixels;
@@ -2535,75 +2950,70 @@ void gdImageCopyResampled (gdImagePtr dst, gdImagePtr src, int dstX, int dstY, i
 				blue /= alpha_sum;
 			}
 			/* Clamping to allow for rounding errors above */
-			if (red > 255.0f) {
-				red = 255.0f;
+			if (red > 255.0) {
+				red = 255.0;
 			}
-			if (green > 255.0f) {
-				green = 255.0f;
+			if (green > 255.0) {
+				green = 255.0;
 			}
-			if (blue > 255.0f) {
-				blue = 255.0f;
+			if (blue > 255.0) {
+				blue = 255.0;
 			}
 			if (alpha > gdAlphaMax) {
 				alpha = gdAlphaMax;
 			}
-			gdImageSetPixel(dst, x, y, gdTrueColorAlpha ((int) red, (int) green, (int) blue, (int) alpha));
+			gdImageSetPixel (dst,
+			                 x, y,
+			                 gdTrueColorAlpha ((int) red,
+			                                   (int) green,
+			                                   (int) blue, (int) alpha));
 		}
 	}
 }
 
-void gdImagePolygon (gdImagePtr im, gdPointPtr p, int n, int c)
+BGD_DECLARE(void) gdImagePolygon (gdImagePtr im, gdPointPtr p, int n, int c)
 {
-	int i;
-	int lx, ly;
-	typedef void (*image_line)(gdImagePtr im, int x1, int y1, int x2, int y2, int color);
-	image_line draw_line;
-
 	if (n <= 0) {
 		return;
 	}
 
-	/* Let it be known that we are drawing a polygon so that the opacity
-	 * mask doesn't get cleared after each line.
-	 */
-	if (c == gdAntiAliased) {
-		im->AA_polygon = 1;
+
+	gdImageLine (im, p->x, p->y, p[n - 1].x, p[n - 1].y, c);
+	gdImageOpenPolygon (im, p, n, c);
+}
+
+BGD_DECLARE(void) gdImageOpenPolygon (gdImagePtr im, gdPointPtr p, int n, int c)
+{
+	int i;
+	int lx, ly;
+	if (n <= 0) {
+		return;
 	}
 
-	if ( im->antialias) {
-		draw_line = gdImageAALine;
-	} else {
-		draw_line = gdImageLine;
-	}
+
 	lx = p->x;
 	ly = p->y;
-	draw_line(im, lx, ly, p[n - 1].x, p[n - 1].y, c);
-	for (i = 1; i < n; i++) {
+	for (i = 1; (i < n); i++) {
 		p++;
-		draw_line(im, lx, ly, p->x, p->y, c);
+		gdImageLine (im, lx, ly, p->x, p->y, c);
 		lx = p->x;
 		ly = p->y;
 	}
 
-	if (c == gdAntiAliased) {
-		im->AA_polygon = 0;
-		gdImageAABlend(im);
-	}
 }
-
-int gdCompareInt (const void *a, const void *b);
 
 /* THANKS to Kirsten Schulz for the polygon fixes! */
 
-/* The intersection finding technique of this code could be improved
- * by remembering the previous intertersection, and by using the slope.
- * That could help to adjust intersections  to produce a nice
- * interior_extrema.
- */
+/* The intersection finding technique of this code could be improved  */
+/* by remembering the previous intertersection, and by using the slope. */
+/* That could help to adjust intersections  to produce a nice */
+/* interior_extrema. */
 
-void gdImageFilledPolygon (gdImagePtr im, gdPointPtr p, int n, int c)
+BGD_DECLARE(void) gdImageFilledPolygon (gdImagePtr im, gdPointPtr p, int n, int c)
 {
 	int i;
+	int j;
+	int index;
 	int y;
 	int miny, maxy, pmaxy;
 	int x1, y1;
@@ -2611,12 +3021,7 @@ void gdImageFilledPolygon (gdImagePtr im, gdPointPtr p, int n, int c)
 	int ind1, ind2;
 	int ints;
 	int fill_color;
-
 	if (n <= 0) {
-		return;
-	}
-
-	if (overflow2(sizeof(int), n)) {
 		return;
 	}
 
@@ -2625,23 +3030,32 @@ void gdImageFilledPolygon (gdImagePtr im, gdPointPtr p, int n, int c)
 	} else {
 		fill_color = c;
 	}
-
 	if (!im->polyAllocated) {
-		im->polyInts = (int *) gdMalloc(sizeof(int) * n);
+		if (overflow2(sizeof (int), n)) {
+			return;
+		}
+		im->polyInts = (int *) gdMalloc (sizeof (int) * n);
+		if (!im->polyInts) {
+			return;
+		}
 		im->polyAllocated = n;
 	}
 	if (im->polyAllocated < n) {
 		while (im->polyAllocated < n) {
 			im->polyAllocated *= 2;
 		}
-		if (overflow2(sizeof(int), im->polyAllocated)) {
+		if (overflow2(sizeof (int), im->polyAllocated)) {
 			return;
 		}
-		im->polyInts = (int *) gdRealloc(im->polyInts, sizeof(int) * im->polyAllocated);
+		im->polyInts = (int *) gdReallocEx (im->polyInts,
+						    sizeof (int) * im->polyAllocated);
+		if (!im->polyInts) {
+			return;
+		}
 	}
 	miny = p[0].y;
 	maxy = p[0].y;
-	for (i = 1; i < n; i++) {
+	for (i = 1; (i < n); i++) {
 		if (p[i].y < miny) {
 			miny = p[i].y;
 		}
@@ -2651,20 +3065,17 @@ void gdImageFilledPolygon (gdImagePtr im, gdPointPtr p, int n, int c)
 	}
 	pmaxy = maxy;
 	/* 2.0.16: Optimization by Ilia Chipitsine -- don't waste time offscreen */
-	if (miny < 0) {
-		miny = 0;
+	/* 2.0.26: clipping rectangle is even better */
+	if (miny < im->cy1) {
+		miny = im->cy1;
 	}
-	if (maxy >= gdImageSY(im)) {
-		maxy = gdImageSY(im) - 1;
+	if (maxy > im->cy2) {
+		maxy = im->cy2;
 	}
-
 	/* Fix in 1.3: count a vertex only once */
-	for (y = miny; y <= maxy; y++) {
-		/*1.4           int interLast = 0; */
-		/*              int dirLast = 0; */
-		/*              int interFirst = 1; */
+	for (y = miny; (y <= maxy); y++) {
 		ints = 0;
-		for (i = 0; i < n; i++) {
+		for (i = 0; (i < n); i++) {
 			if (!i) {
 				ind1 = n - 1;
 				ind2 = 0;
@@ -2685,97 +3096,125 @@ void gdImageFilledPolygon (gdImagePtr im, gdPointPtr p, int n, int c)
 			} else {
 				continue;
 			}
+
 			/* Do the following math as float intermediately, and round to ensure
 			 * that Polygon and FilledPolygon for the same set of points have the
-			 * same footprint.
-			 */
-			if (y >= y1 && y < y2) {
-				im->polyInts[ints++] = (float) ((y - y1) * (x2 - x1)) / (float) (y2 - y1) + 0.5 + x1;
-			} else if (y == pmaxy && y == y2) {
+			 * same footprint. */
+
+			if ((y >= y1) && (y < y2)) {
+				im->polyInts[ints++] = (int) ((float) ((y - y1) * (x2 - x1)) /
+				                              (float) (y2 - y1) + 0.5 + x1);
+			} else if ((y == pmaxy) && (y == y2)) {
 				im->polyInts[ints++] = x2;
 			}
 		}
-		qsort(im->polyInts, ints, sizeof(int), gdCompareInt);
-
-		for (i = 0; i < ints - 1; i += 2) {
-			gdImageLine(im, im->polyInts[i], y, im->polyInts[i + 1], y, fill_color);
+		/*
+		  2.0.26: polygons pretty much always have less than 100 points,
+		  and most of the time they have considerably less. For such trivial
+		  cases, insertion sort is a good choice. Also a good choice for
+		  future implementations that may wish to indirect through a table.
+		*/
+		for (i = 1; (i < ints); i++) {
+			index = im->polyInts[i];
+			j = i;
+			while ((j > 0) && (im->polyInts[j - 1] > index)) {
+				im->polyInts[j] = im->polyInts[j - 1];
+				j--;
+			}
+			im->polyInts[j] = index;
+		}
+		for (i = 0; (i < (ints-1)); i += 2) {
+			/* 2.0.29: back to gdImageLine to prevent segfaults when
+			  performing a pattern fill */
+			gdImageLine (im, im->polyInts[i], y, im->polyInts[i + 1], y,
+			             fill_color);
 		}
 	}
-
 	/* If we are drawing this AA, then redraw the border with AA lines. */
+	/* This doesn't work as well as I'd like, but it doesn't clash either. */
 	if (c == gdAntiAliased) {
-		gdImagePolygon(im, p, n, c);
+		gdImagePolygon (im, p, n, c);
 	}
 }
 
-int gdCompareInt (const void *a, const void *b)
-{
-	return (*(const int *) a) - (*(const int *) b);
-}
+static void gdImageSetAAPixelColor(gdImagePtr im, int x, int y, int color, int t);
 
-void gdImageSetStyle (gdImagePtr im, int *style, int noOfPixels)
+BGD_DECLARE(void) gdImageSetStyle (gdImagePtr im, int *style, int noOfPixels)
 {
 	if (im->style) {
-		gdFree(im->style);
+		gdFree (im->style);
 	}
-	im->style = (int *) gdMalloc(sizeof(int) * noOfPixels);
-	memcpy(im->style, style, sizeof(int) * noOfPixels);
+	if (overflow2(sizeof (int), noOfPixels)) {
+		return;
+	}
+	im->style = (int *) gdMalloc (sizeof (int) * noOfPixels);
+	if (!im->style) {
+		return;
+	}
+	memcpy (im->style, style, sizeof (int) * noOfPixels);
 	im->styleLength = noOfPixels;
 	im->stylePos = 0;
 }
 
-void gdImageSetThickness (gdImagePtr im, int thickness)
+BGD_DECLARE(void) gdImageSetThickness (gdImagePtr im, int thickness)
 {
 	im->thick = thickness;
 }
 
-void gdImageSetBrush (gdImagePtr im, gdImagePtr brush)
+BGD_DECLARE(void) gdImageSetBrush (gdImagePtr im, gdImagePtr brush)
 {
 	int i;
 	im->brush = brush;
-	if (!im->trueColor && !im->brush->trueColor) {
-		for (i = 0; i < gdImageColorsTotal(brush); i++) {
+	if ((!im->trueColor) && (!im->brush->trueColor)) {
+		for (i = 0; (i < gdImageColorsTotal (brush)); i++) {
 			int index;
-			index = gdImageColorResolveAlpha(im, gdImageRed(brush, i), gdImageGreen(brush, i), gdImageBlue(brush, i), gdImageAlpha(brush, i));
+			index = gdImageColorResolveAlpha (im,
+			                                  gdImageRed (brush, i),
+			                                  gdImageGreen (brush, i),
+			                                  gdImageBlue (brush, i),
+			                                  gdImageAlpha (brush, i));
 			im->brushColorMap[i] = index;
 		}
 	}
 }
 
-void gdImageSetTile (gdImagePtr im, gdImagePtr tile)
+BGD_DECLARE(void) gdImageSetTile (gdImagePtr im, gdImagePtr tile)
 {
 	int i;
 	im->tile = tile;
-	if (!im->trueColor && !im->tile->trueColor) {
-		for (i = 0; i < gdImageColorsTotal(tile); i++) {
+	if ((!im->trueColor) && (!im->tile->trueColor)) {
+		for (i = 0; (i < gdImageColorsTotal (tile)); i++) {
 			int index;
-			index = gdImageColorResolveAlpha(im, gdImageRed(tile, i), gdImageGreen(tile, i), gdImageBlue(tile, i), gdImageAlpha(tile, i));
+			index = gdImageColorResolveAlpha (im,
+			                                  gdImageRed (tile, i),
+			                                  gdImageGreen (tile, i),
+			                                  gdImageBlue (tile, i),
+			                                  gdImageAlpha (tile, i));
 			im->tileColorMap[i] = index;
 		}
 	}
 }
 
-void gdImageSetAntiAliased (gdImagePtr im, int c)
+BGD_DECLARE(void) gdImageSetAntiAliased (gdImagePtr im, int c)
 {
 	im->AA = 1;
 	im->AA_color = c;
 	im->AA_dont_blend = -1;
 }
 
-void gdImageSetAntiAliasedDontBlend (gdImagePtr im, int c, int dont_blend)
+BGD_DECLARE(void) gdImageSetAntiAliasedDontBlend (gdImagePtr im, int c, int dont_blend)
 {
 	im->AA = 1;
 	im->AA_color = c;
 	im->AA_dont_blend = dont_blend;
 }
 
-
-void gdImageInterlace (gdImagePtr im, int interlaceArg)
+BGD_DECLARE(void) gdImageInterlace (gdImagePtr im, int interlaceArg)
 {
 	im->interlace = interlaceArg;
 }
 
-int gdImageCompare (gdImagePtr im1, gdImagePtr im2)
+BGD_DECLARE(int) gdImageCompare (gdImagePtr im1, gdImagePtr im2)
 {
 	int x, y;
 	int p1, p2;
@@ -2814,26 +3253,31 @@ int gdImageCompare (gdImagePtr im1, gdImagePtr im2)
 		cmpStatus |= GD_CMP_NUM_COLORS;
 	}
 
-	for (y = 0; y < sy; y++) {
-		for (x = 0; x < sx; x++) {
-			p1 = im1->trueColor ? gdImageTrueColorPixel(im1, x, y) : gdImagePalettePixel(im1, x, y);
-			p2 = im2->trueColor ? gdImageTrueColorPixel(im2, x, y) : gdImagePalettePixel(im2, x, y);
-
-			if (gdImageRed(im1, p1) != gdImageRed(im2, p2)) {
+	for (y = 0; (y < sy); y++) {
+		for (x = 0; (x < sx); x++) {
+			p1 =
+			    im1->trueColor ? gdImageTrueColorPixel (im1, x,
+			            y) :
+			    gdImagePalettePixel (im1, x, y);
+			p2 =
+			    im2->trueColor ? gdImageTrueColorPixel (im2, x,
+			            y) :
+			    gdImagePalettePixel (im2, x, y);
+			if (gdImageRed (im1, p1) != gdImageRed (im2, p2)) {
 				cmpStatus |= GD_CMP_COLOR + GD_CMP_IMAGE;
 				break;
 			}
-			if (gdImageGreen(im1, p1) != gdImageGreen(im2, p2)) {
+			if (gdImageGreen (im1, p1) != gdImageGreen (im2, p2)) {
 				cmpStatus |= GD_CMP_COLOR + GD_CMP_IMAGE;
 				break;
 			}
-			if (gdImageBlue(im1, p1) != gdImageBlue(im2, p2)) {
+			if (gdImageBlue (im1, p1) != gdImageBlue (im2, p2)) {
 				cmpStatus |= GD_CMP_COLOR + GD_CMP_IMAGE;
 				break;
 			}
 #if 0
 			/* Soon we'll add alpha channel to palettes */
-			if (gdImageAlpha(im1, p1) != gdImageAlpha(im2, p2)) {
+			if (gdImageAlpha (im1, p1) != gdImageAlpha (im2, p2)) {
 				cmpStatus |= GD_CMP_COLOR + GD_CMP_IMAGE;
 				break;
 			}
@@ -2841,98 +3285,64 @@ int gdImageCompare (gdImagePtr im1, gdImagePtr im2)
 		}
 		if (cmpStatus & GD_CMP_COLOR) {
 			break;
-		}
+		};
 	}
 
 	return cmpStatus;
 }
 
-int
-gdAlphaBlendOld (int dst, int src)
+
+/* Thanks to Frank Warmerdam for this superior implementation
+	of gdAlphaBlend(), which merges alpha in the
+	destination color much better. */
+
+BGD_DECLARE(int) gdAlphaBlend (int dst, int src)
 {
-	/* 2.0.12: TBB: alpha in the destination should be a
-	 * component of the result. Thanks to Frank Warmerdam for
-	 * pointing out the issue.
-	 */
-	return ((((gdTrueColorGetAlpha (src) *
-	     gdTrueColorGetAlpha (dst)) / gdAlphaMax) << 24) +
-	  ((((gdAlphaTransparent - gdTrueColorGetAlpha (src)) *
-	     gdTrueColorGetRed (src) / gdAlphaMax) +
-	    (gdTrueColorGetAlpha (src) *
-	     gdTrueColorGetRed (dst)) / gdAlphaMax) << 16) +
-	  ((((gdAlphaTransparent - gdTrueColorGetAlpha (src)) *
-	     gdTrueColorGetGreen (src) / gdAlphaMax) +
-	    (gdTrueColorGetAlpha (src) *
-	     gdTrueColorGetGreen (dst)) / gdAlphaMax) << 8) +
-	  (((gdAlphaTransparent - gdTrueColorGetAlpha (src)) *
-	    gdTrueColorGetBlue (src) / gdAlphaMax) +
-	   (gdTrueColorGetAlpha (src) *
-	    gdTrueColorGetBlue (dst)) / gdAlphaMax));
+	int src_alpha = gdTrueColorGetAlpha(src);
+	int dst_alpha, alpha, red, green, blue;
+	int src_weight, dst_weight, tot_weight;
+
+	/* -------------------------------------------------------------------- */
+	/*      Simple cases we want to handle fast.                            */
+	/* -------------------------------------------------------------------- */
+	if( src_alpha == gdAlphaOpaque )
+		return src;
+
+	dst_alpha = gdTrueColorGetAlpha(dst);
+	if( src_alpha == gdAlphaTransparent )
+		return dst;
+	if( dst_alpha == gdAlphaTransparent )
+		return src;
+
+	/* -------------------------------------------------------------------- */
+	/*      What will the source and destination alphas be?  Note that      */
+	/*      the destination weighting is substantially reduced as the       */
+	/*      overlay becomes quite opaque.                                   */
+	/* -------------------------------------------------------------------- */
+	src_weight = gdAlphaTransparent - src_alpha;
+	dst_weight = (gdAlphaTransparent - dst_alpha) * src_alpha / gdAlphaMax;
+	tot_weight = src_weight + dst_weight;
+
+	/* -------------------------------------------------------------------- */
+	/*      What red, green and blue result values will we use?             */
+	/* -------------------------------------------------------------------- */
+	alpha = src_alpha * dst_alpha / gdAlphaMax;
+
+	red = (gdTrueColorGetRed(src) * src_weight
+	       + gdTrueColorGetRed(dst) * dst_weight) / tot_weight;
+	green = (gdTrueColorGetGreen(src) * src_weight
+	         + gdTrueColorGetGreen(dst) * dst_weight) / tot_weight;
+	blue = (gdTrueColorGetBlue(src) * src_weight
+	        + gdTrueColorGetBlue(dst) * dst_weight) / tot_weight;
+
+	/* -------------------------------------------------------------------- */
+	/*      Return merged result.                                           */
+	/* -------------------------------------------------------------------- */
+	return ((alpha << 24) + (red << 16) + (green << 8) + blue);
 }
 
-int gdAlphaBlend (int dst, int src) {
-    int src_alpha = gdTrueColorGetAlpha(src);
-    int dst_alpha, alpha, red, green, blue;
-    int src_weight, dst_weight, tot_weight;
-
-/* -------------------------------------------------------------------- */
-/*      Simple cases we want to handle fast.                            */
-/* -------------------------------------------------------------------- */
-    if( src_alpha == gdAlphaOpaque )
-        return src;
-
-    dst_alpha = gdTrueColorGetAlpha(dst);
-    if( src_alpha == gdAlphaTransparent )
-        return dst;
-    if( dst_alpha == gdAlphaTransparent )
-        return src;
-
-/* -------------------------------------------------------------------- */
-/*      What will the source and destination alphas be?  Note that      */
-/*      the destination weighting is substantially reduced as the       */
-/*      overlay becomes quite opaque.                                   */
-/* -------------------------------------------------------------------- */
-    src_weight = gdAlphaTransparent - src_alpha;
-    dst_weight = (gdAlphaTransparent - dst_alpha) * src_alpha / gdAlphaMax;
-    tot_weight = src_weight + dst_weight;
-
-/* -------------------------------------------------------------------- */
-/*      What red, green and blue result values will we use?             */
-/* -------------------------------------------------------------------- */
-    alpha = src_alpha * dst_alpha / gdAlphaMax;
-
-    red = (gdTrueColorGetRed(src) * src_weight
-           + gdTrueColorGetRed(dst) * dst_weight) / tot_weight;
-    green = (gdTrueColorGetGreen(src) * src_weight
-           + gdTrueColorGetGreen(dst) * dst_weight) / tot_weight;
-    blue = (gdTrueColorGetBlue(src) * src_weight
-           + gdTrueColorGetBlue(dst) * dst_weight) / tot_weight;
-
-/* -------------------------------------------------------------------- */
-/*      Return merged result.                                           */
-/* -------------------------------------------------------------------- */
-    return ((alpha << 24) + (red << 16) + (green << 8) + blue);
-
-}
-
-void gdImageAlphaBlending (gdImagePtr im, int alphaBlendingArg)
-{
-	im->alphaBlendingFlag = alphaBlendingArg;
-}
-
-void gdImageAntialias (gdImagePtr im, int antialias)
-{
-	if (im->trueColor){
-		im->antialias = antialias;
-	}
-}
-
-void gdImageSaveAlpha (gdImagePtr im, int saveAlphaArg)
-{
-	im->saveAlphaFlag = saveAlphaArg;
-}
-
-static int gdLayerOverlay (int dst, int src)
+static int gdAlphaOverlayColor (int src, int dst, int max );
+BGD_DECLARE(int) gdLayerOverlay (int dst, int src)
 {
 	int a1, a2;
 	a1 = gdAlphaMax - gdTrueColorGetAlpha(dst);
@@ -2944,17 +3354,9 @@ static int gdLayerOverlay (int dst, int src)
 		);
 }
 
+/* Apply 'overlay' effect - background pixels are colourised by the foreground colour */
 static int gdAlphaOverlayColor (int src, int dst, int max )
 {
-	/* this function implements the algorithm
-	 *
-	 * for dst[rgb] < 0.5,
-	 *   c[rgb] = 2.src[rgb].dst[rgb]
-	 * and for dst[rgb] > 0.5,
-	 *   c[rgb] = -2.src[rgb].dst[rgb] + 2.dst[rgb] + 2.src[rgb] - 1
-	 *
-	 */
-
 	dst = dst << 1;
 	if( dst > max ) {
 		/* in the "light" zone */
@@ -2965,7 +3367,40 @@ static int gdAlphaOverlayColor (int src, int dst, int max )
 	}
 }
 
-void gdImageSetClip (gdImagePtr im, int x1, int y1, int x2, int y2)
+/* Apply 'multiply' effect */
+BGD_DECLARE(int) gdLayerMultiply (int dst, int src)
+{
+	int a1, a2, r1, r2, g1, g2, b1, b2;
+	a1 = gdAlphaMax - gdTrueColorGetAlpha(src);
+	a2 = gdAlphaMax - gdTrueColorGetAlpha(dst);
+
+	r1 = gdRedMax - (a1 * (gdRedMax - gdTrueColorGetRed(src))) / gdAlphaMax;
+	r2 = gdRedMax - (a2 * (gdRedMax - gdTrueColorGetRed(dst))) / gdAlphaMax;
+	g1 = gdGreenMax - (a1 * (gdGreenMax - gdTrueColorGetGreen(src))) / gdAlphaMax;
+	g2 = gdGreenMax - (a2 * (gdGreenMax - gdTrueColorGetGreen(dst))) / gdAlphaMax;
+	b1 = gdBlueMax - (a1 * (gdBlueMax - gdTrueColorGetBlue(src))) / gdAlphaMax;
+	b2 = gdBlueMax - (a2 * (gdBlueMax - gdTrueColorGetBlue(dst))) / gdAlphaMax ;
+
+	a1 = gdAlphaMax - a1;
+	a2 = gdAlphaMax - a2;
+	return ( ((a1*a2/gdAlphaMax) << 24) +
+			 ((r1*r2/gdRedMax) << 16) +
+			 ((g1*g2/gdGreenMax) << 8) +
+			 ((b1*b2/gdBlueMax))
+		);
+}
+
+BGD_DECLARE(void) gdImageAlphaBlending (gdImagePtr im, int alphaBlendingArg)
+{
+	im->alphaBlendingFlag = alphaBlendingArg;
+}
+
+BGD_DECLARE(void) gdImageSaveAlpha (gdImagePtr im, int saveAlphaArg)
+{
+	im->saveAlphaFlag = saveAlphaArg;
+}
+
+BGD_DECLARE(void) gdImageSetClip (gdImagePtr im, int x1, int y1, int x2, int y2)
 {
 	if (x1 < 0) {
 		x1 = 0;
@@ -2997,7 +3432,7 @@ void gdImageSetClip (gdImagePtr im, int x1, int y1, int x2, int y2)
 	im->cy2 = y2;
 }
 
-void gdImageGetClip (gdImagePtr im, int *x1P, int *y1P, int *x2P, int *y2P)
+BGD_DECLARE(void) gdImageGetClip (gdImagePtr im, int *x1P, int *y1P, int *x2P, int *y2P)
 {
 	*x1P = im->cx1;
 	*y1P = im->cy1;
@@ -3005,8 +3440,163 @@ void gdImageGetClip (gdImagePtr im, int *x1P, int *y1P, int *x2P, int *y2P)
 	*y2P = im->cy2;
 }
 
+BGD_DECLARE(void) gdImageSetResolution(gdImagePtr im, const unsigned int res_x, const unsigned int res_y)
+{
+	if (res_x > 0) im->res_x = res_x;
+	if (res_y > 0) im->res_y = res_y;
+}
+
+/*
+ * Added on 2003/12 by Pierre-Alain Joye (pajoye@pearfr.org)
+ * */
+#define BLEND_COLOR(a, nc, c, cc) \
+nc = (cc) + (((((c) - (cc)) * (a)) + ((((c) - (cc)) * (a)) >> 8) + 0x80) >> 8);
+
+static void gdImageSetAAPixelColor(gdImagePtr im, int x, int y, int color, int t)
+{
+	int dr,dg,db,p,r,g,b;
+
+	/* 2.0.34: watch out for out of range calls */
+	if (!gdImageBoundsSafeMacro(im, x, y)) {
+		return;
+	}
+	p = gdImageGetPixel(im,x,y);
+	/* TBB: we have to implement the dont_blend stuff to provide
+	  the full feature set of the old implementation */
+	if ((p == color)
+	        || ((p == im->AA_dont_blend)
+	            && (t != 0x00))) {
+		return;
+	}
+	dr = gdTrueColorGetRed(color);
+	dg = gdTrueColorGetGreen(color);
+	db = gdTrueColorGetBlue(color);
+
+	r = gdTrueColorGetRed(p);
+	g = gdTrueColorGetGreen(p);
+	b = gdTrueColorGetBlue(p);
+
+	BLEND_COLOR(t, dr, r, dr);
+	BLEND_COLOR(t, dg, g, dg);
+	BLEND_COLOR(t, db, b, db);
+	im->tpixels[y][x] = gdTrueColorAlpha(dr, dg, db, gdAlphaOpaque);
+}
+
+static void gdImageAALine (gdImagePtr im, int x1, int y1, int x2, int y2, int col)
+{
+	/* keep them as 32bits */
+	long x, y, inc, frac;
+	long dx, dy,tmp;
+	int w, wid, wstart; 
+	int thick = im->thick; 
+
+	if (!im->trueColor) {
+		/* TBB: don't crash when the image is of the wrong type */
+		gdImageLine(im, x1, y1, x2, y2, col);
+		return;
+	}
+
+	/* TBB: use the clipping rectangle */
+	if (clip_1d (&x1, &y1, &x2, &y2, im->cx1, im->cx2) == 0)
+		return;
+	if (clip_1d (&y1, &x1, &y2, &x2, im->cy1, im->cy2) == 0)
+		return;
+
+	dx = x2 - x1;
+	dy = y2 - y1;
+
+	if (dx == 0 && dy == 0) {
+		/* TBB: allow setting points */
+		gdImageSetAAPixelColor(im, x1, y1, col, 0xFF);
+		return;
+	} else {
+		double ag;
+		ag = (abs(dy) < abs(dx)) ? cos(atan2(dy, dx)) : sin(atan2(dy, dx));
+		if (ag != 0) {
+			wid = abs(thick / ag);
+		} else {
+			wid = 1;
+		}
+		if (wid == 0) {
+			wid = 1;
+		}
+	}
+
+	/* Axis aligned lines */
+	if (dx == 0) {
+		gdImageVLine(im, x1, y1, y2, col);
+		return;
+	} else if (dy == 0) {
+		gdImageHLine(im, y1, x1, x2, col);
+		return;
+	}
+
+	if (abs(dx) > abs(dy)) {
+		if (dx < 0) {
+			tmp = x1;
+			x1 = x2;
+			x2 = tmp;
+			tmp = y1;
+			y1 = y2;
+			y2 = tmp;
+			dx = x2 - x1;
+			dy = y2 - y1;
+		}
+		y = y1;
+		inc = (dy * 65536) / dx;
+		frac = 0;
+		/* TBB: set the last pixel for consistency (<=) */
+		for (x = x1 ; x <= x2 ; x++) {
+			wstart = y - wid / 2;
+			for (w = wstart; w < wstart + wid; w++) {
+			    gdImageSetAAPixelColor(im, x , w , col , (frac >> 8) & 0xFF);
+			    gdImageSetAAPixelColor(im, x , w + 1 , col, (~frac >> 8) & 0xFF);
+			}
+			frac += inc;
+			if (frac >= 65536) {
+				frac -= 65536;
+				y++;
+			} else if (frac < 0) {
+				frac += 65536;
+				y--;
+			}
+		}
+	} else {
+		if (dy < 0) {
+			tmp = x1;
+			x1 = x2;
+			x2 = tmp;
+			tmp = y1;
+			y1 = y2;
+			y2 = tmp;
+			dx = x2 - x1;
+			dy = y2 - y1;
+		}
+		x = x1;
+		inc = (dx * 65536) / dy;
+		frac = 0;
+		/* TBB: set the last pixel for consistency (<=) */
+		for (y = y1 ; y <= y2 ; y++) {
+			wstart = x - wid / 2;
+			for (w = wstart; w < wstart + wid; w++) {
+			    gdImageSetAAPixelColor(im, w , y  , col, (frac >> 8) & 0xFF);
+			    gdImageSetAAPixelColor(im, w + 1, y, col, (~frac >> 8) & 0xFF);
+			}
+			frac += inc;
+			if (frac >= 65536) {
+				frac -= 65536;
+				x++;
+			} else if (frac < 0) {
+				frac += 65536;
+				x--;
+			}
+		}
+	}
+}
+
+
 /* convert a palette image to true color */
-int gdImagePaletteToTrueColor(gdImagePtr src)
+BGD_DECLARE(int) gdImagePaletteToTrueColor(gdImagePtr src)
 {
 	unsigned int y;
 	unsigned int yy;
@@ -3058,12 +3648,6 @@ int gdImagePaletteToTrueColor(gdImagePtr src)
 	src->pixels = NULL;
 	src->alphaBlendingFlag = 0;
 	src->saveAlphaFlag = 1;
-
-	if (src->transparent >= 0) {
-		const unsigned char c = src->transparent;
-		src->transparent =  gdTrueColorAlpha(src->red[c], src->green[c], src->blue[c], src->alpha[c]);
-	}
-
 	return 1;
 
 clean_on_error:
@@ -3074,4 +3658,3 @@ clean_on_error:
 	gdFree(src->tpixels);
 	return 0;
 }
-

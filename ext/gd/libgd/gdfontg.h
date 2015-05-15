@@ -1,9 +1,9 @@
-
 #ifndef _GDFONTG_H_
 #define _GDFONTG_H_ 1
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 /*
@@ -16,15 +16,13 @@ extern "C" {
 	"Libor Skarvada, libor@informatics.muni.cz"
  */
 
-
 #include "gd.h"
 
-extern gdFontPtr gdFontGiant;
-extern gdFontPtr gdFontGetGiant(void);
+extern BGD_EXPORT_DATA_PROT gdFontPtr gdFontGiant;
+BGD_DECLARE(gdFontPtr) gdFontGetGiant(void);
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif
-
