@@ -1110,7 +1110,11 @@ PHP_MSHUTDOWN_FUNCTION(gd)
 {
 	T1_CloseLib();
 #if HAVE_GD_BUNDLED && HAVE_LIBFREETYPE
+#if GD_MAJOR_VERSION >=2 && GD_MINOR_VERSION >= 2
+	gdFontCacheShutdown();
+#else
 	gdFontCacheMutexShutdown();
+#endif
 #endif
 	UNREGISTER_INI_ENTRIES();
 	return SUCCESS;
@@ -1127,7 +1131,11 @@ PHP_MINIT_FUNCTION(gd)
 	le_gd_font = zend_register_list_destructors_ex(php_free_gd_font, NULL, "gd font", module_number);
 
 #if HAVE_GD_BUNDLED && HAVE_LIBFREETYPE
+#if GD_MAJOR_VERSION >=2 && GD_MINOR_VERSION >= 2
+	gdFontCacheSetup();
+#else
 	gdFontCacheMutexSetup();
+#endif
 #endif
 #if HAVE_LIBT1
 	T1_SetBitmapPad(8);
@@ -1327,14 +1335,27 @@ PHP_MINFO_FUNCTION(gd)
 
 #ifdef HAVE_GD_JPG
 	{
+#if GD_MAJOR_VERSION >=2 && GD_MINOR_VERSION >= 2
+#include "jpeglib.h"
+		char tmp[32];
+		snprintf(tmp, sizeof(tmp), "%d", JPEG_LIB_VERSION);
+		php_info_print_table_row(2, "JPEG Support", "enabled");
+		php_info_print_table_row(2, "libJPEG Version", tmp);
+#else
 		php_info_print_table_row(2, "JPEG Support", "enabled");
 		php_info_print_table_row(2, "libJPEG Version", gdJpegGetVersionString());
+#endif
 	}
 #endif
 
 #ifdef HAVE_GD_PNG
 	php_info_print_table_row(2, "PNG Support", "enabled");
+#if GD_MAJOR_VERSION >=2 && GD_MINOR_VERSION >= 2
+#include "png.h"
+	php_info_print_table_row(2, "libPNG Version", PNG_LIBPNG_VER_STRING);
+#else
 	php_info_print_table_row(2, "libPNG Version", gdPngGetVersionString());
+#endif
 #endif
 	php_info_print_table_row(2, "WBMP Support", "enabled");
 #if defined(HAVE_GD_XPM)
