@@ -51,7 +51,7 @@ if (PHP_GD != "no") {
 			gdtables.c gd_topal.c gd_wbmp.c gdxpm.c wbmp.c gd_security.c gd_transform.c \
 			gd_filter.c gd_rotate.c gd_color.c gd_webp.c  annotate.c \
 			gd_bmp.c gd_color_map.c gd_color_match.c gd_filename.c gd_nnquant.c \
-			gd_tga.c gd_tiff.c gd_version.c gd_xbm.c gdcmpgif.c gdfx.c \
+			gd_tga.c gd_tiff.c gd_xbm.c gdfx.c \
 			gd_crop.c gd_interpolation.c gd_matrix.c", "gd");
 		AC_DEFINE('HAVE_LIBGD', 1, 'GD support');
 		ADD_FLAG("CFLAGS_GD", " \
@@ -81,11 +81,14 @@ if (PHP_GD != "no") {
 /D HAVE_LIBJPEG  \
 /D HAVE_LIBPNG  \
 /D HAVE_XPM  \
+/D HAVE_LIBXPM \
 /D HAVE_COLORCLOSESTHWB  \
+/D HAVE_LIBZ \
 /D USE_GD_IMGSTRTTF  \
 /D USE_GD_IOCTX \
 /D MSWIN32 \
 /D BGDWIN32 \
+/D NONDLL \
 		");
 		if (ICC_TOOLSET || VS_TOOLSET) {
 			ADD_FLAG("LDFLAGS_GD", "/nodefaultlib:libcmt");

@@ -13,8 +13,9 @@
 # include <jpeglib.h>
 #endif
 
-#include "gd_compat.h"
 #include "php.h"
+#include "gd.h"
+#include "gd_compat.h"
 
 #if GD_MAJOR_VERSION > 2 || GD_MAJOR_VERSION == 2 && GD_MINOR_VERSION >= 2
 
@@ -40,8 +41,9 @@ const char * gdJpegGetVersionString()
 			break;
 
 		case 90:
-			return "8";
+			return "9";
 			break;
+
 		default:
 			return "unknown";
 	}
@@ -57,6 +59,7 @@ const char * gdPngGetVersionString()
 
 #endif /* GD-2.2+*/
 
+#if GD_MAJOR_VERSION < 2 || GD_MAJOR_VERSION == 2 && GD_MINOR_VERSION < 2
 int overflow2(int a, int b)
 {
 
@@ -70,4 +73,5 @@ int overflow2(int a, int b)
 	}
 	return 0;
 }
+#endif
 
