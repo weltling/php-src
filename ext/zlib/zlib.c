@@ -865,7 +865,7 @@ PHP_FUNCTION(inflate_init)
 	if (encoding < 0) {
 		encoding += 15 - window;
 	} else {
-		encoding &= window;
+		encoding -= 15 - window;
 	}
 
 	if (Z_OK == inflateInit2(ctx, encoding)) {
@@ -1065,7 +1065,7 @@ PHP_FUNCTION(deflate_init)
 	if (encoding < 0) {
 		encoding += 15 - window;
 	} else {
-		encoding &= window;
+		encoding -= 15 - window;
 	}
 
 	if (Z_OK == deflateInit2(ctx, level, Z_DEFLATED, encoding, memory, strategy)) {
