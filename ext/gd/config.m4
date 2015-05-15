@@ -289,7 +289,7 @@ if test "$PHP_GD" = "yes"; then
                  libgd/gd_filter.c libgd/gd_rotate.c libgd/gd_color.c libgd/gd_webp.c \
                  libgd/gd_transform.c libgd/gd_crop.c libgd/gd_interpolation.c libgd/gd_matrix.c \
                  libgd/annotate.c libgd/gd_tga.c libgd/gd_tiff.c libgd/gd_version.c \
-                 libgd/gd_xbm.c libgd/gdcmpgif.c libgd/gdfx.c  libgd/giftogd2.c \
+                 libgd/gd_xbm.c libgd/gdcmpgif.c libgd/gdfx.c  \
                  libgd/gd_crop.c libgd/gd_interpolation.c libgd/gd_matrix.c
 		"
 

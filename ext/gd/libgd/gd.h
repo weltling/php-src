@@ -88,9 +88,11 @@ extern "C" {
 #  ifndef strcasecmp
 #    define strcasecmp _stricmp
 #  endif 
-#  ifndef snprintf 
-#   define snprintf _snprintf
-#  endif 
+#  if _MSC_VER < 1900
+#   ifndef snprintf 
+#    define snprintf _snprintf
+#   endif 
+#  endif
 #endif 
 
 #ifdef __cplusplus

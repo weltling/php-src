@@ -1,4 +1,8 @@
-#include "php_config.h"
+#ifdef _WIN32
+# include "config.w32.h"
+#else
+# include "php_config.h"
+#endif
 
 #ifdef HAVE_GD_PNG
 /* needs to be first */
@@ -11,6 +15,8 @@
 
 #include "gd_compat.h"
 #include "php.h"
+
+#if GD_MAJOR_VERSION > 2 || GD_MAJOR_VERSION == 2 && GD_MINOR_VERSION >= 2
 
 #ifdef HAVE_GD_JPG
 int gdJpegGetVersionInt()
@@ -33,6 +39,9 @@ const char * gdJpegGetVersionString()
 			return "8";
 			break;
 
+		case 90:
+			return "8";
+			break;
 		default:
 			return "unknown";
 	}
@@ -45,6 +54,8 @@ const char * gdPngGetVersionString()
 	return PNG_LIBPNG_VER_STRING;
 }
 #endif
+
+#endif /* GD-2.2+*/
 
 int overflow2(int a, int b)
 {

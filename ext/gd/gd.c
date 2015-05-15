@@ -832,11 +832,13 @@ ZEND_BEGIN_ARG_INFO(arginfo_imageflip, 0)
 	ZEND_ARG_INFO(0, mode)
 ZEND_END_ARG_INFO()
 
+#if GD_MAJOR_VERSION < 2 || (GD_MAJOR_VERSION == 2 && GD_MINOR_VERSION < 2)
 #ifdef HAVE_GD_BUNDLED
 ZEND_BEGIN_ARG_INFO(arginfo_imageantialias, 0)
 	ZEND_ARG_INFO(0, im)
 	ZEND_ARG_INFO(0, on)
 ZEND_END_ARG_INFO()
+#endif
 #endif
 
 ZEND_BEGIN_ARG_INFO(arginfo_imagecrop, 0)
@@ -930,8 +932,10 @@ const zend_function_entry gd_functions[] = {
 	PHP_FE(imagerotate,     						arginfo_imagerotate)
 	PHP_FE(imageflip,								arginfo_imageflip)
 
+#if GD_MAJOR_VERSION < 2 || (GD_MAJOR_VERSION == 2 && GD_MINOR_VERSION < 2)
 #ifdef HAVE_GD_BUNDLED
 	PHP_FE(imageantialias,							arginfo_imageantialias)
+#endif
 #endif
 	PHP_FE(imagecrop,								arginfo_imagecrop)
 	PHP_FE(imagecropauto,							arginfo_imagecropauto)
@@ -1110,7 +1114,7 @@ PHP_MSHUTDOWN_FUNCTION(gd)
 {
 	T1_CloseLib();
 #if HAVE_GD_BUNDLED && HAVE_LIBFREETYPE
-#if GD_MAJOR_VERSION >=2 && GD_MINOR_VERSION >= 2
+#if GD_MAJOR_VERSION > 2 || (GD_MAJOR_VERSION == 2 && GD_MINOR_VERSION >= 2)
 	gdFontCacheShutdown();
 #else
 	gdFontCacheMutexShutdown();
@@ -1131,7 +1135,7 @@ PHP_MINIT_FUNCTION(gd)
 	le_gd_font = zend_register_list_destructors_ex(php_free_gd_font, NULL, "gd font", module_number);
 
 #if HAVE_GD_BUNDLED && HAVE_LIBFREETYPE
-#if GD_MAJOR_VERSION >=2 && GD_MINOR_VERSION >= 2
+#if GD_MAJOR_VERSION > 2 || (GD_MAJOR_VERSION == 2 && GD_MINOR_VERSION >= 2)
 	gdFontCacheSetup();
 #else
 	gdFontCacheMutexSetup();
@@ -1335,27 +1339,14 @@ PHP_MINFO_FUNCTION(gd)
 
 #ifdef HAVE_GD_JPG
 	{
-#if GD_MAJOR_VERSION >=2 && GD_MINOR_VERSION >= 2
-#include "jpeglib.h"
-		char tmp[32];
-		snprintf(tmp, sizeof(tmp), "%d", JPEG_LIB_VERSION);
-		php_info_print_table_row(2, "JPEG Support", "enabled");
-		php_info_print_table_row(2, "libJPEG Version", tmp);
-#else
 		php_info_print_table_row(2, "JPEG Support", "enabled");
 		php_info_print_table_row(2, "libJPEG Version", gdJpegGetVersionString());
-#endif
 	}
 #endif
 
 #ifdef HAVE_GD_PNG
 	php_info_print_table_row(2, "PNG Support", "enabled");
-#if GD_MAJOR_VERSION >=2 && GD_MINOR_VERSION >= 2
-#include "png.h"
-	php_info_print_table_row(2, "libPNG Version", PNG_LIBPNG_VER_STRING);
-#else
 	php_info_print_table_row(2, "libPNG Version", gdPngGetVersionString());
-#endif
 #endif
 	php_info_print_table_row(2, "WBMP Support", "enabled");
 #if defined(HAVE_GD_XPM)
@@ -3208,10 +3199,12 @@ PHP_FUNCTION(imageline)
 		RETURN_FALSE;
 	}
 
+#if GD_MAJOR_VERSION < 2 || (GD_MAJOR_VERSION == 2 && GD_MINOR_VERSION < 2)
 #ifdef HAVE_GD_BUNDLED
 	if (im->antialias) {
 		gdImageAALine(im, x1, y1, x2, y2, col);
 	} else
+#endif
 #endif
 	{
 		gdImageLine(im, x1, y1, x2, y2, col);
@@ -5102,6 +5095,7 @@ PHP_FUNCTION(imageflip)
 }
 /* }}} */
 
+#if GD_MAJOR_VERSION < 2 || (GD_MAJOR_VERSION == 2 && GD_MINOR_VERSION < 2)
 #ifdef HAVE_GD_BUNDLED
 /* {{{ proto bool imageantialias(resource im, bool on)
    Should antialiased functions used or not*/
@@ -5122,6 +5116,7 @@ PHP_FUNCTION(imageantialias)
 	RETURN_TRUE;
 }
 /* }}} */
+#endif
 #endif
 
 /* {{{ proto void imagecrop(resource im, array rect)

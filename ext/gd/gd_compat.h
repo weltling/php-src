@@ -1,7 +1,7 @@
 #ifndef GD_COMPAT_H
 #define GD_COMPAT_H 1
 
-#ifndef HAVE_GD_BUNDLED
+#if !defined(HAVE_GD_BUNDLED) || !(GD_MAJOR_VERSION < 2 || GD_MAJOR_VERSION == 2 && GD_MINOR_VERSION < 2)
 /* from gd_compat.c */
 const char * gdPngGetVersionString();
 const char * gdJpegGetVersionString();
