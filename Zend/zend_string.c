@@ -113,12 +113,12 @@ static zend_string *zend_new_interned_string_int(zend_string *str)
 			HANDLE_BLOCK_INTERRUPTIONS();
 			CG(interned_strings).nTableSize += CG(interned_strings).nTableSize;
 			CG(interned_strings).nTableMask = -CG(interned_strings).nTableSize;
-			new_data = malloc(HT_SIZE(&CG(interned_strings)));
+			new_data = zend_aligned_malloc(HT_SIZE(&CG(interned_strings)));
 
 			if (new_data) {
 				HT_SET_DATA_ADDR(&CG(interned_strings), new_data);
 				memcpy(CG(interned_strings).arData, old_buckets, sizeof(Bucket) * CG(interned_strings).nNumUsed);
-				free(old_data);
+				zend_aligned_free(old_data);
 				zend_hash_rehash(&CG(interned_strings));
 			} else {
 				CG(interned_strings).nTableSize = CG(interned_strings).nTableSize >> 1;
