@@ -191,6 +191,10 @@ PHP_MINIT_FUNCTION(ldap)
 	REGISTER_LONG_CONSTANT("LDAP_OPT_DEBUG_LEVEL", LDAP_OPT_DEBUG_LEVEL, CONST_PERSISTENT | CONST_CS);
 #endif
 
+#ifdef LDAP_OPT_DIAGNOSTIC_MESSAGE
+	REGISTER_LONG_CONSTANT("LDAP_OPT_DIAGNOSTIC_MESSAGE", LDAP_OPT_DIAGNOSTIC_MESSAGE, CONST_PERSISTENT | CONST_CS);
+#endif
+
 #ifdef HAVE_LDAP_SASL
 	REGISTER_LONG_CONSTANT("LDAP_OPT_X_SASL_MECH", LDAP_OPT_X_SASL_MECH, CONST_PERSISTENT | CONST_CS);
 	REGISTER_LONG_CONSTANT("LDAP_OPT_X_SASL_REALM", LDAP_OPT_X_SASL_REALM, CONST_PERSISTENT | CONST_CS);
@@ -1975,7 +1979,8 @@ PHP_FUNCTION(ldap_sort)
 		RETURN_FALSE;
 	}
 
-	if ((le = zend_hash_index_find_ptr(&EG(regular_list), Z_RES_HANDLE_P(result))) == NULL || le->type != le_result) {
+	le = Z_RES_P(result);
+	if (le->type != le_result) {
 		php_error_docref(NULL, E_WARNING, "Supplied resource is not a valid ldap result resource");
 		RETURN_FALSE;
 	}
@@ -3289,7 +3294,7 @@ zend_module_entry ldap_module_entry = { /* {{{ */
 	NULL,
 	NULL,
 	PHP_MINFO(ldap),
-	NO_VERSION_YET,
+	PHP_LDAP_VERSION,
 	PHP_MODULE_GLOBALS(ldap),
 	PHP_GINIT(ldap),
 	NULL,

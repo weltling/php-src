@@ -40,6 +40,9 @@ PHPAPI pcre* pcre_get_compiled_regex_ex(zend_string *regex, pcre_extra **extra, 
 extern zend_module_entry pcre_module_entry;
 #define pcre_module_ptr &pcre_module_entry
 
+#include "php_version.h"
+#define PHP_PCRE_VERSION PHP_VERSION
+
 typedef struct {
 	pcre *re;
 	pcre_extra *extra;
@@ -77,6 +80,8 @@ ZEND_BEGIN_MODULE_GLOBALS(pcre)
 #endif
 	int  error_code;
 ZEND_END_MODULE_GLOBALS(pcre)
+
+PHPAPI ZEND_EXTERN_MODULE_GLOBALS(pcre);
 
 #ifdef ZTS
 # define PCRE_G(v) ZEND_TSRMG(pcre_globals_id, zend_pcre_globals *, v)

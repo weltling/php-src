@@ -384,7 +384,7 @@ int phpdbg_safe_class_lookup(const char *name, int name_length, zend_class_entry
 		efree(str_name);
 	}
 
-	return ce ? SUCCESS : FAILURE;
+	return *ce ? SUCCESS : FAILURE;
 }
 
 char *phpdbg_get_property_key(char *key) {
@@ -399,10 +399,10 @@ static int phpdbg_parse_variable_arg_wrapper(char *name, size_t len, char *keyna
 }
 
 PHPDBG_API int phpdbg_parse_variable(char *input, size_t len, HashTable *parent, size_t i, phpdbg_parse_var_func callback, zend_bool silent) {
-	return phpdbg_parse_variable_with_arg(input, len, parent, i, (phpdbg_parse_var_with_arg_func) phpdbg_parse_variable_arg_wrapper, silent, callback);
+	return phpdbg_parse_variable_with_arg(input, len, parent, i, (phpdbg_parse_var_with_arg_func) phpdbg_parse_variable_arg_wrapper, NULL, silent, callback);
 }
 
-PHPDBG_API int phpdbg_parse_variable_with_arg(char *input, size_t len, HashTable *parent, size_t i, phpdbg_parse_var_with_arg_func callback, zend_bool silent, void *arg) {
+PHPDBG_API int phpdbg_parse_variable_with_arg(char *input, size_t len, HashTable *parent, size_t i, phpdbg_parse_var_with_arg_func callback, phpdbg_parse_var_with_arg_func step_cb, zend_bool silent, void *arg) {
 	int ret = FAILURE;
 	zend_bool new_index = 1;
 	char *last_index;
@@ -469,10 +469,34 @@ PHPDBG_API int phpdbg_parse_variable_with_arg(char *input, size_t len, HashTable
 					}
 
 					ret = callback(name, namelen, keyname, index_len, parent, zv, arg) == SUCCESS || ret == SUCCESS?SUCCESS:FAILURE;
-				} else if (Z_TYPE_P(zv) == IS_OBJECT) {
-					phpdbg_parse_variable_with_arg(input, len, Z_OBJPROP_P(zv), i, callback, silent, arg);
+				} else retry_ref: if (Z_TYPE_P(zv) == IS_OBJECT) {
+					if (step_cb) {
+						char *name = estrndup(input, i);
+						char *keyname = estrndup(last_index, index_len);
+
+						ret = step_cb(name, i, keyname, index_len, parent, zv, arg) == SUCCESS || ret == SUCCESS?SUCCESS:FAILURE;
+					}
+
+					phpdbg_parse_variable_with_arg(input, len, Z_OBJPROP_P(zv), i, callback, step_cb, silent, arg);
 				} else if (Z_TYPE_P(zv) == IS_ARRAY) {
-					phpdbg_parse_variable_with_arg(input, len, Z_ARRVAL_P(zv), i, callback, silent, arg);
+					if (step_cb) {
+						char *name = estrndup(input, i);
+						char *keyname = estrndup(last_index, index_len);
+
+						ret = step_cb(name, i, keyname, index_len, parent, zv, arg) == SUCCESS || ret == SUCCESS?SUCCESS:FAILURE;
+					}
+
+					phpdbg_parse_variable_with_arg(input, len, Z_ARRVAL_P(zv), i, callback, step_cb, silent, arg);
+				} else if (Z_ISREF_P(zv)) {
+					if (step_cb) {
+						char *name = estrndup(input, i);
+						char *keyname = estrndup(last_index, index_len);
+
+						ret = step_cb(name, i, keyname, index_len, parent, zv, arg) == SUCCESS || ret == SUCCESS?SUCCESS:FAILURE;
+					}
+
+					ZVAL_DEREF(zv);
+					goto retry_ref;
 				} else {
 					/* Ignore silently */
 				}
@@ -493,16 +517,40 @@ PHPDBG_API int phpdbg_parse_variable_with_arg(char *input, size_t len, HashTable
 
 			last_index[index_len] = last_chr;
 			if (i == len) {
-				char *name = estrndup(input, len);
+				char *name = estrndup(input, i);
 				char *keyname = estrndup(last_index, index_len);
 
-				ret = callback(name, len, keyname, index_len, parent, zv, arg) == SUCCESS || ret == SUCCESS?SUCCESS:FAILURE;
-			} else if (Z_TYPE_P(zv) == IS_OBJECT) {
+				ret = callback(name, i, keyname, index_len, parent, zv, arg) == SUCCESS || ret == SUCCESS?SUCCESS:FAILURE;
+			} else retry_ref_end: if (Z_TYPE_P(zv) == IS_OBJECT) {
+				if (step_cb) {
+					char *name = estrndup(input, i);
+					char *keyname = estrndup(last_index, index_len);
+
+					ret = step_cb(name, i, keyname, index_len, parent, zv, arg) == SUCCESS || ret == SUCCESS?SUCCESS:FAILURE;
+				}
+
 				parent = Z_OBJPROP_P(zv);
 			} else if (Z_TYPE_P(zv) == IS_ARRAY) {
+				if (step_cb) {
+					char *name = estrndup(input, i);
+					char *keyname = estrndup(last_index, index_len);
+
+					ret = step_cb(name, i, keyname, index_len, parent, zv, arg) == SUCCESS || ret == SUCCESS?SUCCESS:FAILURE;
+				}
+
 				parent = Z_ARRVAL_P(zv);
+			} else if (Z_ISREF_P(zv)) {
+				if (step_cb) {
+					char *name = estrndup(input, i);
+					char *keyname = estrndup(last_index, index_len);
+
+					ret = step_cb(name, i, keyname, index_len, parent, zv, arg) == SUCCESS || ret == SUCCESS?SUCCESS:FAILURE;
+				}
+
+				ZVAL_DEREF(zv);
+				goto retry_ref_end;
 			} else {
-				phpdbg_error("variable", "type=\"notiterable\" variable=\"%.*s\"", "%.*s is nor an array nor an object", (int) i, input);
+				phpdbg_error("variable", "type=\"notiterable\" variable=\"%.*s\"", "%.*s is nor an array nor an object", (int) (input[i] == '>' ? i - 1 : i), input);
 				return FAILURE;
 			}
 			index_len = 0;
@@ -663,4 +711,48 @@ head_done:
 				break;
 		}
 	} phpdbg_end_try_access();
+}
+
+PHPDBG_API zend_bool phpdbg_check_caught_ex(zend_execute_data *execute_data, zend_object *exception) {
+	const zend_op *op;
+	zend_op *cur;
+	uint32_t op_num, i;
+	zend_op_array *op_array = &execute_data->func->op_array;
+
+	if (execute_data->opline >= EG(exception_op) && execute_data->opline < EG(exception_op) + 3) {
+		op = EG(opline_before_exception);
+	} else {
+		op = execute_data->opline;
+	}
+
+	op_num = op - op_array->opcodes;
+
+	for (i = 0; i < op_array->last_try_catch && op_array->try_catch_array[i].try_op < op_num; i++) {
+		uint32_t catch = op_array->try_catch_array[i].catch_op, finally = op_array->try_catch_array[i].finally_op;
+		if (op_num <= catch || op_num <= finally) {
+			if (finally && finally < catch) {
+				return 0;
+			}
+
+			do {
+				zend_class_entry *ce;
+				cur = &op_array->opcodes[catch];
+
+				if (!(ce = CACHED_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(cur->op1))))) {
+					ce = zend_fetch_class_by_name(Z_STR_P(EX_CONSTANT(cur->op1)), EX_CONSTANT(cur->op1) + 1, ZEND_FETCH_CLASS_NO_AUTOLOAD);
+					CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(cur->op1)), ce);
+				}
+
+				if (ce == exception->ce || (ce && instanceof_function(exception->ce, ce))) {
+					return 1;
+				}
+
+				catch = cur->extended_value;
+			} while (!cur->result.num);
+
+			return 0;
+		}
+	}
+
+	return op->opcode == ZEND_CATCH;
 }

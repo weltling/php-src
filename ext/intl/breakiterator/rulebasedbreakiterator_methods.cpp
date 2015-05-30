@@ -24,6 +24,7 @@ extern "C" {
 }
 
 #include "../intl_convertcpp.h"
+#include "../intl_common.h"
 
 static inline RuleBasedBreakIterator *fetch_rbbi(BreakIterator_object *bio) {
 	return (RuleBasedBreakIterator*)bio->biter;
@@ -31,18 +32,16 @@ static inline RuleBasedBreakIterator *fetch_rbbi(BreakIterator_object *bio) {
 
 static void _php_intlrbbi_constructor_body(INTERNAL_FUNCTION_PARAMETERS)
 {
-	zval		*object		= getThis();
 	char		*rules;
 	size_t		rules_len;
 	zend_bool	compiled	= 0;
 	UErrorCode	status		= U_ZERO_ERROR;
 	intl_error_reset(NULL);
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "s|b",
+	if (zend_parse_parameters_throw(ZEND_NUM_ARGS(), "s|b",
 			&rules, &rules_len, &compiled) == FAILURE) {
 		intl_error_set(NULL, U_ILLEGAL_ARGUMENT_ERROR,
 			"rbbi_create_instance: bad arguments", 0);
-		Z_OBJ_P(return_value) = NULL;
 		return;
 	}
 
@@ -72,7 +71,6 @@ static void _php_intlrbbi_constructor_body(INTERNAL_FUNCTION_PARAMETERS)
 			intl_error_set_custom_msg(NULL, msg, 1);
 			efree(msg);
 			delete rbbi;
-			Z_OBJ_P(return_value) = NULL;
 			return;
 		}
 	} else { // compiled
@@ -81,13 +79,11 @@ static void _php_intlrbbi_constructor_body(INTERNAL_FUNCTION_PARAMETERS)
 		if (U_FAILURE(status)) {
 			intl_error_set(NULL, status, "rbbi_create_instance: unable to "
 				"create instance from compiled rules", 0);
-			Z_OBJ_P(return_value) = NULL;
 			return;
 		}
 #else
 		intl_error_set(NULL, U_UNSUPPORTED_ERROR, "rbbi_create_instance: "
 			"compiled rules require ICU >= 4.8", 0);
-		Z_OBJ_P(return_value) = NULL;
 		return;
 #endif
 	}
@@ -97,15 +93,12 @@ static void _php_intlrbbi_constructor_body(INTERNAL_FUNCTION_PARAMETERS)
 
 U_CFUNC PHP_METHOD(IntlRuleBasedBreakIterator, __construct)
 {
-	zval	orig_this		= *getThis();
+	zend_error_handling error_handling;
 
+	zend_replace_error_handling(EH_THROW, IntlException_ce_ptr, &error_handling);
 	return_value = getThis();
 	_php_intlrbbi_constructor_body(INTERNAL_FUNCTION_PARAM_PASSTHRU);
-
-	if (Z_TYPE_P(return_value) == IS_OBJECT && Z_OBJ_P(return_value) == NULL) {
-		zend_object_store_ctor_failed(Z_OBJ(orig_this));
-		ZEND_CTOR_MAKE_NULL();
-	}
+	zend_restore_error_handling(&error_handling);
 }
 
 U_CFUNC PHP_FUNCTION(rbbi_get_rules)

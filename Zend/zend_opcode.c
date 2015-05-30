@@ -51,6 +51,9 @@ static void op_array_alloc_ops(zend_op_array *op_array, uint32_t size)
 void init_op_array(zend_op_array *op_array, zend_uchar type, int initial_ops_size)
 {
 	op_array->type = type;
+	op_array->arg_flags[0] = 0;
+	op_array->arg_flags[1] = 0;
+	op_array->arg_flags[2] = 0;
 
 	op_array->refcount = (uint32_t *) emalloc(sizeof(uint32_t));
 	*op_array->refcount = 1;
@@ -117,7 +120,6 @@ ZEND_API void zend_function_dtor(zval *zv)
 		ZEND_ASSERT(function->common.function_name);
 		destroy_op_array(&function->op_array);
 		/* op_arrays are allocated on arena, so we don't have to free them */
-//???		efree_size(function, sizeof(zend_op_array));
 	} else {
 		ZEND_ASSERT(function->type == ZEND_INTERNAL_FUNCTION);
 		ZEND_ASSERT(function->common.function_name);
@@ -152,13 +154,15 @@ ZEND_API void zend_cleanup_user_class_data(zend_class_entry *ce)
 	}
 	if (ce->static_members_table) {
 		zval *static_members = ce->static_members_table;
-		int count = ce->default_static_members_count;
-		int i;
+		zval *p = static_members;
+		zval *end = p + ce->default_static_members_count;
+
 
 		ce->default_static_members_count = 0;
 		ce->default_static_members_table = ce->static_members_table = NULL;
-		for (i = 0; i < count; i++) {
-			zval_ptr_dtor(&static_members[i]);
+		while (p != end) {
+			i_zval_ptr_dtor(p ZEND_FILE_LINE_CC);
+			p++;
 		}
 		efree(static_members);
 	}
@@ -168,15 +172,17 @@ ZEND_API void zend_cleanup_internal_class_data(zend_class_entry *ce)
 {
 	if (CE_STATIC_MEMBERS(ce)) {
 		zval *static_members = CE_STATIC_MEMBERS(ce);
-		int i;
+		zval *p = static_members;
+		zval *end = p + ce->default_static_members_count;
 
 #ifdef ZTS
 		CG(static_members_table)[(zend_intptr_t)(ce->static_members_table)] = NULL;
 #else
 		ce->static_members_table = NULL;
 #endif
-		for (i = 0; i < ce->default_static_members_count; i++) {
-			zval_ptr_dtor(&static_members[i]);
+		while (p != end) {
+			i_zval_ptr_dtor(p ZEND_FILE_LINE_CC);
+			p++;
 		}
 		efree(static_members);
 	}
@@ -247,22 +253,22 @@ ZEND_API void destroy_zend_class(zval *zv)
 	switch (ce->type) {
 		case ZEND_USER_CLASS:
 			if (ce->default_properties_table) {
-				int i;
+				zval *p = ce->default_properties_table;
+				zval *end = p + ce->default_properties_count;
 
-				for (i = 0; i < ce->default_properties_count; i++) {
-					if (Z_TYPE(ce->default_properties_table[i]) != IS_UNDEF) {
-						zval_ptr_dtor(&ce->default_properties_table[i]);
-				    }
+				while (p != end) {
+					i_zval_ptr_dtor(p ZEND_FILE_LINE_CC);
+					p++;
 				}
 				efree(ce->default_properties_table);
 			}
 			if (ce->default_static_members_table) {
-				int i;
+				zval *p = ce->default_static_members_table;
+				zval *end = p + ce->default_static_members_count;
 
-				for (i = 0; i < ce->default_static_members_count; i++) {
-					if (Z_TYPE(ce->default_static_members_table[i]) != IS_UNDEF) {
-						zval_ptr_dtor(&ce->default_static_members_table[i]);
-					}
+				while (p != end) {
+					i_zval_ptr_dtor(p ZEND_FILE_LINE_CC);
+					p++;
 				}
 				efree(ce->default_static_members_table);
 			}
@@ -290,20 +296,22 @@ ZEND_API void destroy_zend_class(zval *zv)
 			break;
 		case ZEND_INTERNAL_CLASS:
 			if (ce->default_properties_table) {
-				int i;
+				zval *p = ce->default_properties_table;
+				zval *end = p + ce->default_properties_count;
 
-				for (i = 0; i < ce->default_properties_count; i++) {
-					if (Z_TYPE(ce->default_properties_table[i]) != IS_UNDEF) {
-						zval_internal_ptr_dtor(&ce->default_properties_table[i]);
-					}
+				while (p != end) {
+					zval_internal_ptr_dtor(p);
+					p++;
 				}
 				pefree(ce->default_properties_table, 1);
 			}
 			if (ce->default_static_members_table) {
-				int i;
+				zval *p = ce->default_static_members_table;
+				zval *end = p + ce->default_static_members_count;
 
-				for (i = 0; i < ce->default_static_members_count; i++) {
-					zval_internal_ptr_dtor(&ce->default_static_members_table[i]);
+				while (p != end) {
+					zval_internal_ptr_dtor(p);
+					p++;
 				}
 				free(ce->default_static_members_table);
 			}
@@ -658,6 +666,20 @@ static void zend_resolve_finally_ret(zend_op_array *op_array, uint32_t op_num)
 	}
 }
 
+static uint32_t zend_get_brk_cont_target(const zend_op_array *op_array, const zend_op *opline) {
+	int nest_levels = opline->op2.num;
+	int array_offset = opline->op1.num;
+	zend_brk_cont_element *jmp_to;
+	do {
+		jmp_to = &op_array->brk_cont_array[array_offset];
+		if (nest_levels > 1) {
+			array_offset = jmp_to->parent;
+		}
+	} while (--nest_levels > 0);
+
+	return opline->opcode == ZEND_BRK ? jmp_to->brk : jmp_to->cont;
+}
+
 static void zend_resolve_finally_calls(zend_op_array *op_array)
 {
 	uint32_t i, j;
@@ -673,22 +695,8 @@ static void zend_resolve_finally_calls(zend_op_array *op_array)
 				break;
 			case ZEND_BRK:
 			case ZEND_CONT:
-			{
-				int nest_levels, array_offset;
-				zend_brk_cont_element *jmp_to;
-
-				nest_levels = Z_LVAL(op_array->literals[opline->op2.constant]);
-				if ((array_offset = opline->op1.opline_num) != -1) {
-					do {
-						jmp_to = &op_array->brk_cont_array[array_offset];
-						if (nest_levels > 1) {
-							array_offset = jmp_to->parent;
-						}
-					} while (--nest_levels > 0);
-					zend_resolve_finally_call(op_array, i, opline->opcode == ZEND_BRK ? jmp_to->brk : jmp_to->cont);
-					break;
-				}
-			}
+				zend_resolve_finally_call(op_array, i, zend_get_brk_cont_target(op_array, opline));
+				break;
 			case ZEND_GOTO:
 				if (Z_TYPE_P(CT_CONSTANT_EX(op_array, opline->op2.constant)) != IS_LONG) {
 					uint32_t num = opline->op2.constant;
@@ -759,9 +767,22 @@ ZEND_API int pass_two(zend_op_array *op_array)
 			opline->result.var = (uint32_t)(zend_intptr_t)ZEND_CALL_VAR_NUM(NULL, op_array->last_var + opline->result.var);
 		}
 		switch (opline->opcode) {
+			case ZEND_DECLARE_ANON_INHERITED_CLASS:
+				ZEND_PASS_TWO_UPDATE_JMP_TARGET(op_array, opline, opline->op1);
+				/* break omitted intentionally */
 			case ZEND_DECLARE_INHERITED_CLASS:
 			case ZEND_DECLARE_INHERITED_CLASS_DELAYED:
 				opline->extended_value = (uint32_t)(zend_intptr_t)ZEND_CALL_VAR_NUM(NULL, op_array->last_var + opline->extended_value);
+				break;
+			case ZEND_BRK:
+			case ZEND_CONT:
+				{
+					uint32_t jmp_target = zend_get_brk_cont_target(op_array, opline);
+					opline->opcode = ZEND_JMP;
+					opline->op1.opline_num = jmp_target;
+					opline->op2.num = 0;
+					ZEND_PASS_TWO_UPDATE_JMP_TARGET(op_array, opline, opline->op1);
+				}
 				break;
 			case ZEND_GOTO:
 				if (Z_TYPE_P(RT_CONSTANT(op_array, opline->op2)) != IS_LONG) {
@@ -770,6 +791,7 @@ ZEND_API int pass_two(zend_op_array *op_array)
 				/* break omitted intentionally */
 			case ZEND_JMP:
 			case ZEND_FAST_CALL:
+			case ZEND_DECLARE_ANON_CLASS:
 				ZEND_PASS_TWO_UPDATE_JMP_TARGET(op_array, opline, opline->op1);
 				break;
 			case ZEND_JMPZNZ:
@@ -785,10 +807,12 @@ ZEND_API int pass_two(zend_op_array *op_array)
 			case ZEND_NEW:
 			case ZEND_FE_RESET_R:
 			case ZEND_FE_RESET_RW:
-			case ZEND_FE_FETCH_R:
-			case ZEND_FE_FETCH_RW:
 			case ZEND_ASSERT_CHECK:
 				ZEND_PASS_TWO_UPDATE_JMP_TARGET(op_array, opline, opline->op2);
+				break;
+			case ZEND_FE_FETCH_R:
+			case ZEND_FE_FETCH_RW:
+				opline->extended_value = ZEND_OPLINE_NUM_TO_OFFSET(op_array, opline, opline->extended_value);
 				break;
 			case ZEND_VERIFY_RETURN_TYPE:
 				if (op_array->fn_flags & ZEND_ACC_GENERATOR) {
@@ -861,6 +885,7 @@ ZEND_API binary_op_type get_binary_op(int opcode)
 		case ZEND_SR:
 		case ZEND_ASSIGN_SR:
 			return (binary_op_type) shift_right_function;
+		case ZEND_FAST_CONCAT:
 		case ZEND_CONCAT:
 		case ZEND_ASSIGN_CONCAT:
 			return (binary_op_type) concat_function;

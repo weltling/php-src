@@ -155,7 +155,11 @@ static int pgsql_lob_seek(php_stream *stream, zend_off_t offset, int whence,
 		zend_off_t *newoffset)
 {
 	struct pdo_pgsql_lob_self *self = (struct pdo_pgsql_lob_self*)stream->abstract;
-	int pos = lo_lseek(self->conn, self->lfd, offset, whence);
+#if HAVE_PG_LO64 && ZEND_ENABLE_ZVAL_LONG64
+	zend_off_t pos = lo_lseek64(self->conn, self->lfd, offset, whence);
+#else
+	zend_off_t pos = lo_lseek(self->conn, self->lfd, offset, whence);
+#endif
 	*newoffset = pos;
 	return pos >= 0 ? 0 : -1;
 }
@@ -239,10 +243,6 @@ static int pgsql_handle_preparer(pdo_dbh_t *dbh, const char *sql, size_t sql_len
 		spprintf(&S->cursor_name, 0, "pdo_crsr_%08x", ++H->stmt_counter);
 		emulate = 1;
 	} else if (driver_options) {
-		if (pdo_attr_lval(driver_options, PDO_PGSQL_ATTR_DISABLE_NATIVE_PREPARED_STATEMENT, H->disable_native_prepares) == 1) {
-			php_error_docref(NULL, E_DEPRECATED, "PDO::PGSQL_ATTR_DISABLE_NATIVE_PREPARED_STATEMENT is deprecated, use PDO::ATTR_EMULATE_PREPARES instead");
-			emulate = 1;
-		}
 		if (pdo_attr_lval(driver_options, PDO_ATTR_EMULATE_PREPARES, H->emulate_prepares) == 1) {
 			emulate = 1;
 		}
@@ -384,11 +384,6 @@ static int pdo_pgsql_get_attribute(pdo_dbh_t *dbh, zend_long attr, zval *return_
 	switch (attr) {
 		case PDO_ATTR_EMULATE_PREPARES:
 			ZVAL_BOOL(return_value, H->emulate_prepares);
-			break;
-
-		case PDO_PGSQL_ATTR_DISABLE_NATIVE_PREPARED_STATEMENT:
-			php_error_docref(NULL, E_DEPRECATED, "PDO::PGSQL_ATTR_DISABLE_NATIVE_PREPARED_STATEMENT is deprecated, use PDO::ATTR_EMULATE_PREPARES instead");
-			ZVAL_BOOL(return_value, H->disable_native_prepares);
 			break;
 
 		case PDO_PGSQL_ATTR_DISABLE_PREPARES:
@@ -669,7 +664,7 @@ static PHP_METHOD(PDO, pgsqlCopyFromFile)
 	PDO_CONSTRUCT_CHECK;
 	PDO_DBH_CLEAR_ERR();
 
-	stream = php_stream_open_wrapper_ex(filename, "rb", ENFORCE_SAFE_MODE, NULL, FG(default_context));
+	stream = php_stream_open_wrapper_ex(filename, "rb", 0, NULL, FG(default_context));
 	if (!stream) {
 		pdo_pgsql_error_msg(dbh, PGRES_FATAL_ERROR, "Unable to open the file");
 		PDO_HANDLE_DBH_ERR();
@@ -771,7 +766,7 @@ static PHP_METHOD(PDO, pgsqlCopyToFile)
 
 	H = (pdo_pgsql_db_handle *)dbh->driver_data;
 
-	stream = php_stream_open_wrapper_ex(filename, "wb", ENFORCE_SAFE_MODE, NULL, FG(default_context));
+	stream = php_stream_open_wrapper_ex(filename, "wb", 0, NULL, FG(default_context));
 	if (!stream) {
 		pdo_pgsql_error_msg(dbh, PGRES_FATAL_ERROR, "Unable to open the file for writing");
 		PDO_HANDLE_DBH_ERR();
@@ -1060,6 +1055,11 @@ static PHP_METHOD(PDO, pgsqlGetNotify)
 	if (ms_timeout < 0) {
 		php_error_docref(NULL, E_WARNING, "Invalid timeout");
  		RETURN_FALSE;
+#if ZEND_ENABLE_ZVAL_LONG64
+	} else if (ms_timeout > INT_MAX) {
+		php_error_docref(NULL, E_WARNING, "timeout was shrinked to %d", INT_MAX);
+		ms_timeout = INT_MAX;
+#endif
 	}
 
 	H = (pdo_pgsql_db_handle *)dbh->driver_data;
@@ -1068,7 +1068,7 @@ static PHP_METHOD(PDO, pgsqlGetNotify)
 	pgsql_notify = PQnotifies(H->server);
 
 	if (ms_timeout && !pgsql_notify) {
-		php_pollfd_for_ms(PQsocket(H->server), PHP_POLLREADABLE, ms_timeout);
+		php_pollfd_for_ms(PQsocket(H->server), PHP_POLLREADABLE, (int)ms_timeout);
 
 		PQconsumeInput(H->server);
 		pgsql_notify = PQnotifies(H->server);
@@ -1145,16 +1145,11 @@ static int pdo_pgsql_set_attr(pdo_dbh_t *dbh, zend_long attr, zval *val)
 	switch (attr) {
 		case PDO_ATTR_EMULATE_PREPARES:
 			convert_to_long(val);
-			H->emulate_prepares = Z_LVAL_P(val);
-			return 1;
-		case PDO_PGSQL_ATTR_DISABLE_NATIVE_PREPARED_STATEMENT:
-			convert_to_long(val);
-			php_error_docref(NULL, E_DEPRECATED, "PDO::PGSQL_ATTR_DISABLE_NATIVE_PREPARED_STATEMENT is deprecated, use PDO::ATTR_EMULATE_PREPARES instead");
-			H->disable_native_prepares = Z_LVAL_P(val);
+			H->emulate_prepares = 0 != Z_LVAL_P(val);
 			return 1;
 		case PDO_PGSQL_ATTR_DISABLE_PREPARES:
 			convert_to_long(val);
-			H->disable_prepares = Z_LVAL_P(val);
+			H->disable_prepares = 0 != Z_LVAL_P(val);
 			return 1;
 		default:
 			return 0;

@@ -1065,15 +1065,9 @@ static xmlNodePtr to_xml_long(encodeTypePtr type, zval *data, int style, xmlNode
 		snprintf(s, sizeof(s), "%0.0F",floor(Z_DVAL_P(data)));
 		xmlNodeSetContent(ret, BAD_CAST(s));
 	} else {
-		zval tmp;
-
-		ZVAL_DUP(&tmp, data);
-		if (Z_TYPE(tmp) != IS_LONG) {
-			convert_to_long(&tmp);
-		}
-		convert_to_string(&tmp);
-		xmlNodeSetContentLen(ret, BAD_CAST(Z_STRVAL(tmp)), Z_STRLEN(tmp));
-		zval_dtor(&tmp);
+		zend_string *str = zend_long_to_str(zval_get_long(data));
+		xmlNodeSetContentLen(ret, BAD_CAST(str->val), str->len);
+		zend_string_release(str);
 	}
 
 	if (style == SOAP_ENCODED) {
@@ -1272,7 +1266,7 @@ static void model_to_zval_any(zval *ret, xmlNodePtr node)
 					if (Z_TYPE(val2) != IS_STRING ||  *Z_STRVAL(val) != '<') {
 						break;
 					}
-					add_string_to_string(&val, &val, &val2);
+					concat_function(&val, &val, &val2);
 					zval_ptr_dtor(&val2);
 					node = node->next;
 				}
@@ -2911,7 +2905,7 @@ static xmlNodePtr to_xml_datetime_ex(encodeTypePtr type, zval *data, char *forma
 #ifdef HAVE_TM_GMTOFF
 		snprintf(tzbuf, sizeof(tzbuf), "%c%02d:%02d", (ta->tm_gmtoff < 0) ? '-' : '+', abs(ta->tm_gmtoff / 3600), abs( (ta->tm_gmtoff % 3600) / 60 ));
 #else
-# if defined(__CYGWIN__) || defined(NETWARE)
+# if defined(__CYGWIN__) || defined(NETWARE) || (defined(PHP_WIN32) && defined(_MSC_VER) && _MSC_VER >= 1900)
 		snprintf(tzbuf, sizeof(tzbuf), "%c%02d:%02d", ((ta->tm_isdst ? _timezone - 3600:_timezone)>0)?'-':'+', abs((ta->tm_isdst ? _timezone - 3600 : _timezone) / 3600), abs(((ta->tm_isdst ? _timezone - 3600 : _timezone) % 3600) / 60));
 # else
 		snprintf(tzbuf, sizeof(tzbuf), "%c%02d:%02d", ((ta->tm_isdst ? timezone - 3600:timezone)>0)?'-':'+', abs((ta->tm_isdst ? timezone - 3600 : timezone) / 3600), abs(((ta->tm_isdst ? timezone - 3600 : timezone) % 3600) / 60));

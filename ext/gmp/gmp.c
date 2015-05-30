@@ -204,7 +204,7 @@ zend_module_entry gmp_module_entry = {
 	NULL,
 	ZEND_MODULE_DEACTIVATE_N(gmp),
 	ZEND_MODULE_INFO_N(gmp),
-	NO_VERSION_YET,
+	PHP_GMP_VERSION,
 	ZEND_MODULE_GLOBALS(gmp),
 	ZEND_GINIT(gmp),
 	NULL,
@@ -244,6 +244,9 @@ typedef struct _gmp_temp {
 #define GMP_NATIVE_ENDIAN (1 << 4)
 
 #define GMP_MAX_BASE 62
+
+#define GMP_51_OR_NEWER \
+	((__GNU_MP_VERSION >= 6) || (__GNU_MP_VERSION >= 5 && __GNU_MP_VERSION_MINOR >= 1))
 
 #define IS_GMP(zval) \
 	(Z_TYPE_P(zval) == IS_OBJECT && instanceof_function(Z_OBJCE_P(zval), gmp_ce))
@@ -1388,11 +1391,12 @@ ZEND_FUNCTION(gmp_pow)
 		RETURN_FALSE;
 	}
 
-	INIT_GMP_RETVAL(gmpnum_result);
 	if (Z_TYPE_P(base_arg) == IS_LONG && Z_LVAL_P(base_arg) >= 0) {
+		INIT_GMP_RETVAL(gmpnum_result);
 		mpz_ui_pow_ui(gmpnum_result, Z_LVAL_P(base_arg), exp);
 	} else {
 		FETCH_GMP_ZVAL(gmpnum_base, base_arg, temp_base);
+		INIT_GMP_RETVAL(gmpnum_result);
 		mpz_pow_ui(gmpnum_result, gmpnum_base, exp);
 		FREE_GMP_TEMP(temp_base);
 	}
@@ -1574,7 +1578,15 @@ ZEND_FUNCTION(gmp_rootrem)
 	add_next_index_zval(return_value, &result1);
 	add_next_index_zval(return_value, &result2);
 
+#if GMP_51_OR_NEWER
+	/* mpz_rootrem() is supported since GMP 4.2, but buggy wrt odd roots
+	 * of negative numbers */
 	mpz_rootrem(gmpnum_result1, gmpnum_result2, gmpnum_a, (gmp_ulong) nth);
+#else
+	mpz_root(gmpnum_result1, gmpnum_a, (gmp_ulong) nth);
+	mpz_pow_ui(gmpnum_result2, gmpnum_result1, (gmp_ulong) nth);
+	mpz_sub(gmpnum_result2, gmpnum_a, gmpnum_result2);
+#endif
 
 	FREE_GMP_TEMP(temp_a);
 }

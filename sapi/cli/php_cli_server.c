@@ -73,7 +73,6 @@
 #include "zend_compile.h"
 #include "zend_execute.h"
 #include "zend_highlight.h"
-#include "zend_indent.h"
 #include "zend_exceptions.h"
 
 #include "php_getopt.h"
@@ -90,10 +89,6 @@
 # define SOCK_EAGAIN WSAEWOULDBLOCK
 # define SOCK_EINTR WSAEINTR
 # define SOCK_EADDRINUSE WSAEADDRINUSE
-#endif
-
-#ifndef S_ISDIR
-#define S_ISDIR(mode)	(((mode)&S_IFMT) == S_IFDIR)
 #endif
 
 #include "ext/standard/file.h" /* for php_set_sock_blocking() :-( */

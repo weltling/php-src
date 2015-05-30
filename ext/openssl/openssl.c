@@ -59,7 +59,7 @@
 /* Common */
 #include <time.h>
 
-#ifdef NETWARE
+#if defined(NETWARE) || (defined(PHP_WIN32) && defined(_MSC_VER) && _MSC_VER >= 1900)
 #define timezone _timezone	/* timezone is called _timezone in LibC */
 #endif
 
@@ -525,7 +525,7 @@ zend_module_entry openssl_module_entry = {
 	NULL,
 	NULL,
 	PHP_MINFO(openssl),
-	NO_VERSION_YET,
+	PHP_OPENSSL_VERSION,
 	STANDARD_MODULE_PROPERTIES
 };
 /* }}} */
@@ -993,11 +993,13 @@ static int php_openssl_load_rand_file(const char * file, int *egdsocket, int *se
 
 	if (file == NULL) {
 		file = RAND_file_name(buffer, sizeof(buffer));
+#ifdef HAVE_RAND_EGD
 	} else if (RAND_egd(file) > 0) {
 		/* if the given filename is an EGD socket, don't
 		 * write anything back to it */
 		*egdsocket = 1;
 		return SUCCESS;
+#endif
 	}
 	if (file == NULL || !RAND_load_file(file, -1)) {
 		if (RAND_status() == 0) {
@@ -1248,7 +1250,9 @@ PHP_MINIT_FUNCTION(openssl)
 	}
 
 	php_stream_xport_register("ssl", php_openssl_ssl_socket_factory);
+#ifndef OPENSSL_NO_SSL3
 	php_stream_xport_register("sslv3", php_openssl_ssl_socket_factory);
+#endif
 #ifndef OPENSSL_NO_SSL2
 	php_stream_xport_register("sslv2", php_openssl_ssl_socket_factory);
 #endif
@@ -1297,7 +1301,9 @@ PHP_MSHUTDOWN_FUNCTION(openssl)
 #ifndef OPENSSL_NO_SSL2
 	php_stream_xport_unregister("sslv2");
 #endif
+#ifndef OPENSSL_NO_SSL3
 	php_stream_xport_unregister("sslv3");
+#endif
 	php_stream_xport_unregister("tls");
 	php_stream_xport_unregister("tlsv1.0");
 #if OPENSSL_VERSION_NUMBER >= 0x10001001L
@@ -5247,7 +5253,7 @@ PHP_FUNCTION(openssl_encrypt)
 /* }}} */
 
 /* {{{ proto string openssl_decrypt(string data, string method, string password [, long options=0 [, string $iv = '']])
-   Takes raw or base64 encoded string and dectupt it using given method and key */
+   Takes raw or base64 encoded string and decrypts it using given method and key */
 PHP_FUNCTION(openssl_decrypt)
 {
 	zend_long options = 0;

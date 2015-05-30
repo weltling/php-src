@@ -762,7 +762,7 @@ zend_module_entry pgsql_module_entry = {
 	PHP_RINIT(pgsql),
 	PHP_RSHUTDOWN(pgsql),
 	PHP_MINFO(pgsql),
-	NO_VERSION_YET,
+	PHP_PGSQL_VERSION,
 	PHP_MODULE_GLOBALS(pgsql),
 	PHP_GINIT(pgsql),
 	NULL,
@@ -882,15 +882,14 @@ static char *php_pgsql_PQescapeInternal(PGconn *conn, const char *str, size_t le
 /* {{{ _php_pgsql_trim_message */
 static char * _php_pgsql_trim_message(const char *message, size_t *len)
 {
-	register size_t i = strlen(message)-1;
+	register size_t i = strlen(message);
 
-	if (i>1 && (message[i-1] == '\r' || message[i-1] == '\n') && message[i] == '.') {
+	if (i>2 && (message[i-2] == '\r' || message[i-2] == '\n') && message[i-1] == '.') {
 		--i;
 	}
-	while (i>0 && (message[i] == '\r' || message[i] == '\n')) {
+	while (i>1 && (message[i-1] == '\r' || message[i-1] == '\n')) {
 		--i;
 	}
-	++i;
 	if (len) {
 		*len = i;
 	}
@@ -3127,7 +3126,7 @@ PHP_FUNCTION(pg_trace)
 	php_stream *stream;
 	zend_resource *link;
 
-	if (zend_parse_parameters(argc, "s|sr", &z_filename, &z_filename_len, &mode, &mode_len, &pgsql_link) == FAILURE) {
+	if (zend_parse_parameters(argc, "p|sr", &z_filename, &z_filename_len, &mode, &mode_len, &pgsql_link) == FAILURE) {
 		return;
 	}
 
@@ -5505,7 +5504,11 @@ PHP_PGSQL_API int php_pgsql_meta_data(PGconn *pg_link, const char *table_name, z
 
 	src = estrdup(table_name);
 	tmp_name = php_strtok_r(src, ".", &tmp_name2);
-
+	if (!tmp_name) {
+		efree(src);
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "The table name must be specified");
+		return FAILURE;
+	}
 	if (!tmp_name2 || !*tmp_name2) {
 		/* Default schema */
 		tmp_name2 = tmp_name;
@@ -6503,7 +6506,8 @@ static int do_exec(smart_str *querystr, int expect, PGconn *pg_link, zend_ulong 
 
 static inline void build_tablename(smart_str *querystr, PGconn *pg_link, const char *table) /* {{{ */
 {
-	char *table_copy, *escaped, *token, *tmp;
+	char *table_copy, *escaped, *tmp;
+	const char *token;
 	size_t len;
 
 	/* schame.table should be "schame"."table" */

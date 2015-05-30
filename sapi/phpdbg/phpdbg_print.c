@@ -27,15 +27,15 @@
 ZEND_EXTERN_MODULE_GLOBALS(phpdbg);
 
 #define PHPDBG_PRINT_COMMAND_D(f, h, a, m, l, s, flags) \
-	PHPDBG_COMMAND_D_EXP(f, h, a, m, l, s, &phpdbg_prompt_commands[9], flags)
+	PHPDBG_COMMAND_D_EXP(f, h, a, m, l, s, &phpdbg_prompt_commands[8], flags)
 
 const phpdbg_command_t phpdbg_print_commands[] = {
-	PHPDBG_PRINT_COMMAND_D(exec,       "print out the instructions in the execution context",  'e', print_exec,   NULL, 0, PHPDBG_ASYNC_SAFE),
-	PHPDBG_PRINT_COMMAND_D(opline,     "print out the instruction in the current opline",      'o', print_opline, NULL, 0, PHPDBG_ASYNC_SAFE),
-	PHPDBG_PRINT_COMMAND_D(class,      "print out the instructions in the specified class",    'c', print_class,  NULL, "s", PHPDBG_ASYNC_SAFE),
-	PHPDBG_PRINT_COMMAND_D(method,     "print out the instructions in the specified method",   'm', print_method, NULL, "m", PHPDBG_ASYNC_SAFE),
-	PHPDBG_PRINT_COMMAND_D(func,       "print out the instructions in the specified function", 'f', print_func,   NULL, "s", PHPDBG_ASYNC_SAFE),
-	PHPDBG_PRINT_COMMAND_D(stack,      "print out the instructions in the current stack",      's', print_stack,  NULL, 0, PHPDBG_ASYNC_SAFE),
+	PHPDBG_PRINT_COMMAND_D(exec,       "print out the instructions in the main execution context", 'e', print_exec,   NULL, 0, PHPDBG_ASYNC_SAFE),
+	PHPDBG_PRINT_COMMAND_D(opline,     "print out the instruction in the current opline",          'o', print_opline, NULL, 0, PHPDBG_ASYNC_SAFE),
+	PHPDBG_PRINT_COMMAND_D(class,      "print out the instructions in the specified class",        'c', print_class,  NULL, "s", PHPDBG_ASYNC_SAFE),
+	PHPDBG_PRINT_COMMAND_D(method,     "print out the instructions in the specified method",       'm', print_method, NULL, "m", PHPDBG_ASYNC_SAFE),
+	PHPDBG_PRINT_COMMAND_D(func,       "print out the instructions in the specified function",     'f', print_func,   NULL, "s", PHPDBG_ASYNC_SAFE),
+	PHPDBG_PRINT_COMMAND_D(stack,      "print out the instructions in the current stack",          's', print_stack,  NULL, 0, PHPDBG_ASYNC_SAFE),
 	PHPDBG_END_COMMAND
 };
 
@@ -63,32 +63,36 @@ static inline void phpdbg_print_function_helper(zend_function *method) /* {{{ */
 				end = op_array->last-1;
 
 				if (method->common.scope) {
-					phpdbg_writeln("printoplineinfo", "type=\"User\" startline=\"%d\" endline=\"%d\" method=\"%s::%s\" file=\"%s\"", "\tL%d-%d %s::%s() %s",
+					phpdbg_writeln("printoplineinfo", "type=\"User\" startline=\"%d\" endline=\"%d\" method=\"%s::%s\" file=\"%s\" opline=\"%p\"", "L%d-%d %s::%s() %s - %p + %d ops",
 						op_array->line_start,
 						op_array->line_end,
 						method->common.scope->name->val,
 						method->common.function_name->val,
-						op_array->filename ? op_array->filename->val : "unknown");
+						op_array->filename ? op_array->filename->val : "unknown",
+						opline,
+						op_array->last);
 				} else {
-					phpdbg_writeln("printoplineinfo", "type=\"User\" startline=\"%d\" endline=\"%d\" function=\"%s\" file=\"%s\"", "\tL%d-%d %s() %s",
-						method->common.function_name ? op_array->line_start : 0,
-						method->common.function_name ? op_array->line_end : 0,
+					phpdbg_writeln("printoplineinfo", "type=\"User\" startline=\"%d\" endline=\"%d\" function=\"%s\" file=\"%s\" opline=\"%p\"", "L%d-%d %s() %s - %p + %d ops",
+						op_array->line_start,
+						op_array->line_end,
 						method->common.function_name ? method->common.function_name->val : "{main}",
-						op_array->filename ? op_array->filename->val : "unknown");
+						op_array->filename ? op_array->filename->val : "unknown",
+						opline,
+						op_array->last);
 				}
 
 				zend_hash_init(&vars, op_array->last, NULL, NULL, 0);
 				do {
 					char *decode = phpdbg_decode_opline(op_array, opline, &vars);
 					if (decode != NULL) {
-						phpdbg_writeln("print", "line=\"%u\" opline=\"%p\" opcode=\"%s\" op=\"%s\"", "\t\tL%u\t%p %-30s %s",
+						phpdbg_writeln("print", "line=\"%u\" opnum=\"%u\" opcode=\"%s\" op=\"%s\"", " L%-4u #%-5u %-23s %s",
 							opline->lineno,
-							opline,
-							phpdbg_decode_opcode(opline->opcode),
+							opcode,
+							phpdbg_decode_opcode(opline->opcode) + 5, /* remove ZEND_ prefix */
 							decode);
 						free(decode);
 					} else {
-						phpdbg_error("print", "type=\"decodefailure\" opline=\"%16p\"", "\tFailed to decode opline %16p", opline);
+						phpdbg_error("print", "type=\"decodefailure\" opline=\"%16p\"", "Failed to decode opline %16p", opline);
 					}
 					opline++;
 				} while (opcode++ < end);
@@ -260,3 +264,121 @@ PHPDBG_PRINT(func) /* {{{ */
 
 	return SUCCESS;
 } /* }}} */
+
+void phpdbg_print_opcodes_main() {
+	phpdbg_out("function name: (null)\n");
+	phpdbg_print_function_helper((zend_function *) PHPDBG_G(ops));
+}
+
+void phpdbg_print_opcodes_function(const char *function, size_t len) {
+	zend_function *func = zend_hash_str_find_ptr(EG(function_table), function, len);
+
+	if (!func) {
+		return;
+	}
+
+	phpdbg_out("function name: %.*s\n", (int) len, function);
+	phpdbg_print_function_helper(func);
+}
+
+void phpdbg_print_opcodes_method(const char *class, const char *function) {
+	zend_class_entry *ce;
+	zend_function *func;
+
+	if (phpdbg_safe_class_lookup(class, strlen(class), &ce) != SUCCESS) {
+		return;
+	}
+
+	if (ce->type != ZEND_USER_CLASS) {
+		phpdbg_out("function name: %s::%s (internal)\n", class, function);
+		return;
+	}
+
+	if (!(func = zend_hash_str_find_ptr(&ce->function_table, function, strlen(function)))) {
+		return;
+	}
+
+	phpdbg_out("function name: %s::%s\n", class, function);
+	phpdbg_print_function_helper(func);
+}
+
+void phpdbg_print_opcodes_class(const char *class) {
+	zend_class_entry *ce;
+	zend_function *method;
+	zend_string *method_name;
+	zend_bool first = 1;
+
+	if (phpdbg_safe_class_lookup(class, strlen(class), &ce) != SUCCESS) {
+		return;
+	}
+
+	phpdbg_out("%s %s: %s\n",
+		(ce->type == ZEND_USER_CLASS) ?
+			"user" : "internal",
+		(ce->ce_flags & ZEND_ACC_INTERFACE) ?
+			"interface" :
+			(ce->ce_flags & ZEND_ACC_ABSTRACT) ?
+				"abstract Class" :
+				"class",
+		ce->name->val);
+
+	if (ce->type != ZEND_USER_CLASS) {
+		return;
+	}
+
+	phpdbg_out("%d methods: ", zend_hash_num_elements(&ce->function_table));
+	ZEND_HASH_FOREACH_PTR(&ce->function_table, method) {
+		if (first) {
+			first = 0;
+		} else {
+			phpdbg_out(", ");
+		}
+		phpdbg_out("%s", method->common.function_name->val);
+	} ZEND_HASH_FOREACH_END();
+	if (first) {
+		phpdbg_out("-");
+	}
+	phpdbg_out("\n");
+
+	ZEND_HASH_FOREACH_STR_KEY_PTR(&ce->function_table, method_name, method) {
+		phpdbg_out("\nfunction name: %s\n", method_name);
+		phpdbg_print_function_helper(method);
+	} ZEND_HASH_FOREACH_END();
+}
+
+PHPDBG_API void phpdbg_print_opcodes(char *function)
+{
+	char *method_name;
+	strtok(function, ":");
+
+	if (function == NULL) {
+		phpdbg_print_opcodes_main();
+	} else if (function[0] == '*' && function[1] == 0) {
+		/* all */
+		zend_string *name;
+		zend_function *func;
+		zend_class_entry *ce;
+
+		phpdbg_print_opcodes_main();
+
+		ZEND_HASH_FOREACH_STR_KEY_PTR(EG(function_table), name, func) {
+			if (func->type == ZEND_USER_FUNCTION) {
+				phpdbg_out("\n");
+				phpdbg_print_opcodes_function(name->val, name->len);
+			}
+		} ZEND_HASH_FOREACH_END();
+
+		ZEND_HASH_FOREACH_STR_KEY_PTR(EG(class_table), name, ce) {
+			if (ce->type == ZEND_USER_CLASS) {
+				phpdbg_out("\n\n");
+				phpdbg_print_opcodes_class(name->val);
+			}
+		} ZEND_HASH_FOREACH_END();
+	} else if ((method_name = strtok(NULL, ":")) == NULL) {
+		phpdbg_print_opcodes_function(function, strlen(function));
+	} else if ((method_name + 1) == NULL) {
+		phpdbg_print_opcodes_class(function);
+	} else {
+		phpdbg_print_opcodes_method(function, method_name);
+	}
+}

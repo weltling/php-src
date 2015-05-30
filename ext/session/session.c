@@ -768,7 +768,7 @@ static PHP_INI_MH(OnUpdateHashFunc) /* {{{ */
 static PHP_INI_MH(OnUpdateRfc1867Freq) /* {{{ */
 {
 	int tmp;
-	tmp = zend_atoi(new_value->val, new_value->len);
+	tmp = zend_atoi(new_value->val, (int)new_value->len);
 	if(tmp < 0) {
 		php_error_docref(NULL, E_WARNING, "session.upload_progress.freq must be greater than or equal to zero");
 		return FAILURE;
@@ -1004,7 +1004,7 @@ PS_SERIALIZER_DECODE_FUNC(php) /* {{{ */
 	const char *endptr = val + vallen;
 	zval current;
 	int has_value;
-	int namelen;
+	ptrdiff_t namelen;
 	zend_string *name;
 	php_unserialize_data_t var_hash;
 
@@ -1216,7 +1216,7 @@ CACHE_LIMITER_FUNC(private_no_expire) /* {{{ */
 {
 	char buf[MAX_STR + 1];
 
-	snprintf(buf, sizeof(buf), "Cache-Control: private, max-age=" ZEND_LONG_FMT ", pre-check=" ZEND_LONG_FMT, PS(cache_expire) * 60, PS(cache_expire) * 60); /* SAFE */
+	snprintf(buf, sizeof(buf), "Cache-Control: private, max-age=" ZEND_LONG_FMT, PS(cache_expire) * 60); /* SAFE */
 	ADD_HEADER(buf);
 
 	last_modified();
@@ -1234,8 +1234,8 @@ CACHE_LIMITER_FUNC(nocache) /* {{{ */
 {
 	ADD_HEADER("Expires: Thu, 19 Nov 1981 08:52:00 GMT");
 
-	/* For HTTP/1.1 conforming clients and the rest (MSIE 5) */
-	ADD_HEADER("Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0");
+	/* For HTTP/1.1 conforming clients */
+	ADD_HEADER("Cache-Control: no-store, no-cache, must-revalidate");
 
 	/* For HTTP/1.0 conforming clients */
 	ADD_HEADER("Pragma: no-cache");
@@ -1988,7 +1988,7 @@ static PHP_FUNCTION(session_id)
 	if (PS(id)) {
 		/* keep compatibility for "\0" characters ???
 		 * see: ext/session/tests/session_id_error3.phpt */
-		int len = strlen(PS(id)->val);
+		size_t len = strlen(PS(id)->val);
 		if (UNEXPECTED(len != PS(id)->len)) {
 			RETVAL_NEW_STR(zend_string_init(PS(id)->val, len, 0));
 		} else {
@@ -2197,7 +2197,7 @@ static PHP_FUNCTION(session_start)
 	zval *value;
 	zend_ulong num_idx;
 	zend_string *str_idx;
-	int read_and_close = 0;
+	zend_long read_and_close = 0;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "|a", &options) == FAILURE) {
 		RETURN_FALSE;
@@ -3015,7 +3015,7 @@ zend_module_entry session_module_entry = {
 	PHP_MINIT(session), PHP_MSHUTDOWN(session),
 	PHP_RINIT(session), PHP_RSHUTDOWN(session),
 	PHP_MINFO(session),
-	NO_VERSION_YET,
+	PHP_SESSION_VERSION,
 	PHP_MODULE_GLOBALS(ps),
 	PHP_GINIT(ps),
 	NULL,

@@ -89,6 +89,7 @@ int zend_optimizer_lookup_cv(zend_op_array *op_array, zend_string* name)
 				opline->result.var += sizeof(zval);
 			}
 			if (opline->opcode == ZEND_DECLARE_INHERITED_CLASS ||
+			    opline->opcode == ZEND_DECLARE_ANON_INHERITED_CLASS ||
 			    opline->opcode == ZEND_DECLARE_INHERITED_CLASS_DELAYED) {
 				opline->extended_value += sizeof(zval);
 			}
@@ -109,6 +110,13 @@ int zend_optimizer_add_literal(zend_op_array *op_array, zval *zv)
 //???	Z_SET_REFCOUNT(op_array->literals[i].constant, 2);
 //???	Z_SET_ISREF(op_array->literals[i].constant);
 	return i;
+}
+
+int zend_optimizer_is_disabled_func(const char *name, size_t len) {
+	zend_function *fbc = (zend_function *)zend_hash_str_find_ptr(EG(function_table), name, len);
+
+	return (fbc && fbc->type == ZEND_INTERNAL_FUNCTION &&
+			fbc->internal_function.handler == ZEND_FN(display_disabled_function));
 }
 
 void zend_optimizer_update_op1_const(zend_op_array *op_array,
@@ -141,6 +149,10 @@ void zend_optimizer_update_op1_const(zend_op_array *op_array,
 					break;
 			}
 		} else {
+			if (opline->opcode == ZEND_CONCAT ||
+			    opline->opcode == ZEND_FAST_CONCAT) {
+				convert_to_string(val);
+			}
 			opline->op1.constant = zend_optimizer_add_literal(op_array, val);
 		}
 	}
@@ -158,9 +170,12 @@ void zend_optimizer_update_op2_const(zend_op_array *op_array,
 		Z_CACHE_SLOT(op_array->literals[opline->op2.constant]) = op_array->cache_size;
 		op_array->cache_size += sizeof(void*);
 		return;
-	} else if (opline->opcode == ZEND_ADD_VAR) {
+	} else if (opline->opcode == ZEND_ROPE_INIT ||
+			opline->opcode == ZEND_ROPE_ADD ||
+			opline->opcode == ZEND_ROPE_END ||
+			opline->opcode == ZEND_CONCAT ||
+			opline->opcode == ZEND_FAST_CONCAT) {
 		convert_to_string(val);
-		opline->opcode = ZEND_ADD_STRING;
 	}
 	opline->op2.constant = zend_optimizer_add_literal(op_array, val);
 	if (Z_TYPE_P(val) == IS_STRING) {
@@ -483,6 +498,8 @@ static void zend_accel_optimize(zend_op_array      *op_array,
 			case ZEND_JMP:
 			case ZEND_GOTO:
 			case ZEND_FAST_CALL:
+			case ZEND_DECLARE_ANON_CLASS:
+			case ZEND_DECLARE_ANON_INHERITED_CLASS:
 				ZEND_PASS_TWO_UNDO_JMP_TARGET(op_array, opline, ZEND_OP1(opline));
 				break;
 			case ZEND_JMPZNZ:
@@ -498,10 +515,12 @@ static void zend_accel_optimize(zend_op_array      *op_array,
 			case ZEND_NEW:
 			case ZEND_FE_RESET_R:
 			case ZEND_FE_RESET_RW:
-			case ZEND_FE_FETCH_R:
-			case ZEND_FE_FETCH_RW:
 			case ZEND_ASSERT_CHECK:
 				ZEND_PASS_TWO_UNDO_JMP_TARGET(op_array, opline, ZEND_OP2(opline));
+				break;
+			case ZEND_FE_FETCH_R:
+			case ZEND_FE_FETCH_RW:
+				opline->extended_value = ZEND_OFFSET_TO_OPLINE_NUM(op_array, opline, opline->extended_value);
 				break;
 		}
 		opline++;
@@ -524,6 +543,8 @@ static void zend_accel_optimize(zend_op_array      *op_array,
 			case ZEND_JMP:
 			case ZEND_GOTO:
 			case ZEND_FAST_CALL:
+			case ZEND_DECLARE_ANON_CLASS:
+			case ZEND_DECLARE_ANON_INHERITED_CLASS:
 				ZEND_PASS_TWO_UPDATE_JMP_TARGET(op_array, opline, ZEND_OP1(opline));
 				break;
 			case ZEND_JMPZNZ:
@@ -539,10 +560,12 @@ static void zend_accel_optimize(zend_op_array      *op_array,
 			case ZEND_NEW:
 			case ZEND_FE_RESET_R:
 			case ZEND_FE_RESET_RW:
-			case ZEND_FE_FETCH_R:
-			case ZEND_FE_FETCH_RW:
 			case ZEND_ASSERT_CHECK:
 				ZEND_PASS_TWO_UPDATE_JMP_TARGET(op_array, opline, ZEND_OP2(opline));
+				break;
+			case ZEND_FE_FETCH_R:
+			case ZEND_FE_FETCH_RW:
+				opline->extended_value = ZEND_OPLINE_NUM_TO_OFFSET(op_array, opline, opline->extended_value);
 				break;
 		}
 		ZEND_VM_SET_OPCODE_HANDLER(opline);

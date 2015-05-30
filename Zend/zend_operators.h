@@ -60,6 +60,8 @@ ZEND_API int ZEND_FASTCALL shift_left_function(zval *result, zval *op1, zval *op
 ZEND_API int ZEND_FASTCALL shift_right_function(zval *result, zval *op1, zval *op2);
 ZEND_API int ZEND_FASTCALL concat_function(zval *result, zval *op1, zval *op2);
 
+ZEND_API int ZEND_FASTCALL zend_is_identical(zval *op1, zval *op2);
+
 ZEND_API int ZEND_FASTCALL is_equal_function(zval *result, zval *op1, zval *op2);
 ZEND_API int ZEND_FASTCALL is_identical_function(zval *result, zval *op1, zval *op2);
 ZEND_API int ZEND_FASTCALL is_not_identical_function(zval *result, zval *op1, zval *op2);
@@ -267,8 +269,6 @@ static zend_always_inline zend_string *_zval_get_string(zval *op) {
 #define zval_get_double(op) _zval_get_double((op))
 #define zval_get_string(op) _zval_get_string((op))
 
-ZEND_API int ZEND_FASTCALL add_char_to_string(zval *result, const zval *op1, const zval *op2);
-ZEND_API int ZEND_FASTCALL add_string_to_string(zval *result, const zval *op1, const zval *op2);
 #define convert_to_cstring(op) if (Z_TYPE_P(op) != IS_STRING) { _convert_to_cstring((op) ZEND_FILE_LINE_CC); }
 #define convert_to_string(op) if (Z_TYPE_P(op) != IS_STRING) { _convert_to_string((op) ZEND_FILE_LINE_CC); }
 
@@ -418,10 +418,8 @@ ZEND_API void ZEND_FASTCALL zend_locale_sprintf_double(zval *op ZEND_FILE_LINE_D
 		convert_scalar_to_number(pzv);					\
 	}
 
-#if HAVE_SETLOCALE && defined(ZEND_WIN32) && !defined(ZTS) && defined(_MSC_VER) && (_MSC_VER >= 1400)
-/* This is performance improvement of tolower() on Windows and VC2005
- * Gives 10-18% on bench.php
- */
+#if HAVE_SETLOCALE && defined(ZEND_WIN32) && !defined(ZTS) && defined(_MSC_VER)
+/* This performance improvement of tolower() on Windows gives 10-18% on bench.php */
 #define ZEND_USE_TOLOWER_L 1
 #endif
 
@@ -779,52 +777,6 @@ static zend_always_inline void fast_long_sub_function(zval *result, zval *op1, z
 
 static zend_always_inline int fast_div_function(zval *result, zval *op1, zval *op2)
 {
-#if 0
-	if (EXPECTED(Z_TYPE_P(op1) == IS_LONG) && 0) {
-		if (EXPECTED(Z_TYPE_P(op2) == IS_LONG)) {
-			if (UNEXPECTED(Z_LVAL_P(op2) == 0)) {
-				zend_error(E_WARNING, "Division by zero");
-				ZVAL_BOOL(result, 0);
-				return FAILURE;
-			} else if (UNEXPECTED(Z_LVAL_P(op2) == -1 && Z_LVAL_P(op1) == ZEND_LONG_MIN)) {
-				/* Prevent overflow error/crash */
-				ZVAL_DOUBLE(result, (double) ZEND_LONG_MIN / -1);
-			} else if (EXPECTED(Z_LVAL_P(op1) % Z_LVAL_P(op2) == 0)) {
-				/* integer */
-				ZVAL_LONG(result, Z_LVAL_P(op1) / Z_LVAL_P(op2));
-			} else {
-				ZVAL_DOUBLE(result, ((double) Z_LVAL_P(op1)) / ((double)Z_LVAL_P(op2)));
-			}
-			return SUCCESS;
-		} else if (EXPECTED(Z_TYPE_P(op2) == IS_DOUBLE)) {
-			if (UNEXPECTED(Z_DVAL_P(op2) == 0)) {
-				zend_error(E_WARNING, "Division by zero");
-				ZVAL_BOOL(result, 0);
-				return FAILURE;
-			}
-			ZVAL_DOUBLE(result, ((double)Z_LVAL_P(op1)) / Z_DVAL_P(op2));
-			return SUCCESS;
-		}
-	} else if (EXPECTED(Z_TYPE_P(op1) == IS_DOUBLE) && 0) {
-		if (EXPECTED(Z_TYPE_P(op2) == IS_DOUBLE)) {
-			if (UNEXPECTED(Z_DVAL_P(op2) == 0)) {
-				zend_error(E_WARNING, "Division by zero");
-				ZVAL_BOOL(result, 0);
-				return FAILURE;
-			}
-			ZVAL_DOUBLE(result, Z_DVAL_P(op1) / Z_DVAL_P(op2));
-			return SUCCESS;
-		} else if (EXPECTED(Z_TYPE_P(op2) == IS_LONG)) {
-			if (UNEXPECTED(Z_LVAL_P(op2) == 0)) {
-				zend_error(E_WARNING, "Division by zero");
-				ZVAL_BOOL(result, 0);
-				return FAILURE;
-			}
-			ZVAL_DOUBLE(result, Z_DVAL_P(op1) / ((double)Z_LVAL_P(op2)));
-			return SUCCESS;
-		}
-	}
-#endif
 	return div_function(result, op1, op2);
 }
 
@@ -892,23 +844,24 @@ static zend_always_inline int fast_equal_check_string(zval *op1, zval *op2)
 	return Z_LVAL(result) == 0;
 }
 
-static zend_always_inline void fast_is_identical_function(zval *result, zval *op1, zval *op2)
+static zend_always_inline int fast_is_identical_function(zval *op1, zval *op2)
 {
 	if (Z_TYPE_P(op1) != Z_TYPE_P(op2)) {
-		ZVAL_FALSE(result);
-		return;
+		return 0;
+	} else if (Z_TYPE_P(op1) <= IS_TRUE) {
+		return 1;
 	}
-	is_identical_function(result, op1, op2);
+	return zend_is_identical(op1, op2);
 }
 
-static zend_always_inline void fast_is_not_identical_function(zval *result, zval *op1, zval *op2)
+static zend_always_inline int fast_is_not_identical_function(zval *op1, zval *op2)
 {
 	if (Z_TYPE_P(op1) != Z_TYPE_P(op2)) {
-		ZVAL_TRUE(result);
-		return;
+		return 1;
+	} else if (Z_TYPE_P(op1) <= IS_TRUE) {
+		return 0;
 	}
-	is_identical_function(result, op1, op2);
-	ZVAL_BOOL(result, Z_TYPE_P(result) != IS_TRUE);
+	return !zend_is_identical(op1, op2);
 }
 
 #define ZEND_TRY_BINARY_OP1_OBJECT_OPERATION(opcode, binary_op)                                            \

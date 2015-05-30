@@ -85,7 +85,6 @@ typedef struct _spl_SplObjectStorage { /* {{{ */
 	HashPosition      pos;
 	zend_long         flags;
 	zend_function    *fptr_get_hash;
-	HashTable        *debug_info;
 	zval             *gcdata;
 	size_t            gcdata_num;
 	zend_object       std;
@@ -111,11 +110,6 @@ void spl_SplObjectStorage_free_storage(zend_object *object) /* {{{ */
 	zend_object_std_dtor(&intern->std);
 
 	zend_hash_destroy(&intern->storage);
-
-	if (intern->debug_info != NULL) {
-		zend_hash_destroy(intern->debug_info);
-		efree(intern->debug_info);
-	}
 
 	if (intern->gcdata != NULL) {
 		efree(intern->gcdata);
@@ -320,39 +314,35 @@ static HashTable* spl_object_storage_debug_info(zval *obj, int *is_temp) /* {{{ 
 	zval tmp, storage;
 	zend_string *md5str;
 	zend_string *zname;
+	HashTable *debug_info;
 
-	*is_temp = 0;
+	*is_temp = 1;
 
 	props = Z_OBJPROP_P(obj);
 
-	if (intern->debug_info == NULL) {
-		ALLOC_HASHTABLE(intern->debug_info);
-		ZEND_INIT_SYMTABLE_EX(intern->debug_info, zend_hash_num_elements(props) + 1, 0);
-	}
+	ALLOC_HASHTABLE(debug_info);
+	ZEND_INIT_SYMTABLE_EX(debug_info, zend_hash_num_elements(props) + 1, 0);
+	zend_hash_copy(debug_info, props, (copy_ctor_func_t)zval_add_ref);
 
-	if (intern->debug_info->u.v.nApplyCount == 0) {
-		zend_hash_copy(intern->debug_info, props, (copy_ctor_func_t)zval_add_ref);
+	array_init(&storage);
 
-		array_init(&storage);
+	ZEND_HASH_FOREACH_PTR(&intern->storage, element) {
+		md5str = php_spl_object_hash(&element->obj);
+		array_init(&tmp);
+		/* Incrementing the refcount of obj and inf would confuse the garbage collector.
+		 * Prefer to null the destructor */
+		Z_ARRVAL_P(&tmp)->pDestructor = NULL;
+		add_assoc_zval_ex(&tmp, "obj", sizeof("obj") - 1, &element->obj);
+		add_assoc_zval_ex(&tmp, "inf", sizeof("inf") - 1, &element->inf);
+		zend_hash_update(Z_ARRVAL(storage), md5str, &tmp);
+		zend_string_release(md5str);
+	} ZEND_HASH_FOREACH_END();
 
-		ZEND_HASH_FOREACH_PTR(&intern->storage, element) {
-			md5str = php_spl_object_hash(&element->obj);
-			array_init(&tmp);
-			/* Incrementing the refcount of obj and inf would confuse the garbage collector.
-			 * Prefer to null the destructor */
-			Z_ARRVAL_P(&tmp)->pDestructor = NULL;
-			add_assoc_zval_ex(&tmp, "obj", sizeof("obj") - 1, &element->obj);
-			add_assoc_zval_ex(&tmp, "inf", sizeof("inf") - 1, &element->inf);
-			zend_hash_update(Z_ARRVAL(storage), md5str, &tmp);
-			zend_string_release(md5str);
-		} ZEND_HASH_FOREACH_END();
+	zname = spl_gen_private_prop_name(spl_ce_SplObjectStorage, "storage", sizeof("storage")-1);
+	zend_symtable_update(debug_info, zname, &storage);
+	zend_string_release(zname);
 
-		zname = spl_gen_private_prop_name(spl_ce_SplObjectStorage, "storage", sizeof("storage")-1);
-		zend_symtable_update(intern->debug_info, zname, &storage);
-		zend_string_release(zname);
-	}
-
-	return intern->debug_info;
+	return debug_info;
 }
 /* }}} */
 
@@ -976,18 +966,13 @@ SPL_METHOD(MultipleIterator, __construct)
 {
 	spl_SplObjectStorage   *intern;
 	zend_long               flags = MIT_NEED_ALL|MIT_KEYS_NUMERIC;
-	zend_error_handling error_handling;
 
-	zend_replace_error_handling(EH_THROW, spl_ce_InvalidArgumentException, &error_handling);
-
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "|l", &flags) == FAILURE) {
-		zend_restore_error_handling(&error_handling);
+	if (zend_parse_parameters_throw(ZEND_NUM_ARGS(), "|l", &flags) == FAILURE) {
 		return;
 	}
 
 	intern = Z_SPLOBJSTORAGE_P(getThis());
 	intern->flags = flags;
-	zend_restore_error_handling(&error_handling);
 }
 /* }}} */
 
@@ -1032,7 +1017,6 @@ SPL_METHOD(MultipleIterator, attachIterator)
 
 	if (info != NULL) {
 		spl_SplObjectStorageElement *element;
-		zval                         compare_result;
 
 		if (Z_TYPE_P(info) != IS_LONG && Z_TYPE_P(info) != IS_STRING) {
 			zend_throw_exception(spl_ce_InvalidArgumentException, "Info must be NULL, integer or string", 0);
@@ -1041,8 +1025,7 @@ SPL_METHOD(MultipleIterator, attachIterator)
 
 		zend_hash_internal_pointer_reset_ex(&intern->storage, &intern->pos);
 		while ((element = zend_hash_get_current_data_ptr_ex(&intern->storage, &intern->pos)) != NULL) {
-			is_identical_function(&compare_result, info, &element->inf);
-			if (Z_TYPE(compare_result) == IS_TRUE) {
+			if (fast_is_identical_function(info, &element->inf)) {
 				zend_throw_exception(spl_ce_InvalidArgumentException, "Key duplication error", 0);
 				return;
 			}

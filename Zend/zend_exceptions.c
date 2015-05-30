@@ -35,6 +35,7 @@ static zend_class_entry *default_exception_ce;
 static zend_class_entry *error_exception_ce;
 static zend_class_entry *engine_exception_ce;
 static zend_class_entry *parse_exception_ce;
+static zend_class_entry *type_exception_ce;
 static zend_object_handlers default_exception_handlers;
 ZEND_API void (*zend_throw_exception_hook)(zval *ex);
 
@@ -47,7 +48,7 @@ void zend_exception_set_previous(zend_object *exception, zend_object *add_previo
 	}
 	ZVAL_OBJ(&tmp, add_previous);
 	if (!instanceof_function(Z_OBJCE(tmp), base_exception_ce)) {
-		zend_error(E_ERROR, "Cannot set non exception as previous exception");
+		zend_error_noreturn(E_CORE_ERROR, "Cannot set non exception as previous exception");
 		return;
 	}
 	ZVAL_OBJ(&zv, exception);
@@ -115,7 +116,7 @@ ZEND_API void zend_throw_exception_internal(zval *exception) /* {{{ */
 		if(EG(exception)) {
 			zend_exception_error(EG(exception), E_ERROR);
 		}
-		zend_error(E_ERROR, "Exception thrown without a stack frame");
+		zend_error_noreturn(E_CORE_ERROR, "Exception thrown without a stack frame");
 	}
 
 	if (zend_throw_exception_hook) {
@@ -124,7 +125,7 @@ ZEND_API void zend_throw_exception_internal(zval *exception) /* {{{ */
 
 	if (!EG(current_execute_data)->func ||
 	    !ZEND_USER_CODE(EG(current_execute_data)->func->common.type) ||
-	    (EG(current_execute_data)->opline+1)->opcode == ZEND_HANDLE_EXCEPTION) {
+	    EG(current_execute_data)->opline->opcode == ZEND_HANDLE_EXCEPTION) {
 		/* no need to rethrow the exception */
 		return;
 	}
@@ -157,6 +158,7 @@ static zend_object *zend_default_exception_new_ex(zend_class_entry *class_type, 
 	zval obj;
 	zend_object *object;
 	zval trace;
+	zend_string *filename;
 
 	Z_OBJ(obj) = object = zend_objects_new(class_type);
 	Z_OBJ_HT(obj) = &default_exception_handlers;
@@ -170,11 +172,11 @@ static zend_object *zend_default_exception_new_ex(zend_class_entry *class_type, 
 	}
 	Z_SET_REFCOUNT(trace, 0);
 
-	if (EXPECTED(class_type != parse_exception_ce)) {
+	if (EXPECTED(class_type != parse_exception_ce || !(filename = zend_get_compiled_filename()))) {
 		zend_update_property_string(base_exception_ce, &obj, "file", sizeof("file")-1, zend_get_executed_filename());
 		zend_update_property_long(base_exception_ce, &obj, "line", sizeof("line")-1, zend_get_executed_lineno());
 	} else {
-		zend_update_property_string(base_exception_ce, &obj, "file", sizeof("file")-1, zend_get_compiled_filename()->val);
+		zend_update_property_string(base_exception_ce, &obj, "file", sizeof("file")-1, filename->val);
 		zend_update_property_long(base_exception_ce, &obj, "line", sizeof("line")-1, zend_get_compiled_lineno());
 	}
 	zend_update_property(base_exception_ce, &obj, "trace", sizeof("trace")-1, &trace);
@@ -214,7 +216,8 @@ ZEND_METHOD(exception, __construct)
 	int    argc = ZEND_NUM_ARGS();
 
 	if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, argc, "|SlO!", &message, &code, &previous, base_exception_ce) == FAILURE) {
-		zend_error(E_ERROR, "Wrong parameters for Exception([string $exception [, long $code [, Exception $previous = NULL]]])");
+		zend_error(E_EXCEPTION | E_ERROR, "Wrong parameters for Exception([string $exception [, long $code [, Exception $previous = NULL]]])");
+		return;
 	}
 
 	object = getThis();
@@ -244,7 +247,8 @@ ZEND_METHOD(error_exception, __construct)
 	size_t message_len, filename_len;
 
 	if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, argc, "|sllslO!", &message, &message_len, &code, &severity, &filename, &filename_len, &lineno, &previous, base_exception_ce) == FAILURE) {
-		zend_error(E_ERROR, "Wrong parameters for ErrorException([string $exception [, long $code, [ long $severity, [ string $filename, [ long $lineno  [, Exception $previous = NULL]]]]]])");
+		zend_error(E_EXCEPTION | E_ERROR, "Wrong parameters for ErrorException([string $exception [, long $code, [ long $severity, [ string $filename, [ long $lineno  [, Exception $previous = NULL]]]]]])");
+		return;
 	}
 
 	object = getThis();
@@ -554,6 +558,9 @@ ZEND_METHOD(exception, getTraceAsString)
 	DEFAULT_0_PARAMS;
 
 	trace = zend_read_property(base_exception_ce, getThis(), "trace", sizeof("trace")-1, 1, &rv);
+	if (Z_TYPE_P(trace) != IS_ARRAY) {
+		RETURN_FALSE;
+	}
 	ZEND_HASH_FOREACH_NUM_KEY_VAL(Z_ARRVAL_P(trace), index, frame) {
 		if (Z_TYPE_P(frame) != IS_ARRAY) {
 			zend_error(E_WARNING, "Expected array for frame %pu", index);
@@ -646,14 +653,20 @@ ZEND_METHOD(exception, __toString)
 			ZVAL_UNDEF(&trace);
 		}
 
+		if (Z_OBJCE_P(exception) == type_exception_ce && strstr(message->val, ", called in ")) {
+			zend_string *real_message = zend_strpprintf(0, "%s and defined", message->val);
+			zend_string_release(message);
+			message = real_message;
+		}
+
 		if (message->len > 0) {
-			str = zend_strpprintf(0, "exception '%s' with message '%s' in %s:" ZEND_LONG_FMT
+			str = zend_strpprintf(0, "%s: %s in %s:" ZEND_LONG_FMT
 					"\nStack trace:\n%s%s%s",
 					Z_OBJCE_P(exception)->name->val, message->val, file->val, line,
 					(Z_TYPE(trace) == IS_STRING && Z_STRLEN(trace)) ? Z_STRVAL(trace) : "#0 {main}\n",
 					prev_str->len ? "\n\nNext " : "", prev_str->val);
 		} else {
-			str = zend_strpprintf(0, "exception '%s' in %s:" ZEND_LONG_FMT
+			str = zend_strpprintf(0, "%s in %s:" ZEND_LONG_FMT
 					"\nStack trace:\n%s%s%s",
 					Z_OBJCE_P(exception)->name->val, file->val, line,
 					(Z_TYPE(trace) == IS_STRING && Z_STRLEN(trace)) ? Z_STRVAL(trace) : "#0 {main}\n",
@@ -747,7 +760,7 @@ void zend_register_default_exception(void) /* {{{ */
 	default_exception_ce = zend_register_internal_class_ex(&ce, base_exception_ce);
 	default_exception_ce->create_object = zend_default_exception_new;
 
-	/* A trick, to make visible prvate properties of BaseException */
+	/* A trick, to make visible private properties of BaseException */
 	ZEND_HASH_FOREACH_PTR(&default_exception_ce->properties_info, prop) {
 		if (prop->flags & ZEND_ACC_SHADOW) {
 			if (prop->name->len == sizeof("\0BaseException\0string")-1) {
@@ -778,6 +791,10 @@ void zend_register_default_exception(void) /* {{{ */
 	INIT_CLASS_ENTRY(ce, "ParseException", NULL);
 	parse_exception_ce = zend_register_internal_class_ex(&ce, base_exception_ce);
 	parse_exception_ce->create_object = zend_default_exception_new;
+
+	INIT_CLASS_ENTRY(ce, "TypeException", NULL);
+	type_exception_ce = zend_register_internal_class_ex(&ce, engine_exception_ce);
+	type_exception_ce->create_object = zend_default_exception_new;
 }
 /* }}} */
 
@@ -808,6 +825,12 @@ ZEND_API zend_class_entry *zend_get_engine_exception(void) /* {{{ */
 ZEND_API zend_class_entry *zend_get_parse_exception(void) /* {{{ */
 {
 	return parse_exception_ce;
+}
+/* }}} */
+
+ZEND_API zend_class_entry *zend_get_type_exception(void) /* {{{ */
+{
+	return type_exception_ce;
 }
 /* }}} */
 
@@ -892,16 +915,16 @@ ZEND_API void zend_exception_error(zend_object *ex, int severity) /* {{{ */
 	ZVAL_OBJ(&exception, ex);
 	ce_exception = Z_OBJCE(exception);
 	EG(exception) = NULL;
-	if (ce_exception == parse_exception_ce || ce_exception == engine_exception_ce) {
+	if (ce_exception == parse_exception_ce) {
 		zend_string *message = zval_get_string(GET_PROPERTY(&exception, "message"));
 		zend_string *file = zval_get_string(GET_PROPERTY_SILENT(&exception, "file"));
 		zend_long line = zval_get_long(GET_PROPERTY_SILENT(&exception, "line"));
 		zend_long code = zval_get_long(GET_PROPERTY_SILENT(&exception, "code"));
 
-		zend_error_helper(code, file->val, line, "%s", message->val);
+		zend_error_helper(code? code : E_ERROR, file->val, line, "%s", message->val);
+
 		zend_string_release(file);
 		zend_string_release(message);
-		OBJ_RELEASE(ex);
 	} else if (instanceof_function(ce_exception, base_exception_ce)) {
 		zval tmp, rv;
 		zend_string *str, *file = NULL;
@@ -948,6 +971,8 @@ ZEND_API void zend_exception_error(zend_object *ex, int severity) /* {{{ */
 	} else {
 		zend_error(severity, "Uncaught exception '%s'", ce_exception->name->val);
 	}
+
+	OBJ_RELEASE(ex);
 }
 /* }}} */
 
@@ -956,13 +981,14 @@ ZEND_API void zend_throw_exception_object(zval *exception) /* {{{ */
 	zend_class_entry *exception_ce;
 
 	if (exception == NULL || Z_TYPE_P(exception) != IS_OBJECT) {
-		zend_error(E_ERROR, "Need to supply an object when throwing an exception");
+		zend_error_noreturn(E_CORE_ERROR, "Need to supply an object when throwing an exception");
 	}
 
 	exception_ce = Z_OBJCE_P(exception);
 
 	if (!exception_ce || !instanceof_function(exception_ce, base_exception_ce)) {
-		zend_error(E_ERROR, "Exceptions must be valid objects derived from the Exception base class");
+		zend_error(E_EXCEPTION | E_ERROR, "Exceptions must be valid objects derived from the Exception base class");
+		return;
 	}
 	zend_throw_exception_internal(exception);
 }

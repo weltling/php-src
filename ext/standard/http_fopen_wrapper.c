@@ -124,7 +124,7 @@ php_stream *php_stream_url_wrap_http_ex(php_stream_wrapper *wrapper,
 	size_t scratch_len = 0;
 	int body = 0;
 	char location[HTTP_HEADER_BLOCK_SIZE];
-	zval *response_header = NULL;
+	zval response_header;
 	int reqok = 0;
 	char *http_header_line = NULL;
 	char tmp_line[128];
@@ -146,6 +146,7 @@ php_stream *php_stream_url_wrap_http_ex(php_stream_wrapper *wrapper,
 	int response_code;
 	zend_array *symbol_table;
 
+	ZVAL_UNDEF(&response_header);
 	tmp_line[0] = '\0';
 
 	if (redirect_max < 1) {
@@ -669,7 +670,15 @@ finish:
 		zend_set_local_var_str("http_response_header", sizeof("http_response_header")-1, &ztmp, 0);
 	}
 
-	response_header = zend_hash_str_find_ind(symbol_table, "http_response_header", sizeof("http_response_header")-1);
+	{
+		zval *response_header_ptr = zend_hash_str_find_ind(symbol_table, "http_response_header", sizeof("http_response_header")-1);
+		if (!response_header_ptr || Z_TYPE_P(response_header_ptr) != IS_ARRAY) {
+			ZVAL_UNDEF(&response_header);
+			goto out;
+		} else {
+			ZVAL_COPY(&response_header, response_header_ptr);
+		}
+	}
 
 	if (!php_stream_eof(stream)) {
 		size_t tmp_line_len;
@@ -717,7 +726,7 @@ finish:
 				}
 			}
 			ZVAL_STRINGL(&http_response, tmp_line, tmp_line_len);
-			zend_hash_next_index_insert(Z_ARRVAL_P(response_header), &http_response);
+			zend_hash_next_index_insert(Z_ARRVAL(response_header), &http_response);
 		}
 	} else {
 		php_stream_wrapper_log_error(wrapper, options, "HTTP request failed, unexpected end of socket!");
@@ -790,7 +799,7 @@ finish:
 
 				ZVAL_STRINGL(&http_header, http_header_line, http_header_line_length);
 
-				zend_hash_next_index_insert(Z_ARRVAL_P(response_header), &http_header);
+				zend_hash_next_index_insert(Z_ARRVAL(response_header), &http_header);
 			}
 		} else {
 			break;
@@ -904,7 +913,7 @@ out:
 
 	if (stream) {
 		if (header_init) {
-			ZVAL_COPY(&stream->wrapperdata, response_header);
+			ZVAL_COPY(&stream->wrapperdata, &response_header);
 		}
 		php_stream_notify_progress_init(context, 0, file_size);
 
@@ -925,9 +934,13 @@ out:
 		if (transfer_encoding) {
 			php_stream_filter_append(&stream->readfilters, transfer_encoding);
 		}
-	} else if (transfer_encoding) {
-		php_stream_filter_free(transfer_encoding);
+	} else {
+		if (transfer_encoding) {
+			php_stream_filter_free(transfer_encoding);
+		}
 	}
+
+	zval_ptr_dtor(&response_header);
 
 	return stream;
 }

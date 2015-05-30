@@ -45,9 +45,6 @@ typedef void (WINAPI *PGNSI)(LPSYSTEM_INFO);
 typedef BOOL (WINAPI *PGPI)(DWORD, DWORD, DWORD, DWORD, PDWORD);
 # include "winver.h"
 
-# if _MSC_VER < 1300
-#  define OSVERSIONINFOEX php_win_OSVERSIONINFOEX
-# endif
 #endif
 
 #define SECTION(name)	if (!sapi_module.phpinfo_as_text) { \
@@ -294,21 +291,14 @@ PHPAPI zend_string *php_info_html_esc(char *string)
 
 char* php_get_windows_name()
 {
-	OSVERSIONINFOEX osvi;
+	OSVERSIONINFOEX osvi = EG(windows_version_info);
 	SYSTEM_INFO si;
 	PGNSI pGNSI;
 	PGPI pGPI;
-	BOOL bOsVersionInfoEx;
 	DWORD dwType;
 	char *major = NULL, *sub = NULL, *retval;
 
 	ZeroMemory(&si, sizeof(SYSTEM_INFO));
-	ZeroMemory(&osvi, sizeof(OSVERSIONINFOEX));
-	osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
-
-	if (!(bOsVersionInfoEx = GetVersionEx ((OSVERSIONINFO *) &osvi))) {
-		return NULL;
-	}
 
 	pGNSI = (PGNSI) GetProcAddress(GetModuleHandle("kernel32.dll"), "GetNativeSystemInfo");
 	if(NULL != pGNSI) {
@@ -317,7 +307,17 @@ char* php_get_windows_name()
 		GetSystemInfo(&si);
 	}
 
-	if (VER_PLATFORM_WIN32_NT==osvi.dwPlatformId && osvi.dwMajorVersion > 4 ) {
+	if (VER_PLATFORM_WIN32_NT==osvi.dwPlatformId && osvi.dwMajorVersion >= 10) {
+		if (osvi.dwMajorVersion == 10) {
+			if( osvi.dwMinorVersion == 0 ) {
+				if( osvi.wProductType == VER_NT_WORKSTATION ) {
+					major = "Windows 10";
+				} else {
+					major = "Windows Server 2016";
+				}
+			}
+		}
+	} else if (VER_PLATFORM_WIN32_NT==osvi.dwPlatformId && osvi.dwMajorVersion >= 6) {
 		if (osvi.dwMajorVersion == 6) {
 			if( osvi.dwMinorVersion == 0 ) {
 				if( osvi.wProductType == VER_NT_WORKSTATION ) {
@@ -325,8 +325,7 @@ char* php_get_windows_name()
 				} else {
 					major = "Windows Server 2008";
 				}
-			} else
-			if ( osvi.dwMinorVersion == 1 ) {
+			} else if ( osvi.dwMinorVersion == 1 ) {
 				if( osvi.wProductType == VER_NT_WORKSTATION )  {
 					major = "Windows 7";
 				} else {
@@ -334,6 +333,11 @@ char* php_get_windows_name()
 				}
 			} else if ( osvi.dwMinorVersion == 2 ) {
 				/* could be Windows 8/Windows Server 2012, could be Windows 8.1/Windows Server 2012 R2 */
+				/* XXX and one more X - the above comment is true if no manifest is used for two cases:
+					- if the PHP build doesn't use the correct manifest
+					- if PHP DLL loaded under some binary that doesn't use the correct manifest 
+					
+					So keep the handling here as is for now, even if we know 6.2 is win8 and nothing else, and think about an improvement. */
 				OSVERSIONINFOEX osvi81;
 				DWORDLONG dwlConditionMask = 0;
 				int op = VER_GREATER_EQUAL;
@@ -363,6 +367,12 @@ char* php_get_windows_name()
 					} else {
 						major = "Windows Server 2012";
 					}
+				}
+			} else if (osvi.dwMinorVersion == 3) {
+				if( osvi.wProductType == VER_NT_WORKSTATION )  {
+					major = "Windows 8.1";
+				} else {
+					major = "Windows Server 2012 R2";
 				}
 			} else {
 				major = "Unknown Windows version";
@@ -423,78 +433,6 @@ char* php_get_windows_name()
 				case PRODUCT_WEB_SERVER:
 					sub = "Web Server Edition";
 					break;
-			}
-		}
-
-		if ( osvi.dwMajorVersion == 5 && osvi.dwMinorVersion == 2 ) {
-			if (GetSystemMetrics(SM_SERVERR2))
-				major = "Windows Server 2003 R2";
-			else if (osvi.wSuiteMask==VER_SUITE_STORAGE_SERVER)
-				major = "Windows Storage Server 2003";
-			else if (osvi.wSuiteMask==VER_SUITE_WH_SERVER)
-				major = "Windows Home Server";
-			else if (osvi.wProductType == VER_NT_WORKSTATION &&
-				si.wProcessorArchitecture==PROCESSOR_ARCHITECTURE_AMD64) {
-				major = "Windows XP Professional x64 Edition";
-			} else {
-				major = "Windows Server 2003";
-			}
-
-			/* Test for the server type. */
-			if ( osvi.wProductType != VER_NT_WORKSTATION ) {
-				if ( si.wProcessorArchitecture==PROCESSOR_ARCHITECTURE_IA64 ) {
-					if( osvi.wSuiteMask & VER_SUITE_DATACENTER )
-						sub = "Datacenter Edition for Itanium-based Systems";
-					else if( osvi.wSuiteMask & VER_SUITE_ENTERPRISE )
-						sub = "Enterprise Edition for Itanium-based Systems";
-				}
-
-				else if ( si.wProcessorArchitecture==PROCESSOR_ARCHITECTURE_AMD64 ) {
-					if( osvi.wSuiteMask & VER_SUITE_DATACENTER )
-						sub = "Datacenter x64 Edition";
-					else if( osvi.wSuiteMask & VER_SUITE_ENTERPRISE )
-						sub = "Enterprise x64 Edition";
-					else sub = "Standard x64 Edition";
-				} else {
-					if ( osvi.wSuiteMask & VER_SUITE_COMPUTE_SERVER )
-						sub = "Compute Cluster Edition";
-					else if( osvi.wSuiteMask & VER_SUITE_DATACENTER )
-						sub = "Datacenter Edition";
-					else if( osvi.wSuiteMask & VER_SUITE_ENTERPRISE )
-						sub = "Enterprise Edition";
-					else if ( osvi.wSuiteMask & VER_SUITE_BLADE )
-						sub = "Web Edition";
-					else sub = "Standard Edition";
-				}
-			}
-		}
-
-		if ( osvi.dwMajorVersion == 5 && osvi.dwMinorVersion == 1 )	{
-			major = "Windows XP";
-			if( osvi.wSuiteMask & VER_SUITE_PERSONAL ) {
-				sub = "Home Edition";
-			} else if (GetSystemMetrics(SM_MEDIACENTER)) {
-				sub = "Media Center Edition";
-			} else if (GetSystemMetrics(SM_STARTER)) {
-				sub = "Starter Edition";
-			} else if (GetSystemMetrics(SM_TABLETPC)) {
-				sub = "Tablet PC Edition";
-			} else {
-				sub = "Professional";
-			}
-		}
-
-		if ( osvi.dwMajorVersion == 5 && osvi.dwMinorVersion == 0 ) {
-			major = "Windows 2000";
-
-			if (osvi.wProductType == VER_NT_WORKSTATION ) {
-				sub = "Professional";
-			} else {
-				if( osvi.wSuiteMask & VER_SUITE_DATACENTER )
-					sub = "Datacenter Server";
-				else if( osvi.wSuiteMask & VER_SUITE_ENTERPRISE )
-					sub = "Advanced Server";
-				else sub = "Server";
 			}
 		}
 	} else {

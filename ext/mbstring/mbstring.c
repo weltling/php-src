@@ -572,7 +572,7 @@ zend_module_entry mbstring_module_entry = {
 	PHP_RINIT(mbstring),
 	PHP_RSHUTDOWN(mbstring),
 	PHP_MINFO(mbstring),
-	NO_VERSION_YET,
+	PHP_MBSTRING_VERSION,
 	PHP_MODULE_GLOBALS(mbstring),
 	PHP_GINIT(mbstring),
 	PHP_GSHUTDOWN(mbstring),
@@ -1716,11 +1716,13 @@ PHP_MINFO_FUNCTION(mbstring)
 		snprintf(tmp, sizeof(tmp), "%d.%d.%d", MBFL_VERSION_MAJOR, MBFL_VERSION_MINOR, MBFL_VERSION_TEENY);
 		php_info_print_table_row(2, "libmbfl version", tmp);
 	}
+#if HAVE_ONIG
 	{
 		char tmp[256];
 		snprintf(tmp, sizeof(tmp), "%d.%d.%d", ONIGURUMA_VERSION_MAJOR, ONIGURUMA_VERSION_MINOR, ONIGURUMA_VERSION_TEENY);
 		php_info_print_table_row(2, "oniguruma version", tmp);
 	}
+#endif
 	php_info_print_table_end();
 
 	php_info_print_table_start();

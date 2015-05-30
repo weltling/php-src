@@ -1451,7 +1451,7 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(arginfo_htmlspecialchars, 0, 0, 1)
 	ZEND_ARG_INFO(0, string)
 	ZEND_ARG_INFO(0, quote_style)
-	ZEND_ARG_INFO(0, charset)
+	ZEND_ARG_INFO(0, encoding)
 	ZEND_ARG_INFO(0, double_encode)
 ZEND_END_ARG_INFO()
 
@@ -1463,19 +1463,20 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(arginfo_html_entity_decode, 0, 0, 1)
 	ZEND_ARG_INFO(0, string)
 	ZEND_ARG_INFO(0, quote_style)
-	ZEND_ARG_INFO(0, charset)
+	ZEND_ARG_INFO(0, encoding)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_htmlentities, 0, 0, 1)
 	ZEND_ARG_INFO(0, string)
 	ZEND_ARG_INFO(0, quote_style)
-	ZEND_ARG_INFO(0, charset)
+	ZEND_ARG_INFO(0, encoding)
 	ZEND_ARG_INFO(0, double_encode)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_get_html_translation_table, 0, 0, 0)
 	ZEND_ARG_INFO(0, table)
 	ZEND_ARG_INFO(0, quote_style)
+	ZEND_ARG_INFO(0, encoding)
 ZEND_END_ARG_INFO()
 
 /* }}} */
@@ -1902,6 +1903,16 @@ ZEND_BEGIN_ARG_INFO(arginfo_getrandmax, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO(arginfo_mt_getrandmax, 0)
+ZEND_END_ARG_INFO()
+/* }}} */
+/* {{{ random.c */
+ZEND_BEGIN_ARG_INFO_EX(arginfo_random_bytes, 0, 0, 0)
+	ZEND_ARG_INFO(0, length)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_random_int, 0, 0, 0)
+	ZEND_ARG_INFO(0, min)
+	ZEND_ARG_INFO(0, max)
 ZEND_END_ARG_INFO()
 /* }}} */
 /* {{{ sha1.c */
@@ -2827,6 +2838,9 @@ const zend_function_entry basic_functions[] = { /* {{{ */
 	PHP_FE(mt_srand,														arginfo_mt_srand)
 	PHP_FE(mt_getrandmax,													arginfo_mt_getrandmax)
 
+	PHP_FE(random_bytes,													arginfo_random_bytes)
+	PHP_FE(random_int,													arginfo_random_int)
+
 #if HAVE_GETSERVBYNAME
 	PHP_FE(getservbyname,													arginfo_getservbyname)
 #endif
@@ -3372,7 +3386,7 @@ zend_module_entry basic_functions_module = { /* {{{ */
 	PHP_RINIT(basic),			/* request startup */
 	PHP_RSHUTDOWN(basic),		/* request shutdown */
 	PHP_MINFO(basic),			/* extension info */
-	PHP_VERSION,				/* extension version */
+	PHP_STANDARD_VERSION,		/* extension version */
 	STANDARD_MODULE_PROPERTIES
 };
 /* }}} */
@@ -3383,13 +3397,13 @@ static void php_putenv_destructor(zval *zv) /* {{{ */
 	putenv_entry *pe = Z_PTR_P(zv);
 
 	if (pe->previous_value) {
-#if _MSC_VER >= 1300
-		/* VS.Net has a bug in putenv() when setting a variable that
+# if defined(PHP_WIN32)
+		/* MSVCRT has a bug in putenv() when setting a variable that
 		 * is already set; if the SetEnvironmentVariable() API call
 		 * fails, the Crt will double free() a string.
 		 * We try to avoid this by setting our own value first */
 		SetEnvironmentVariable(pe->key, "bugbug");
-#endif
+# endif
 		putenv(pe->previous_value);
 # if defined(PHP_WIN32)
 		efree(pe->previous_value);
@@ -3657,6 +3671,8 @@ PHP_MINIT_FUNCTION(basic) /* {{{ */
 # endif
 #endif
 
+	BASIC_MINIT_SUBMODULE(random)
+
 	return SUCCESS;
 }
 /* }}} */
@@ -3694,6 +3710,8 @@ PHP_MSHUTDOWN_FUNCTION(basic) /* {{{ */
 #if HAVE_CRYPT
 	BASIC_MSHUTDOWN_SUBMODULE(crypt)
 #endif
+
+	BASIC_MSHUTDOWN_SUBMODULE(random)
 
 	zend_hash_destroy(&basic_submodules);
 	return SUCCESS;
@@ -3827,7 +3845,9 @@ PHP_FUNCTION(constant)
 	if (c) {
 		ZVAL_COPY_VALUE(return_value, c);
 		if (Z_CONSTANT_P(return_value)) {
-			zval_update_constant_ex(return_value, 1, NULL);
+			if (UNEXPECTED(zval_update_constant_ex(return_value, 1, NULL) != SUCCESS)) {
+				return;
+			}
 		}
 		zval_copy_ctor(return_value);
 	} else {
@@ -4124,7 +4144,7 @@ PHP_FUNCTION(putenv)
 		Obviously the CRT version will be useful more often. But
 		generally, doing both brings us on the safe track at least
 		in NTS build. */
-	&& _putenv(pe.putenv_string) == 0
+	&& _putenv_s(pe.key, value ? value : "") == 0
 # endif
 	) { /* success */
 # endif
@@ -4797,6 +4817,7 @@ PHP_FUNCTION(forward_static_call)
 	zval retval;
 	zend_fcall_info fci;
 	zend_fcall_info_cache fci_cache;
+	zend_class_entry *called_scope;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "f*", &fci, &fci_cache, &fci.params, &fci.param_count) == FAILURE) {
 		return;
@@ -4808,9 +4829,10 @@ PHP_FUNCTION(forward_static_call)
 
 	fci.retval = &retval;
 
-	if (EX(called_scope) &&
-		instanceof_function(EX(called_scope), fci_cache.calling_scope)) {
-			fci_cache.called_scope = EX(called_scope);
+	called_scope = zend_get_called_scope(execute_data);
+	if (called_scope &&
+		instanceof_function(called_scope, fci_cache.calling_scope)) {
+			fci_cache.called_scope = called_scope;
 	}
 
 	if (zend_call_function(&fci, &fci_cache) == SUCCESS && Z_TYPE(retval) != IS_UNDEF) {
@@ -4826,6 +4848,7 @@ PHP_FUNCTION(forward_static_call_array)
 	zval *params, retval;
 	zend_fcall_info fci;
 	zend_fcall_info_cache fci_cache;
+	zend_class_entry *called_scope;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "fa/", &fci, &fci_cache, &params) == FAILURE) {
 		return;
@@ -4834,9 +4857,10 @@ PHP_FUNCTION(forward_static_call_array)
 	zend_fcall_info_args(&fci, params);
 	fci.retval = &retval;
 
-	if (EX(called_scope) &&
-		instanceof_function(EX(called_scope), fci_cache.calling_scope)) {
-			fci_cache.called_scope = EX(called_scope);
+	called_scope = zend_get_called_scope(execute_data);
+	if (called_scope &&
+		instanceof_function(called_scope, fci_cache.calling_scope)) {
+			fci_cache.called_scope = called_scope;
 	}
 
 	if (zend_call_function(&fci, &fci_cache) == SUCCESS && Z_TYPE(retval) != IS_UNDEF) {
@@ -5385,7 +5409,7 @@ PHP_FUNCTION(set_include_path)
 	char *old_value;
 	zend_string *key;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "S", &new_value) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "P", &new_value) == FAILURE) {
 		return;
 	}
 

@@ -24,6 +24,7 @@
 #include "php.h"
 #include "php_math.h"
 #include "zend_multiply.h"
+#include "zend_exceptions.h"
 
 #include <math.h>
 #include <float.h>
@@ -326,9 +327,16 @@ PHP_FUNCTION(ceil)
 {
 	zval *value;
 
+#ifndef FAST_ZPP
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "z", &value) == FAILURE) {
 		return;
 	}
+#else
+	ZEND_PARSE_PARAMETERS_START(1, 1)
+		Z_PARAM_ZVAL(value)
+	ZEND_PARSE_PARAMETERS_END();
+#endif
+
 	convert_scalar_to_number_ex(value);
 
 	if (Z_TYPE_P(value) == IS_DOUBLE) {
@@ -346,9 +354,16 @@ PHP_FUNCTION(floor)
 {
 	zval *value;
 
+#ifndef FAST_ZPP
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "z", &value) == FAILURE) {
 		return;
 	}
+#else
+	ZEND_PARSE_PARAMETERS_START(1, 1)
+		Z_PARAM_ZVAL(value)
+	ZEND_PARSE_PARAMETERS_END();
+#endif
+
 	convert_scalar_to_number_ex(value);
 
 	if (Z_TYPE_P(value) == IS_DOUBLE) {
@@ -1452,12 +1467,13 @@ PHP_FUNCTION(intdiv)
 	}
 
 	if (divisor == 0) {
-		php_error_docref(NULL, E_WARNING, "Division by zero");
-		RETURN_BOOL(0);
+		zend_throw_exception_ex(NULL, 0, "Division by zero");
+		return;
 	} else if (divisor == -1 && numerator == ZEND_LONG_MIN) {
 		/* Prevent overflow error/crash
 		   We don't return a float here as that violates function contract */
-		RETURN_LONG(0);
+		zend_throw_exception_ex(NULL, 0, "Division of PHP_INT_MIN by -1 is not an integer");
+		return;
 	}
 
 	RETURN_LONG(numerator/divisor);

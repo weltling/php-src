@@ -122,9 +122,6 @@ php_file_globals file_globals;
 # include <wchar.h>
 #endif
 
-#ifndef S_ISDIR
-# define S_ISDIR(mode)	(((mode)&S_IFMT) == S_IFDIR)
-#endif
 /* }}} */
 
 #define PHP_STREAM_TO_ZVAL(stream, arg) \
@@ -522,7 +519,7 @@ PHP_FUNCTION(file_get_contents)
 	zend_bool use_include_path = 0;
 	php_stream *stream;
 	zend_long offset = -1;
-	zend_long maxlen = PHP_STREAM_COPY_ALL;
+	zend_long maxlen = (ssize_t) PHP_STREAM_COPY_ALL;
 	zval *zcontext = NULL;
 	php_stream_context *context = NULL;
 	zend_string *contents;
@@ -806,7 +803,7 @@ PHP_FUNCTION(tempnam)
 	int fd;
 	zend_string *p;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "ps", &dir, &dir_len, &prefix, &prefix_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "pp", &dir, &dir_len, &prefix, &prefix_len) == FAILURE) {
 		return;
 	}
 
@@ -900,11 +897,9 @@ PHPAPI PHP_FUNCTION(fclose)
 		RETURN_FALSE;
 	}
 
-	if (!stream->is_persistent) {
-		php_stream_close(stream);
-	} else {
-		php_stream_pclose(stream);
-	}
+	php_stream_free(stream,
+		PHP_STREAM_FREE_KEEP_RSRC |
+		(stream->is_persistent ? PHP_STREAM_FREE_CLOSE_PERSISTENT : PHP_STREAM_FREE_CLOSE));
 
 	RETURN_TRUE;
 }
@@ -1355,7 +1350,7 @@ PHP_FUNCTION(rmdir)
 	zval *zcontext = NULL;
 	php_stream_context *context;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "s|r", &dir, &dir_len, &zcontext) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "p|r", &dir, &dir_len, &zcontext) == FAILURE) {
 		RETURN_FALSE;
 	}
 
@@ -1665,7 +1660,7 @@ PHPAPI int php_copy_file(const char *src, const char *dest)
  */
 PHPAPI int php_copy_file_ex(const char *src, const char *dest, int src_flg)
 {
-	return php_copy_file_ctx(src, dest, 0, NULL);
+	return php_copy_file_ctx(src, dest, src_flg, NULL);
 }
 /* }}} */
 

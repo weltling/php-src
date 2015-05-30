@@ -197,7 +197,10 @@ PHPAPI struct lconv *localeconv_r(struct lconv *out)
 	tsrm_mutex_lock( locale_mutex );
 # endif
 
-#if defined(PHP_WIN32) && defined(ZTS)
+/*  cur->locinfo is struct __crt_locale_info which implementation is
+	hidden in vc14. TODO revisit this and check if a workaround available
+	and needed. */
+#if defined(PHP_WIN32) && _MSC_VER < 1900 && defined(ZTS)
 	{
 		/* Even with the enabled per thread locale, localeconv
 			won't check any locale change in the master thread. */
@@ -1079,18 +1082,22 @@ PHPAPI void php_explode(const zend_string *delim, zend_string *str, zval *return
 	char *p1 = str->val;
 	char *endp = str->val + str->len;
 	char *p2 = (char *) php_memnstr(str->val, delim->val, delim->len, endp);
+	zval  tmp;
 
 	if (p2 == NULL) {
-		add_next_index_str(return_value, zend_string_copy(str));
+		ZVAL_STR_COPY(&tmp, str);
+		zend_hash_next_index_insert_new(Z_ARRVAL_P(return_value), &tmp);
 	} else {
 		do {
-			add_next_index_stringl(return_value, p1, p2 - p1);
+			ZVAL_STRINGL(&tmp, p1, p2 - p1);
+			zend_hash_next_index_insert_new(Z_ARRVAL_P(return_value), &tmp);
 			p1 = p2 + delim->len;
 			p2 = (char *) php_memnstr(p1, delim->val, delim->len, endp);
 		} while (p2 != NULL && --limit > 1);
 
 		if (p1 <= endp) {
-			add_next_index_stringl(return_value, p1, endp - p1);
+			ZVAL_STRINGL(&tmp, p1, endp - p1);
+			zend_hash_next_index_insert_new(Z_ARRVAL_P(return_value), &tmp);
 		}
 	}
 }
@@ -1104,6 +1111,7 @@ PHPAPI void php_explode_negative_limit(const zend_string *delim, zend_string *st
 	char *p1 = str->val;
 	char *endp = str->val + str->len;
 	char *p2 = (char *) php_memnstr(str->val, delim->val, delim->len, endp);
+	zval  tmp;
 
 	if (p2 == NULL) {
 		/*
@@ -1128,8 +1136,8 @@ PHPAPI void php_explode_negative_limit(const zend_string *delim, zend_string *st
 		to_return = limit + found;
 		/* limit is at least -1 therefore no need of bounds checking : i will be always less than found */
 		for (i = 0; i < to_return; i++) { /* this checks also for to_return > 0 */
-			add_next_index_stringl(return_value, positions[i],
-					(positions[i+1] - delim->len) - positions[i]);
+			ZVAL_STRINGL(&tmp, positions[i], (positions[i+1] - delim->len) - positions[i]);
+			zend_hash_next_index_insert_new(Z_ARRVAL_P(return_value), &tmp);
 		}
 		efree(positions);
 	}
@@ -1143,6 +1151,7 @@ PHP_FUNCTION(explode)
 {
 	zend_string *str, *delim;
 	zend_long limit = ZEND_LONG_MAX; /* No limit */
+	zval tmp;
 
 #ifndef FAST_ZPP
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "SS|l", &delim, &str, &limit) == FAILURE) {
@@ -1166,7 +1175,8 @@ PHP_FUNCTION(explode)
 
 	if (str->len == 0) {
 	  	if (limit >= 0) {
-			add_next_index_str(return_value, STR_EMPTY_ALLOC());
+			ZVAL_EMPTY_STRING(&tmp);
+			zend_hash_index_add_new(Z_ARRVAL_P(return_value), 0, &tmp);
 		}
 		return;
 	}
@@ -1176,7 +1186,8 @@ PHP_FUNCTION(explode)
 	} else if (limit < 0) {
 		php_explode_negative_limit(delim, str, return_value, limit);
 	} else {
-		add_index_stringl(return_value, 0, str->val, str->len);
+		ZVAL_STR_COPY(&tmp, str);
+		zend_hash_index_add_new(Z_ARRVAL_P(return_value), 0, &tmp);
 	}
 }
 /* }}} */
@@ -1189,69 +1200,79 @@ PHP_FUNCTION(explode)
  */
 PHPAPI void php_implode(const zend_string *delim, zval *arr, zval *return_value)
 {
-	zval          *tmp;
-	smart_str      implstr = {0};
-	int            numelems, i = 0;
-	zend_string *str;
+	zval         *tmp;
+	int           numelems;
+	zend_string  *str;
+	char         *cptr;
+	size_t        len = 0;
+	zend_string **strings, **strptr;
 
 	numelems = zend_hash_num_elements(Z_ARRVAL_P(arr));
 
 	if (numelems == 0) {
 		RETURN_EMPTY_STRING();
+	} else if (numelems == 1) {
+		/* loop to search the first not undefined element... */
+		ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(arr), tmp) {
+			RETURN_STR(zval_get_string(tmp));
+		} ZEND_HASH_FOREACH_END();
 	}
 
+	strings = emalloc((sizeof(zend_long) + sizeof(zend_string *)) * numelems);
+	strptr = strings - 1;
+
 	ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(arr), tmp) {
-again:
-		switch (Z_TYPE_P(tmp)) {
-			case IS_STRING:
-				smart_str_append(&implstr, Z_STR_P(tmp));
-				break;
-
-			case IS_LONG:
-				smart_str_append_long(&implstr, Z_LVAL_P(tmp));
-				break;
-
-			case IS_TRUE:
-				smart_str_appendl(&implstr, "1", sizeof("1")-1);
-				break;
-
-			case IS_NULL:
-			case IS_FALSE:
-				break;
-
-			case IS_DOUBLE: {
-				char *stmp;
-				size_t str_len = spprintf(&stmp, 0, "%.*G", (int) EG(precision), Z_DVAL_P(tmp));
-				smart_str_appendl(&implstr, stmp, str_len);
-				efree(stmp);
-				break;
+		if (Z_TYPE_P(tmp) == IS_LONG) {
+			double val = Z_LVAL_P(tmp);
+			*++strptr = NULL;
+			((zend_long *) (strings + numelems))[strptr - strings] = Z_LVAL_P(tmp);
+			if (val < 0) {
+				val = -10 * val;
 			}
-
-			case IS_REFERENCE:
-				tmp = Z_REFVAL_P(tmp);
-				goto again;
-
-			default:
-				str = zval_get_string(tmp);
-				smart_str_append(&implstr, str);
-				zend_string_release(str);
-				break;
-
-		}
-
-		if (++i != numelems) {
-			smart_str_append(&implstr, delim);
+			if (val < 10) {
+				len++;
+			} else {
+				len += (int) log10(10 * (double) val);
+			}
+		} else {
+			*++strptr = zval_get_string(tmp);
+			len += (*strptr)->len;
 		}
 	} ZEND_HASH_FOREACH_END();
 
-	smart_str_0(&implstr);
+	str = zend_string_alloc(len + (numelems - 1) * delim->len, 0);
+	cptr = str->val + str->len;
+	*cptr = 0;
 
-	if (implstr.s) {
-		RETURN_NEW_STR(implstr.s);
+	do {
+		if (*strptr) {
+			cptr -= (*strptr)->len;
+			memcpy(cptr, (*strptr)->val, (*strptr)->len);
+			zend_string_release(*strptr);
+		} else {
+			char *oldPtr = cptr;
+			char oldVal = *cptr;
+			zend_long val = ((zend_long *) (strings + numelems))[strptr - strings];
+			cptr = zend_print_long_to_buf(cptr, val);
+			*oldPtr = oldVal;
+		}
+
+		cptr -= delim->len;
+		memcpy(cptr, delim->val, delim->len);
+	} while (--strptr > strings);
+
+	if (*strptr) {
+		memcpy(str->val, (*strptr)->val, (*strptr)->len);
+		zend_string_release(*strptr);
 	} else {
-		smart_str_free(&implstr);
-		RETURN_EMPTY_STRING();
+		char *oldPtr = cptr;
+		char oldVal = *cptr;
+		zend_print_long_to_buf(cptr, ((zend_long *) (strings + numelems))[strptr - strings]);
+		*oldPtr = oldVal;
 	}
+
+	efree(strings);
+	RETURN_NEW_STR(str);
 }
 /* }}} */
 
@@ -2528,25 +2549,7 @@ PHP_FUNCTION(substr_replace)
 		from_idx = len_idx = repl_idx = 0;
 
 		ZEND_HASH_FOREACH_KEY_VAL(Z_ARRVAL_P(str), num_index, str_index, tmp_str) {
-			zval *orig_str;
-			zval dummy;
-
-			if (Z_ISREF_P(tmp_str)) {
-				/* see bug #55871 */
-				ZVAL_DUP(&dummy, Z_REFVAL_P(tmp_str));
-				convert_to_string(&dummy);
-				orig_str = &dummy;
-			} else if (Z_TYPE_P(tmp_str) != IS_STRING) {
-				ZVAL_DUP(&dummy, tmp_str);
-				convert_to_string(&dummy);
-				orig_str = &dummy;
-			} else {
-				orig_str = tmp_str;
-			}
-
-			/*???
-			refcount = Z_REFCOUNT_P(orig_str);
-			*/
+			zend_string *orig_str = zval_get_string(tmp_str);
 
 			if (Z_TYPE_P(from) == IS_ARRAY) {
 				while (from_idx < Z_ARRVAL_P(from)->nNumUsed) {
@@ -2560,12 +2563,12 @@ PHP_FUNCTION(substr_replace)
 					f = zval_get_long(tmp_from);
 
 					if (f < 0) {
-						f = Z_STRLEN_P(orig_str) + f;
+						f = orig_str->len + f;
 						if (f < 0) {
 							f = 0;
 						}
-					} else if (f > Z_STRLEN_P(orig_str)) {
-						f = Z_STRLEN_P(orig_str);
+					} else if (f > orig_str->len) {
+						f = orig_str->len;
 					}
 					from_idx++;
 				} else {
@@ -2574,12 +2577,12 @@ PHP_FUNCTION(substr_replace)
 			} else {
 				f = Z_LVAL_P(from);
 				if (f < 0) {
-					f = Z_STRLEN_P(orig_str) + f;
+					f = orig_str->len + f;
 					if (f < 0) {
 						f = 0;
 					}
-				} else if (f > Z_STRLEN_P(orig_str)) {
-					f = Z_STRLEN_P(orig_str);
+				} else if (f > orig_str->len) {
+					f = orig_str->len;
 				}
 			}
 
@@ -2595,26 +2598,26 @@ PHP_FUNCTION(substr_replace)
 					l = zval_get_long(tmp_len);
 					len_idx++;
 				} else {
-					l = Z_STRLEN_P(orig_str);
+					l = orig_str->len;
 				}
 			} else if (argc > 3) {
 				l = Z_LVAL_P(len);
 			} else {
-				l = Z_STRLEN_P(orig_str);
+				l = orig_str->len;
 			}
 
 			if (l < 0) {
-				l = (Z_STRLEN_P(orig_str) - f) + l;
+				l = (orig_str->len - f) + l;
 				if (l < 0) {
 					l = 0;
 				}
 			}
 
-			if ((f + l) > Z_STRLEN_P(orig_str)) {
-				l = Z_STRLEN_P(orig_str) - f;
+			if ((f + l) > orig_str->len) {
+				l = orig_str->len - f;
 			}
 
-			result_len = Z_STRLEN_P(orig_str) - l;
+			result_len = orig_str->len - l;
 
 			if (Z_TYPE_P(repl) == IS_ARRAY) {
 				while (repl_idx < Z_ARRVAL_P(repl)->nNumUsed) {
@@ -2625,51 +2628,30 @@ PHP_FUNCTION(substr_replace)
 					repl_idx++;
 				}
 				if (repl_idx < Z_ARRVAL_P(repl)->nNumUsed) {
-					zval *repl_str;
-					zval zrepl;
+					zend_string *repl_str = zval_get_string(tmp_repl);
 
-					ZVAL_DEREF(tmp_repl);
-					if (Z_TYPE_P(tmp_repl) != IS_STRING) {
-						ZVAL_DUP(&zrepl, tmp_repl);
-						convert_to_string(&zrepl);
-						repl_str = &zrepl;
-					} else {
-						repl_str = tmp_repl;
-					}
-					/*???
-					if (Z_REFCOUNT_P(orig_str) != refcount) {
-						php_error_docref(NULL, E_WARNING, "Argument was modified while replacing");
-						if (Z_TYPE_P(tmp_repl) != IS_STRING) {
-							zval_dtor(repl_str);
-						}
-						break;
-					}
-					*/
-
-					result_len += Z_STRLEN_P(repl_str);
+					result_len += repl_str->len;
 					repl_idx++;
 					result = zend_string_alloc(result_len, 0);
 
-					memcpy(result->val, Z_STRVAL_P(orig_str), f);
-					memcpy((result->val + f), Z_STRVAL_P(repl_str), Z_STRLEN_P(repl_str));
-					memcpy((result->val + f + Z_STRLEN_P(repl_str)), Z_STRVAL_P(orig_str) + f + l, Z_STRLEN_P(orig_str) - f - l);
-					if(Z_TYPE_P(tmp_repl) != IS_STRING) {
-						zval_dtor(repl_str);
-					}
+					memcpy(result->val, orig_str->val, f);
+					memcpy((result->val + f), repl_str->val, repl_str->len);
+					memcpy((result->val + f + repl_str->len), orig_str->val + f + l, orig_str->len - f - l);
+					zend_string_release(repl_str);
 				} else {
 					result = zend_string_alloc(result_len, 0);
 
-					memcpy(result->val, Z_STRVAL_P(orig_str), f);
-					memcpy((result->val + f), Z_STRVAL_P(orig_str) + f + l, Z_STRLEN_P(orig_str) - f - l);
+					memcpy(result->val, orig_str->val, f);
+					memcpy((result->val + f), orig_str->val + f + l, orig_str->len - f - l);
 				}
 			} else {
 				result_len += Z_STRLEN_P(repl);
 
 				result = zend_string_alloc(result_len, 0);
 
-				memcpy(result->val, Z_STRVAL_P(orig_str), f);
+				memcpy(result->val, orig_str->val, f);
 				memcpy((result->val + f), Z_STRVAL_P(repl), Z_STRLEN_P(repl));
-				memcpy((result->val + f + Z_STRLEN_P(repl)), Z_STRVAL_P(orig_str) + f + l, Z_STRLEN_P(orig_str) - f - l);
+				memcpy((result->val + f + Z_STRLEN_P(repl)), orig_str->val + f + l, orig_str->len - f - l);
 			}
 
 			result->val[result->len] = '\0';
@@ -2683,11 +2665,7 @@ PHP_FUNCTION(substr_replace)
 				add_index_str(return_value, num_index, result);
 			}
 
-			if(Z_TYPE_P(tmp_str) != IS_STRING) {
-				zval_dtor(orig_str);
-			} else {
-//???			Z_SET_ISREF_TO_P(orig_str, was_ref);
-			}
+			zend_string_release(orig_str);
 		} ZEND_HASH_FOREACH_END();
 	} /* if */
 }
@@ -3009,19 +2987,20 @@ static void php_strtr_array(zval *return_value, zend_string *input, HashTable *p
 	int num_keys = 0;
 	size_t minlen = 128*1024;
 	size_t maxlen = 0;
-	HashTable str_hash, num_hash;
+	HashTable str_hash;
 	zval *entry, tmp, dummy;
 	char *key;
 	smart_str result = {0};
 	zend_ulong bitset[256/sizeof(zend_ulong)];
+	zend_ulong *num_bitset;
 
 	/* we will collect all possible key lengths */
 	ZVAL_NULL(&dummy);
-	zend_hash_init(&num_hash, 8, NULL, NULL, 0);
+	num_bitset = ecalloc((slen + (sizeof(zend_ulong)-1)) / sizeof(zend_ulong), sizeof(zend_ulong));
 	memset(bitset, 0, sizeof(bitset));
 
 	/* check if original array has numeric keys */
-	ZEND_HASH_FOREACH_KEY(pats, num_key, str_key) {
+	ZEND_HASH_FOREACH_STR_KEY(pats, str_key) {
 		if (UNEXPECTED(!str_key)) {
 			num_keys = 1;
 		} else {
@@ -3039,12 +3018,12 @@ static void php_strtr_array(zval *return_value, zend_string *input, HashTable *p
 				minlen = len;
 			}
 			/* remember possible key length */
-			zend_hash_index_add(&num_hash, len, &dummy);
+			num_bitset[len / sizeof(zend_ulong)] |= Z_UL(1) << (len % sizeof(zend_ulong));
 			bitset[((unsigned char)str_key->val[0]) / sizeof(zend_ulong)] |= Z_UL(1) << (((unsigned char)str_key->val[0]) % sizeof(zend_ulong));
 		}
 	} ZEND_HASH_FOREACH_END();
 
-	if (num_keys) {
+	if (UNEXPECTED(num_keys)) {
 		/* we have to rebuild HashTable with numeric keys */
 		zend_hash_init(&str_hash, zend_hash_num_elements(pats), NULL, NULL, 0);
 		ZEND_HASH_FOREACH_KEY_VAL(pats, num_key, str_key, entry) {
@@ -3065,7 +3044,7 @@ static void php_strtr_array(zval *return_value, zend_string *input, HashTable *p
 					minlen = len;
 				}
 				/* remember possible key length */
-				zend_hash_index_add(&num_hash, len, &dummy);
+				num_bitset[len / sizeof(zend_ulong)] |= Z_UL(1) << (len % sizeof(zend_ulong));
 				bitset[((unsigned char)str_key->val[0]) / sizeof(zend_ulong)] |= Z_UL(1) << (((unsigned char)str_key->val[0]) % sizeof(zend_ulong));
 			} else {
 				len = str_key->len;
@@ -3087,22 +3066,20 @@ static void php_strtr_array(zval *return_value, zend_string *input, HashTable *p
 		if (pats == &str_hash) {
 			zend_hash_destroy(&str_hash);
 		}
-		zend_hash_destroy(&num_hash);
-		RETURN_STRINGL(str, slen);
+		efree(num_bitset);
+		RETURN_STR_COPY(input);
 	}
-	/* select smart or simple algorithm */
-	// TODO: tune the condition ???
-	len = zend_hash_num_elements(&num_hash);
-	if ((maxlen - (minlen - 1) - len > 0) &&
-		/* smart algorithm, sort key lengths first */
-		zend_hash_sort(&num_hash, php_strtr_key_compare, 0) == SUCCESS) {
 
-		old_pos = pos = 0;
-		while (pos <= slen - minlen) {
-			key = str + pos;
-			ZEND_HASH_FOREACH_NUM_KEY(&num_hash, len) {
-				if (len > slen - pos) continue;
-				if ((bitset[((unsigned char)key[0]) / sizeof(zend_ulong)] & Z_UL(1) << (((unsigned char)key[0]) % sizeof(zend_ulong))) == 0) continue;
+	old_pos = pos = 0;
+	while (pos <= slen - minlen) {
+		key = str + pos;
+		if (bitset[((unsigned char)key[0]) / sizeof(zend_ulong)] & Z_UL(1) << (((unsigned char)key[0]) % sizeof(zend_ulong))) {
+			len = maxlen;
+			if (len > slen - pos) {
+				len = slen - pos;
+			}
+			while (len >= minlen) {
+				if (num_bitset[len / sizeof(zend_ulong)] & Z_UL(1) << (len % sizeof(zend_ulong)) == 0) continue;
 				entry = zend_hash_str_find(pats, key, len);
 				if (entry != NULL) {
 					zend_string *s = zval_get_string(entry);
@@ -3113,33 +3090,12 @@ static void php_strtr_array(zval *return_value, zend_string *input, HashTable *p
 					zend_string_release(s);
 					break;
 				}
-			} ZEND_HASH_FOREACH_END();
-			pos++;
-		}
-	} else {
-		/* use simple algorithm */
-		old_pos = pos = 0;
-		while (pos <= slen - minlen) {
-			if (maxlen > slen - pos) {
-				maxlen = slen - pos;
+				len--;
 			}
-			key = str + pos;
-			for (len = maxlen; len >= minlen; len--) {
-				if ((bitset[((unsigned char)key[0]) / sizeof(zend_ulong)] & Z_UL(1) << (((unsigned char)key[0]) % sizeof(zend_ulong))) == 0) continue;
-				entry = zend_hash_str_find(pats, key, len);
-				if (entry != NULL) {
-					zend_string *s = zval_get_string(entry);
-					smart_str_appendl(&result, str + old_pos, pos - old_pos);
-					smart_str_append(&result, s);
-					old_pos = pos + len;
-					pos = old_pos - 1;
-					zend_string_release(s);
-					break;
-				}
-			}
-			pos++;
 		}
+		pos++;
 	}
+
 	if (result.s) {
 		smart_str_appendl(&result, str + old_pos, slen - old_pos);
 		smart_str_0(&result);
@@ -3152,7 +3108,7 @@ static void php_strtr_array(zval *return_value, zend_string *input, HashTable *p
 	if (pats == &str_hash) {
 		zend_hash_destroy(&str_hash);
 	}
-	zend_hash_destroy(&num_hash);
+	efree(num_bitset);
 }
 /* }}} */
 

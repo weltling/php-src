@@ -397,7 +397,7 @@ PHP_FUNCTION(stream_get_contents)
 {
 	php_stream	*stream;
 	zval		*zsrc;
-	zend_long		maxlen		= PHP_STREAM_COPY_ALL,
+	zend_long		maxlen		= (ssize_t) PHP_STREAM_COPY_ALL,
 				desiredpos	= -1L;
 	zend_string *contents;
 
@@ -1493,7 +1493,7 @@ PHP_FUNCTION(stream_resolve_include_path)
 	size_t filename_len;
 	zend_string *resolved_path;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "s", &filename, &filename_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "p", &filename, &filename_len) == FAILURE) {
 		return;
 	}
 

@@ -177,7 +177,7 @@ union YYSTYPE
 
 	zval value;
 	struct {
-		zval key;
+		zend_string *key;
 		zval val;
 	} pair;
 
@@ -204,7 +204,7 @@ int php_json_yyparse (php_json_parser *parser);
 int php_json_yylex(union YYSTYPE *value, php_json_parser *parser);
 void php_json_yyerror(php_json_parser *parser, char const *msg);
 void php_json_parser_object_init(php_json_parser *parser, zval *object);
-void php_json_parser_object_update(php_json_parser *parser, zval *object, zval *zkey, zval *zvalue);
+void php_json_parser_object_update(php_json_parser *parser, zval *object, zend_string *key, zval *zvalue);
 void php_json_parser_array_init(zval *object);
 void php_json_parser_array_append(zval *array, zval *zvalue);
 
@@ -1143,7 +1143,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, php_json_parser *p
 
     case 25: /* pair  */
 
-      { zval_dtor(&((*yyvaluep).pair).key); zval_dtor(&((*yyvaluep).pair).val); }
+      { zend_string_release(((*yyvaluep).pair).key); zval_dtor(&((*yyvaluep).pair).val); }
 
         break;
 
@@ -1447,7 +1447,7 @@ yyreduce:
     {
         case 2:
 
-    { (yyval.value) = (yyvsp[-1].value); ZVAL_COPY_VALUE(parser->return_value, &(yyvsp[-1].value)); PHP_JSON_USE((yyvsp[0].value)); YYACCEPT; }
+    { ZVAL_COPY_VALUE(&(yyval.value), &(yyvsp[-1].value)); ZVAL_COPY_VALUE(parser->return_value, &(yyvsp[-1].value)); PHP_JSON_USE((yyvsp[0].value)); YYACCEPT; }
 
     break;
 
@@ -1483,13 +1483,13 @@ yyreduce:
 
   case 10:
 
-    { php_json_parser_object_init(parser, &(yyval.value)); php_json_parser_object_update(parser, &(yyval.value), &(yyvsp[0].pair).key, &(yyvsp[0].pair).val); }
+    { php_json_parser_object_init(parser, &(yyval.value)); php_json_parser_object_update(parser, &(yyval.value), (yyvsp[0].pair).key, &(yyvsp[0].pair).val); }
 
     break;
 
   case 11:
 
-    { php_json_parser_object_update(parser, &(yyvsp[-2].value), &(yyvsp[0].pair).key, &(yyvsp[0].pair).val); (yyval.value) = (yyvsp[-2].value); }
+    { php_json_parser_object_update(parser, &(yyvsp[-2].value), (yyvsp[0].pair).key, &(yyvsp[0].pair).val); ZVAL_COPY_VALUE(&(yyval.value), &(yyvsp[-2].value)); }
 
     break;
 
@@ -1501,7 +1501,7 @@ yyreduce:
 
   case 13:
 
-    { (yyval.pair).key = (yyvsp[-2].value); (yyval.pair).val = (yyvsp[0].value); }
+    { (yyval.pair).key = Z_STR((yyvsp[-2].value)); ZVAL_COPY_VALUE(&(yyval.pair).val, &(yyvsp[0].value)); }
 
     break;
 
@@ -1519,7 +1519,7 @@ yyreduce:
 
   case 16:
 
-    { PHP_JSON_DEPTH_DEC; (yyval.value) = (yyvsp[-1].value); }
+    { PHP_JSON_DEPTH_DEC; ZVAL_COPY_VALUE(&(yyval.value), &(yyvsp[-1].value)); }
 
     break;
 
@@ -1543,7 +1543,7 @@ yyreduce:
 
   case 22:
 
-    { php_json_parser_array_append(&(yyvsp[-2].value), &(yyvsp[0].value)); (yyval.value) = (yyvsp[-2].value); }
+    { php_json_parser_array_append(&(yyvsp[-2].value), &(yyvsp[0].value)); ZVAL_COPY_VALUE(&(yyval.value), &(yyvsp[-2].value)); }
 
     break;
 
@@ -1814,25 +1814,25 @@ void php_json_parser_object_init(php_json_parser *parser, zval *object)
 	}
 }
 
-void php_json_parser_object_update(php_json_parser *parser, zval *object, zval *zkey, zval *zvalue)
+void php_json_parser_object_update(php_json_parser *parser, zval *object, zend_string *key, zval *zvalue)
 {
-	char *key = Z_STRVAL_P(zkey);
-	int key_len = Z_STRLEN_P(zkey);
-
-	if (parser->scanner.options & PHP_JSON_OBJECT_AS_ARRAY) {
-		add_assoc_zval_ex(object, key, key_len, zvalue);
+	/* if JSON_OBJECT_AS_ARRAY is set */
+	if (Z_TYPE_P(object) == IS_ARRAY) {
+		zend_symtable_update(Z_ARRVAL_P(object), key, zvalue);
 	} else {
-		if (key_len == 0) {
-			key = "_empty_";
-			key_len = sizeof("_empty_") - 1;
+		zval zkey;
+		if (key->len == 0) {
+			zend_string_release(key);
+			key = zend_string_init("_empty_", sizeof("_empty_") - 1, 0);
 		}
-		add_property_zval_ex(object, key, key_len, zvalue);
+		ZVAL_NEW_STR(&zkey, key);
+		zend_std_write_property(object, &zkey, zvalue, NULL); 
 
 		if (Z_REFCOUNTED_P(zvalue)) {
 			Z_DELREF_P(zvalue);
 		}
 	}
-	zval_dtor(zkey);
+	zend_string_release(key);
 }
 
 void php_json_parser_array_init(zval *array)
@@ -1842,7 +1842,7 @@ void php_json_parser_array_init(zval *array)
 
 void php_json_parser_array_append(zval *array, zval *zvalue)
 {
-	add_next_index_zval(array, zvalue);
+	zend_hash_next_index_insert(Z_ARRVAL_P(array), zvalue);
 }
 	
 int php_json_yylex(union YYSTYPE *value, php_json_parser *parser)

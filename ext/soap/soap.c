@@ -460,7 +460,7 @@ zend_module_entry soap_module_entry = {
   NULL,
   PHP_MINFO(soap),
 #ifdef STANDARD_MODULE_HEADER
-  NO_VERSION_YET,
+  PHP_SOAP_VERSION,
 #endif
   STANDARD_MODULE_PROPERTIES,
 };
@@ -668,6 +668,7 @@ PHP_MINIT_FUNCTION(soap)
 		fe.prototype = NULL;
 		fe.num_args = 2;
 		fe.arg_info = NULL;
+		zend_set_function_arg_flags((zend_function*)&fe);
 
 		INIT_OVERLOADED_CLASS_ENTRY(ce, PHP_SOAP_CLIENT_CLASSNAME, soap_client_functions,
 			(zend_function *)&fe, NULL, NULL);
@@ -2595,7 +2596,18 @@ static int do_request(zval *this_ptr, xmlDoc *request, char *location, char *act
 			add_soap_fault(this_ptr, "Client", "SoapClient::__doRequest() failed", NULL, NULL);
 			ret = FALSE;
 		} else if (Z_TYPE_P(response) != IS_STRING) {
-			if ((fault = zend_hash_str_find(Z_OBJPROP_P(this_ptr), "__soap_fault", sizeof("__soap_fault")-1)) == NULL) {
+			if (EG(exception) && instanceof_function(EG(exception)->ce, zend_get_engine_exception())) {
+				zval rv;
+				zend_string *msg;
+				zval exception_object;
+
+				ZVAL_OBJ(&exception_object, EG(exception));
+				msg = zval_get_string(zend_read_property(zend_exception_get_base(), &exception_object, "message", sizeof("message")-1, 0, &rv));
+				/* change class */
+				EG(exception)->ce = soap_fault_class_entry;
+				set_soap_fault(&exception_object, NULL, "Client", msg->val, NULL, NULL, NULL);
+				zend_string_release(msg);
+			} else if ((fault = zend_hash_str_find(Z_OBJPROP_P(this_ptr), "__soap_fault", sizeof("__soap_fault")-1)) == NULL) {
 				add_soap_fault(this_ptr, "Client", "SoapClient::__doRequest() returned non string value", NULL, NULL);
 			}
 			ret = FALSE;
@@ -2797,6 +2809,7 @@ static void do_soap_call(zend_execute_data *execute_data,
 				ZVAL_COPY(return_value, fault);
 			} else {
 				add_soap_fault_ex(return_value, this_ptr, "Client", "Unknown Error", NULL, NULL);
+				Z_ADDREF_P(return_value);
 			}
 		} else {
 			zval* fault;
@@ -3171,7 +3184,7 @@ PHP_METHOD(SoapClient, __getCookies)
 
 	if ((cookies = zend_hash_str_find(Z_OBJPROP_P(getThis()), "_cookies", sizeof("_cookies")-1)) != NULL &&
 	    Z_TYPE_P(cookies) == IS_ARRAY) {
-		ZVAL_ARR(return_value, zend_array_dup(Z_ARRVAL_P(cookies)));
+		RETURN_ARR(zend_array_dup(Z_ARRVAL_P(cookies)));
 	} else {
 		array_init(return_value);
 	}
