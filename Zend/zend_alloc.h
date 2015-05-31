@@ -41,6 +41,14 @@
 
 #define ZEND_MM_ALIGNED_SIZE(size)	(((size) + ZEND_MM_ALIGNMENT - Z_L(1)) & ZEND_MM_ALIGNMENT_MASK)
 
+#ifndef ZEND_HEAP_ALIGNMENT
+# ifdef ZEND_ENABLE_ZVAL_LONG64
+#  define ZEND_HEAP_ALIGNMENT Z_UL(16)
+# else
+#  define ZEND_HEAP_ALIGNMENT Z_UL(8)
+# endif
+#endif
+
 typedef struct _zend_leak_info {
 	void *addr;
 	size_t size;
@@ -184,18 +192,20 @@ ZEND_API void ZEND_FASTCALL _efree_huge(void *, size_t size);
 #define zend_mem_block_size_rel(ptr)			_zend_mem_block_size((ptr) ZEND_FILE_LINE_RELAY_CC ZEND_FILE_LINE_CC)
 
 
-/* XXX make zend_aligned_malloc accept alignment and do sanity checks */
 #ifdef ZEND_WIN32
 #if ZEND_DEBUG
-#define zend_aligned_malloc(len) _aligned_malloc_dbg(len, ZEND_MM_ALIGNMENT ZEND_FILE_LINE_CC)
-#define zend_aligned_realloc(p, len) _aligned_realloc_dbg(p, len, ZEND_MM_ALIGNMENT ZEND_FILE_LINE_CC)
+#define zend_aligned_malloc_exp(len, alignment) _aligned_malloc_dbg(len, alignment ZEND_FILE_LINE_CC)
+#define zend_aligned_malloc(len) _aligned_malloc_dbg(len, ZEND_HEAP_ALIGNMENT ZEND_FILE_LINE_CC)
+#define zend_aligned_realloc(p, len) _aligned_realloc_dbg(p, len, ZEND_HEAP_ALIGNMENT ZEND_FILE_LINE_CC)
 #define zend_aligned_free(p) _aligned_free_dbg(p)
 #else
-#define zend_aligned_malloc(len) _aligned_malloc(len, ZEND_MM_ALIGNMENT)
-#define zend_aligned_realloc(p, len) _aligned_realloc(p, len, ZEND_MM_ALIGNMENT)
+#define zend_aligned_malloc_exp(len, alignment) _aligned_malloc(len, alignment)
+#define zend_aligned_malloc(len) _aligned_malloc(len, ZEND_HEAP_ALIGNMENT)
+#define zend_aligned_realloc(p, len) _aligned_realloc(p, len, ZEND_HEAP_ALIGNMENT)
 #define zend_aligned_free(p) _aligned_free(p)
 #endif
 #else
+#define zend_aligned_malloc_exp malloc(len)
 #define zend_aligned_malloc malloc(len)
 #define zend_aligned_realloc(p, len) realloc(p, len)
 #define zend_aligned_free(p) free(p)
