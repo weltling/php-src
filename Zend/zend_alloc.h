@@ -23,6 +23,7 @@
 #define ZEND_ALLOC_H
 
 #include <stdio.h>
+#include <errno.h>
 
 #include "../TSRM/TSRM.h"
 #include "zend.h"
@@ -205,8 +206,25 @@ ZEND_API void ZEND_FASTCALL _efree_huge(void *, size_t size);
 #define zend_aligned_free(p) _aligned_free(p)
 #endif
 #else
-#define zend_aligned_malloc_exp malloc(len)
-#define zend_aligned_malloc malloc(len)
+zend_always_inline static void *zend_aligned_malloc_exp(size_t len, size_t alignment)
+{
+	void *tmp;
+	int ret;
+
+	ret = posix_memalign(&tmp, alignment, len);
+	if (!ret) {
+		return tmp;
+	}
+
+	if (EINVAL == ret) {
+		fprintf(stderr, "Invalid alignment\n");
+		return NULL;
+	} else {
+		fprintf(stderr, "Out of memory\n");
+	}
+	exit(1);
+}
+#define zend_aligned_malloc(len) zend_aligned_malloc_exp(len, ZEND_HEAP_ALIGNMENT)
 #define zend_aligned_realloc(p, len) realloc(p, len)
 #define zend_aligned_free(p) free(p)
 #endif
