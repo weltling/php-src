@@ -506,7 +506,11 @@ try_again:
 			break;
 		}
 		case IS_TRUE:
-			ZVAL_NEW_STR(op, zend_string_init("1", 1, 0));
+			if (CG(one_char_string)['1']) {
+				ZVAL_INTERNED_STR(op, CG(one_char_string)['1']);
+			} else {
+				ZVAL_NEW_STR(op, zend_string_init("1", 1, 0));
+			}
 			break;
 		case IS_STRING:
 			break;
@@ -797,7 +801,11 @@ try_again:
 		case IS_FALSE:
 			return ZSTR_EMPTY_ALLOC();
 		case IS_TRUE:
-			return zend_string_init("1", 1, 0);
+			if (CG(one_char_string)['1']) {
+				return CG(one_char_string)['1'];
+			} else {
+				return zend_string_init("1", 1, 0);
+			}
 		case IS_RESOURCE: {
 			char buf[sizeof("Resource id #") + MAX_LENGTH_OF_LONG];
 			int len;
@@ -1103,40 +1111,24 @@ ZEND_API int ZEND_FASTCALL div_function(zval *result, zval *op1, zval *op2) /* {
 	while (1) {
 		switch (TYPE_PAIR(Z_TYPE_P(op1), Z_TYPE_P(op2))) {
 			case TYPE_PAIR(IS_LONG, IS_LONG):
-				if (Z_LVAL_P(op2) == 0) {
-					zend_error(E_WARNING, "Division by zero");
-					ZVAL_DOUBLE(result, ((double) Z_LVAL_P(op1) / (double) Z_LVAL_P(op2)));
-					return SUCCESS;
-				} else if (Z_LVAL_P(op2) == -1 && Z_LVAL_P(op1) == ZEND_LONG_MIN) {
-					/* Prevent overflow error/crash */
-					ZVAL_DOUBLE(result, (double) ZEND_LONG_MIN / -1);
-					return SUCCESS;
-				}
-				if (Z_LVAL_P(op1) % Z_LVAL_P(op2) == 0) { /* integer */
-					ZVAL_LONG(result, Z_LVAL_P(op1) / Z_LVAL_P(op2));
-				} else {
+				/* prevent crashes (arithmetic exception) */
+				if (UNEXPECTED(Z_LVAL_P(op2) == 0 || (Z_LVAL_P(op2) == -1 && Z_LVAL_P(op1) == ZEND_LONG_MIN) || Z_LVAL_P(op1) % Z_LVAL_P(op2) != 0)) {
 					ZVAL_DOUBLE(result, ((double) Z_LVAL_P(op1)) / Z_LVAL_P(op2));
+					return SUCCESS;
+				} else {
+					ZVAL_LONG(result, Z_LVAL_P(op1) / Z_LVAL_P(op2));
 				}
 				return SUCCESS;
 
 			case TYPE_PAIR(IS_DOUBLE, IS_LONG):
-				if (Z_LVAL_P(op2) == 0) {
-					zend_error(E_WARNING, "Division by zero");
-				}
 				ZVAL_DOUBLE(result, Z_DVAL_P(op1) / (double)Z_LVAL_P(op2));
 				return SUCCESS;
 
 			case TYPE_PAIR(IS_LONG, IS_DOUBLE):
-				if (Z_DVAL_P(op2) == 0) {
-					zend_error(E_WARNING, "Division by zero");
-				}
 				ZVAL_DOUBLE(result, (double)Z_LVAL_P(op1) / Z_DVAL_P(op2));
 				return SUCCESS;
 
 			case TYPE_PAIR(IS_DOUBLE, IS_DOUBLE):
-				if (Z_DVAL_P(op2) == 0) {
-					zend_error(E_WARNING, "Division by zero");
-				}
 				ZVAL_DOUBLE(result, Z_DVAL_P(op1) / Z_DVAL_P(op2));
 				return SUCCESS;
 
@@ -1173,7 +1165,7 @@ ZEND_API int ZEND_FASTCALL mod_function(zval *result, zval *op1, zval *op2) /* {
 	if (op2_lval == 0) {
 		/* modulus by zero */
 		if (EG(current_execute_data) && !CG(in_compilation)) {
-			zend_throw_exception_ex(NULL, 0, "Division by zero");
+			zend_throw_exception_ex(zend_ce_division_by_zero_error, 0, "Modulo by zero");
 		} else {
 			zend_error_noreturn(E_ERROR, "Division by zero");
 		}
@@ -2130,8 +2122,12 @@ static void ZEND_FASTCALL increment_string(zval *str) /* {{{ */
 
 	if (Z_STRLEN_P(str) == 0) {
 		zend_string_release(Z_STR_P(str));
-		Z_STR_P(str) = zend_string_init("1", sizeof("1")-1, 0);
-		Z_TYPE_INFO_P(str) = IS_STRING_EX;
+		if (CG(one_char_string)['1']) {
+			ZVAL_INTERNED_STR(str, CG(one_char_string)['1']);
+		} else {
+			Z_STR_P(str) = zend_string_init("1", sizeof("1")-1, 0);
+			Z_TYPE_INFO_P(str) = IS_STRING_EX;
+		}
 		return;
 	}
 
@@ -2414,6 +2410,34 @@ ZEND_API void ZEND_FASTCALL zend_str_tolower(char *str, size_t length) /* {{{ */
 		*p = zend_tolower_ascii(*p);
 		p++;
 	}
+}
+/* }}} */
+
+ZEND_API char* ZEND_FASTCALL zend_str_tolower_dup_ex(const char *source, size_t length) /* {{{ */
+{
+	register const unsigned char *p = (const unsigned char*)source;
+	register const unsigned char *end = p + length;
+
+	while (p < end) {
+		if (*p != zend_tolower_ascii(*p)) {
+			char *res = (char*)emalloc(length + 1);
+			register unsigned char *r;
+
+			if (p != (const unsigned char*)source) {
+				memcpy(res, source, p - (const unsigned char*)source);
+			}
+			r = (unsigned char*)p + (res - source);
+			while (p < end) {
+				*r = zend_tolower_ascii(*p);
+				p++;
+				r++;
+			}
+			*r = '\0';
+			return res;
+		}
+		p++;
+	}
+	return NULL;
 }
 /* }}} */
 
