@@ -7,7 +7,7 @@ Francesco Fullone ff@ideato.it
 --SKIPIF--
 <?php
 	if (!extension_loaded('pcntl')) die('skip pcntl extension not available');
-	elseif (!extension_loaded('posix')) die('skip posix extension not available');
+	elseif (!function_exists('pcntl_fork')) die('skip pcntl_fork() not available');
 ?>
 --FILE--
 <?php

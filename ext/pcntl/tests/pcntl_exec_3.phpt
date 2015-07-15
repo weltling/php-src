@@ -1,5 +1,5 @@
 --TEST--
-pcntl_exec() 3
+pcntl_exec() with bad parameters
 --SKIPIF--
 <?php if (!extension_loaded("pcntl")) print "skip"; ?>
 --FILE--

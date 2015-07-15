@@ -30,7 +30,6 @@ extern zend_module_entry pcntl_module_entry;
 #define PHP_PCNTL_VERSION PHP_VERSION
 
 PHP_MINIT_FUNCTION(pcntl);
-PHP_MSHUTDOWN_FUNCTION(pcntl);
 PHP_RINIT_FUNCTION(pcntl);
 PHP_RSHUTDOWN_FUNCTION(pcntl);
 PHP_MINFO_FUNCTION(pcntl);
@@ -50,6 +49,7 @@ PHP_FUNCTION(pcntl_wtermsig);
 PHP_FUNCTION(pcntl_wstopsig);
 PHP_FUNCTION(pcntl_signal);
 PHP_FUNCTION(pcntl_signal_dispatch);
+PHP_FUNCTION(pcntl_raise);
 PHP_FUNCTION(pcntl_get_last_error);
 PHP_FUNCTION(pcntl_strerror);
 #ifdef HAVE_SIGPROCMASK
@@ -66,6 +66,7 @@ PHP_FUNCTION(pcntl_getpriority);
 #ifdef HAVE_SETPRIORITY
 PHP_FUNCTION(pcntl_setpriority);
 #endif
+PHP_FUNCTION(pcntl_spawn);
 
 struct php_pcntl_pending_signal {
 	struct php_pcntl_pending_signal *next;

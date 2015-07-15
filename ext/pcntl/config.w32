@@ -1,0 +1,8 @@
+// $Id$
+// vim:ft=javascript
+
+ARG_ENABLE('pcntl', 'Process control support', 'no');
+
+if (PHP_PCNTL != 'no') {
+	EXTENSION('pcntl', 'pcntl.c php_signal.c pcntl_win.c');
+}

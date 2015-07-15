@@ -2,24 +2,22 @@
 pcntl_signal()
 --SKIPIF--
 <?php if (!extension_loaded("pcntl")) print "skip"; ?>
-<?php if (!extension_loaded("posix")) die("skip posix extension not available"); ?>
 --FILE--
 <?php
 pcntl_signal(SIGTERM, function($signo){
 	echo "signal dispatched\n";
 });
-posix_kill(posix_getpid(), SIGTERM);
+pcntl_raise(SIGTERM);
 pcntl_signal_dispatch();
 
 var_dump(pcntl_signal());
-var_dump(pcntl_signal(SIGALRM, SIG_IGN));
+var_dump(pcntl_signal(SIGILL, SIG_IGN));
 var_dump(pcntl_signal(-1, -1));
 var_dump(pcntl_signal(-1, function(){}));
-var_dump(pcntl_signal(SIGALRM, "not callable"));
-
+var_dump(pcntl_signal(SIGILL, "not callable"));
 
 /* test freeing queue in RSHUTDOWN */
-posix_kill(posix_getpid(), SIGTERM);
+pcntl_raise(SIGTERM);
 echo "ok\n";
 ?>
 --EXPECTF--

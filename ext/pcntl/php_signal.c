@@ -23,13 +23,41 @@
 #include "Zend/zend.h"
 #include "Zend/zend_signal.h"
 
+#ifdef PHP_WIN32
+static _invalid_parameter_handler old_invalid_parameter_handler;
+
+void swallow_invalid_parameter_handler(const wchar_t * expression, const wchar_t *function, const wchar_t *file, unsigned int line, uintptr_t pReserved)
+{
+		/* Do nothing */
+}
+
+/* Windows does not HAVE sigaction available to it, instead signal must be used */
+Sigfunc *php_signal(int signo, Sigfunc *func, int restart)
+{
+	Sigfunc *value;
+
+	/* Bad voodoo - PHP has a CRT invalid parameter handler, that's nice, but we'll be 
+	   checking for errors in a moment and don't need double warnings! */
+	old_invalid_parameter_handler = _set_invalid_parameter_handler(swallow_invalid_parameter_handler);
+
+	/* Do the call */
+	value = signal(signo, func);
+
+	/* Restore the previous handler - my word this is ugly */
+	if (old_invalid_parameter_handler != NULL) {
+		_set_invalid_parameter_handler(old_invalid_parameter_handler);
+	}
+
+	return value;
+}
+#else
+
 /* php_signal using sigaction is derived from Advanced Programing
  * in the Unix Environment by W. Richard Stevens p 298. */
 Sigfunc *php_signal4(int signo, Sigfunc *func, int restart, int mask_all)
 {
 	struct sigaction act,oact;
-#ifdef ZEND_SIGNALS
-#endif
+
 	act.sa_handler = func;
 	if (mask_all) {
 		sigfillset(&act.sa_mask);
@@ -62,6 +90,8 @@ Sigfunc *php_signal(int signo, Sigfunc *func, int restart)
 {
 	return php_signal4(signo, func, restart, 0);
 }
+
+#endif
 
 /*
  * Local variables:
