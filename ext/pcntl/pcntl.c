@@ -838,7 +838,7 @@ PHP_FUNCTION(pcntl_wifsignaled)
    Returns true if the child status code represents a process that was resumed due to a SIGCONT signal */
 PHP_FUNCTION(pcntl_wifcontinued)
 {
-#ifdef HAVE_WCONTINUED
+#if defined(HAVE_WCONTINUED) && defined(WIFCONTINUED)
 	zend_long status_word;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "l", &status_word) == FAILURE) {
