@@ -217,7 +217,7 @@ ZEND_GET_MODULE(pcntl)
 #endif
 
 static void pcntl_signal_handler(int);
-static void pcntl_signal_dispatch();
+static void pcntl_signal_dispatch(int);
 
 void php_register_signal_constants(INIT_FUNC_ARGS)
 {
@@ -1078,7 +1078,7 @@ PHP_FUNCTION(pcntl_signal_dispatch)
 		return;
 	}
 
-	pcntl_signal_dispatch();
+	pcntl_signal_dispatch(0);
 	RETURN_TRUE;
 }
 /* }}} */
@@ -1402,7 +1402,7 @@ static void pcntl_signal_handler(int signo)
 	PCNTL_G(pending_signals) = 1;
 }
 
-void pcntl_signal_dispatch()
+void pcntl_signal_dispatch(int tick_count)
 {
 	zval param, *handle, retval;
 	struct php_pcntl_pending_signal *queue, *next;
