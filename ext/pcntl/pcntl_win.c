@@ -22,7 +22,8 @@
 #include "pcntl_win.h"
 
 /* Implementation of waitpid - only supports WNOHANG for options */
-pid_t waitpid (pid_t pid, int *stat_loc, int options) {
+pid_t waitpid (pid_t pid, int *stat_loc, int options)
+{
     DWORD timeout;
 
     if (options == WNOHANG) {
@@ -49,11 +50,14 @@ pid_t wait (int *stat_loc) {
 }
 
 /* Implementation of alarm using timers */
-unsigned int alarm(unsigned int seconds) {
+unsigned int alarm(unsigned int seconds)
+{
+	return 0;
 }
 
 /* Implementation of setpriority using SetPriorityClass */
-int setpriority(int which, int who, int prio) {
+int setpriority(int which, int who, int prio)
+{
 	HANDLE process;
 	zend_bool close_handle = 0;
 	DWORD dwFlag = NORMAL_PRIORITY_CLASS;
