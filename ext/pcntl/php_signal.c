@@ -21,7 +21,10 @@
 #include "TSRM.h"
 #include "php_signal.h"
 #include "Zend/zend.h"
-#include "Zend/zend_signal.h"
+
+#ifndef PHP_WIN32
+# include "Zend/zend_signal.h"
+#endif
 
 #ifdef PHP_WIN32
 static _invalid_parameter_handler old_invalid_parameter_handler;
