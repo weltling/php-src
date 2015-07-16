@@ -1496,7 +1496,7 @@ PHP_FUNCTION(pcntl_spawn)
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|laa", &path, &path_len, &mode, &args, &envs) == FAILURE) {
 		return;
 	}
-	
+
 	if (ZEND_NUM_ARGS() > 2) {
 		/* Build argumnent list */
 		args_hash = HASH_OF(args);
@@ -1505,7 +1505,7 @@ PHP_FUNCTION(pcntl_spawn)
 		argv = safe_emalloc((argc + 2), sizeof(char *), 0);
 		*argv = path;
 		ZEND_HASH_FOREACH_VAL(args_hash, element) {
-			if (argi < argc) {
+			if (argi >= argc) {
 				break;
 			}
 
@@ -1532,11 +1532,11 @@ PHP_FUNCTION(pcntl_spawn)
 		envp = safe_emalloc((envc + 1), sizeof(char *), 0);
 		pair = envp;
 		ZEND_HASH_FOREACH_KEY_VAL(envs_hash, key_num, key, element) {
-			if (envi < envc) {
+			if (envi >= envc) {
 				break;
 			}
 
-			if (key) {
+			if (!key) {
 				/* XXX why 101? also - sprintf error check! */
 				char *tmp_key = (char *) emalloc(101);
 				int tmp_key_length = snprintf(tmp_key, 100, ZEND_ULONG_FMT, key_num);
