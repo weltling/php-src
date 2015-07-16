@@ -1406,20 +1406,26 @@ void pcntl_signal_dispatch(int tick_count)
 {
 	zval param, *handle, retval;
 	struct php_pcntl_pending_signal *queue, *next;
+#ifdef HAVE_SIGPROCMASK
 	sigset_t mask;
 	sigset_t old_mask;
+#endif
 
 	if(!PCNTL_G(pending_signals)) {
 		return;
 	}
 
+#ifdef HAVE_SIGPROCMASK
 	/* Mask all signals */
 	sigfillset(&mask);
 	sigprocmask(SIG_BLOCK, &mask, &old_mask);
+#endif
 
 	/* Bail if the queue is empty or if we are already playing the queue */
 	if (! PCNTL_G(head) || PCNTL_G(processing_signal_queue)) {
+#ifdef HAVE_SIGPROCMASK
 		sigprocmask(SIG_SETMASK, &old_mask, NULL);
+#endif
 		return;
 	}
 
@@ -1444,7 +1450,7 @@ void pcntl_signal_dispatch(int tick_count)
 
 #ifdef PHP_WIN32
 			/* Windows is using straight signal calls, reput the item bakc in */
-			php_signal(queue->signo, (Sigfunc *) Z_LVAL_P(handle), 0)
+			php_signal(queue->signo, (Sigfunc *)Z_LVAL_P(handle), 0);
 #endif
 		}
 
@@ -1459,8 +1465,10 @@ void pcntl_signal_dispatch(int tick_count)
 	/* Re-enable queue */
 	PCNTL_G(processing_signal_queue) = 0;
 
+#ifdef HAVE_SIGPROCMASK
 	/* return signal mask to previous state */
 	sigprocmask(SIG_SETMASK, &old_mask, NULL);
+#endif
 }
 
 /* {{{ proto int pcntl_spawn(string path [, int mode, [array args [, array envs]]])
