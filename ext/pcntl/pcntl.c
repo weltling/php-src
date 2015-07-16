@@ -1518,7 +1518,6 @@ PHP_FUNCTION(pcntl_spawn)
 			current_arg++;
 
 		} ZEND_HASH_FOREACH_END();
-		*(current_arg) = NULL;
 	} else {
 		argv = emalloc(2 * sizeof(char *));
 		*argv = path;
