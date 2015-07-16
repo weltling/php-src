@@ -158,7 +158,7 @@ ZEND_END_ARG_INFO()
 /* }}} */
 
 const zend_function_entry pcntl_functions[] = {
-#ifdef fork
+#ifdef HAVE_FORK
 	PHP_FE(pcntl_fork,				arginfo_pcntl_void)
 #endif
 	PHP_FE(pcntl_waitpid,			arginfo_pcntl_waitpid)
@@ -603,7 +603,7 @@ PHP_MINFO_FUNCTION(pcntl)
 	php_info_print_table_end();
 }
 
-#ifdef fork
+#ifdef HAVE_FORK
 /* {{{ proto int pcntl_fork(void)
    Forks the currently running process following the same behavior as the UNIX fork() system call
    (not available on Windows) */
