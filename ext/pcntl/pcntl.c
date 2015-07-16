@@ -143,12 +143,14 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_pcntl_strerror, 0, 0, 1)
         ZEND_ARG_INFO(0, errno)
 ZEND_END_ARG_INFO()
 
+#if 0
 ZEND_BEGIN_ARG_INFO_EX(arginfo_pcntl_spawn, 0, 0, 1)
 	ZEND_ARG_INFO(0, path)
 	ZEND_ARG_INFO(0, mode)
 	ZEND_ARG_INFO(0, args)
 	ZEND_ARG_INFO(0, envs)
 ZEND_END_ARG_INFO()
+#endif
 
 ZEND_BEGIN_ARG_INFO(arginfo_pcntl_raise, 0)
 	ZEND_ARG_INFO(0, signal)
@@ -173,7 +175,9 @@ const zend_function_entry pcntl_functions[] = {
 	PHP_FE(pcntl_alarm,				arginfo_pcntl_alarm)
 	PHP_FE(pcntl_get_last_error,	arginfo_pcntl_void)
 	PHP_FALIAS(pcntl_errno,			pcntl_get_last_error,	arginfo_pcntl_void)
+#if 0
 	PHP_FE(pcntl_spawn, 			arginfo_pcntl_spawn)
+#endif
 	PHP_FE(pcntl_raise,				arginfo_pcntl_raise)
 	PHP_FE(pcntl_strerror,			arginfo_pcntl_strerror) 
 #ifdef HAVE_GETPRIORITY
@@ -1471,6 +1475,7 @@ void pcntl_signal_dispatch(int tick_count)
 #endif
 }
 
+#if 0
 /* {{{ proto int pcntl_spawn(string path [, int mode, [array args [, array envs]]])
    implemented as fork + exec for most systems
    roughly equivalent to fork + exec, this uses win32 api calls on windows */
@@ -1632,6 +1637,7 @@ PHP_FUNCTION(pcntl_spawn)
 	RETURN_LONG(pid);
 }
 /* }}} */
+#endif
 
 
 /*
