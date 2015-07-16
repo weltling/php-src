@@ -42,6 +42,9 @@
 typedef INT_PTR intptr_t;
 #endif
 
+/* mask_all is ignored on Windows */
+#define php_signal4(signo, func, restart, mask_all) php_signal(signo, func, restart)
+
 pid_t waitpid(pid_t pid, int *stat_loc, int options);
 pid_t wait(int *stat_loc);
 unsigned int alarm(unsigned int seconds);
