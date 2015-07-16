@@ -143,14 +143,12 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_pcntl_strerror, 0, 0, 1)
         ZEND_ARG_INFO(0, errno)
 ZEND_END_ARG_INFO()
 
-#if 0
 ZEND_BEGIN_ARG_INFO_EX(arginfo_pcntl_spawn, 0, 0, 1)
 	ZEND_ARG_INFO(0, path)
 	ZEND_ARG_INFO(0, mode)
 	ZEND_ARG_INFO(0, args)
 	ZEND_ARG_INFO(0, envs)
 ZEND_END_ARG_INFO()
-#endif
 
 ZEND_BEGIN_ARG_INFO(arginfo_pcntl_raise, 0)
 	ZEND_ARG_INFO(0, signal)
@@ -175,9 +173,7 @@ const zend_function_entry pcntl_functions[] = {
 	PHP_FE(pcntl_alarm,				arginfo_pcntl_alarm)
 	PHP_FE(pcntl_get_last_error,	arginfo_pcntl_void)
 	PHP_FALIAS(pcntl_errno,			pcntl_get_last_error,	arginfo_pcntl_void)
-#if 0
 	PHP_FE(pcntl_spawn, 			arginfo_pcntl_spawn)
-#endif
 	PHP_FE(pcntl_raise,				arginfo_pcntl_raise)
 	PHP_FE(pcntl_strerror,			arginfo_pcntl_strerror) 
 #ifdef HAVE_GETPRIORITY
@@ -1475,14 +1471,13 @@ void pcntl_signal_dispatch(int tick_count)
 #endif
 }
 
-#if 0
 /* {{{ proto int pcntl_spawn(string path [, int mode, [array args [, array envs]]])
    implemented as fork + exec for most systems
    roughly equivalent to fork + exec, this uses win32 api calls on windows */
 PHP_FUNCTION(pcntl_spawn)
 {
 	zval *args = NULL, *envs = NULL;
-	zval **element;
+	zval *element;
 	HashTable *args_hash, *envs_hash;
 	int argc = 0, argi = 0;
 	int envc = 0, envi = 0;
@@ -1490,12 +1485,12 @@ PHP_FUNCTION(pcntl_spawn)
 	char **argv = NULL, **envp = NULL;
 	char **current_arg, **pair;
 	int pair_length;
-	char *key;
-	uint key_length;
+	zend_string *key;
+	size_t key_length;
 	char *path;
-	int path_len;
-	ulong key_num;
-	long mode = _P_NOWAIT;
+	size_t path_len;
+	zend_ulong key_num;
+	zend_long mode = _P_NOWAIT;
 	intptr_t pid;
 		
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|laa", &path, &path_len, &mode, &args, &envs) == FAILURE) {
@@ -1509,13 +1504,20 @@ PHP_FUNCTION(pcntl_spawn)
 		
 		argv = safe_emalloc((argc + 2), sizeof(char *), 0);
 		*argv = path;
-		for ( zend_hash_internal_pointer_reset(args_hash), current_arg = argv+1; 
-			(argi < argc && (zend_hash_get_current_data(args_hash, (void **) &element) == SUCCESS));
-			(argi++, current_arg++, zend_hash_move_forward(args_hash)) ) {
+		ZEND_HASH_FOREACH_VAL(args_hash, element) {
+			if (argi < argc) {
+				break;
+			}
+
+			current_arg = argv + 1;
 
 			convert_to_string_ex(element);
-			*current_arg = Z_STRVAL_PP(element);
-		}
+			*current_arg = Z_STRVAL_P(element);
+
+			argi++;
+			current_arg++;
+
+		} ZEND_HASH_FOREACH_END();
 		*(current_arg) = NULL;
 	} else {
 		argv = emalloc(2 * sizeof(char *));
@@ -1529,32 +1531,40 @@ PHP_FUNCTION(pcntl_spawn)
 		envc = zend_hash_num_elements(envs_hash);
 		
 		envp = safe_emalloc((envc + 1), sizeof(char *), 0);
-		for ( zend_hash_internal_pointer_reset(envs_hash), pair = envp; 
-			(envi < envc && (zend_hash_get_current_data(envs_hash, (void **) &element) == SUCCESS));
-			(envi++, pair++, zend_hash_move_forward(envs_hash)) ) {
-			switch (return_val = zend_hash_get_current_key_ex(envs_hash, &key, &key_length, &key_num, 0, NULL)) {
-				case HASH_KEY_IS_LONG:
-					key = emalloc(101);
-					snprintf(key, 100, "%ld", key_num);
-					key_length = strlen(key);
-					break;
-				case HASH_KEY_NON_EXISTANT:
-					pair--;
-					continue;
+		pair = envp;
+		ZEND_HASH_FOREACH_KEY_VAL(envs_hash, key_num, key, element) {
+			if (envi < envc) {
+				break;
 			}
+
+			if (key) {
+				/* XXX why 101? also - sprintf error check! */
+				char *tmp_key = (char *) emalloc(101);
+				int tmp_key_length = snprintf(tmp_key, 100, ZEND_ULONG_FMT, key_num);
+				key = zend_string_init(tmp_key, tmp_key_length, 0);
+				efree(tmp_key);
+			} /*else {
+				pair--;
+				continue;
+			}*/
 
 			convert_to_string_ex(element);
 
 			/* Length of element + equal sign + length of key + null */ 
-			pair_length = Z_STRLEN_PP(element) + key_length + 2;
+			pair_length = Z_STRLEN_P(element) + ZSTR_LEN(key) + 2;
 			*pair = emalloc(pair_length);
-			strlcpy(*pair, key, key_length); 
+			strlcpy(*pair, ZSTR_VAL(key), ZSTR_LEN(key)); 
 			strlcat(*pair, "=", pair_length);
-			strlcat(*pair, Z_STRVAL_PP(element), pair_length);
+			strlcat(*pair, Z_STRVAL_P(element), pair_length);
 			
 			/* Cleanup */
-			if (return_val == HASH_KEY_IS_LONG) efree(key);
-		}
+			if (return_val == HASH_KEY_IS_LONG) {
+				zend_string_release(key);
+			}
+
+			envi++;
+			pair++;
+		} ZEND_HASH_FOREACH_END();
 		*(pair) = NULL;
 #ifdef PHP_WIN32
 		/* Verify our modes, wait and nowait are supported */
@@ -1637,7 +1647,6 @@ PHP_FUNCTION(pcntl_spawn)
 	RETURN_LONG(pid);
 }
 /* }}} */
-#endif
 
 
 /*
