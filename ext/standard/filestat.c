@@ -1222,21 +1222,21 @@ PHP_FUNCTION(realpath_cache_get)
 			array_init(&entry);
 
 			/* bucket->key is unsigned long */
-			if (ZEND_LONG_MAX >= bucket->key) {
-				add_assoc_long_ex(&entry, "key", sizeof("key") - 1, bucket->key);
+			if (!UINT_ZEND_LONG_OVFL(bucket->key)) {
+				add_assoc_long_ex(&entry, "key", sizeof("key") - 1, VCWD_BUCKET_KEY(bucket));
 			} else {
-				add_assoc_double_ex(&entry, "key", sizeof("key") - 1, (double)bucket->key);
+				add_assoc_double_ex(&entry, "key", sizeof("key") - 1, (double)VCWD_BUCKET_KEY(bucket));
 			}
-			add_assoc_bool_ex(&entry, "is_dir", sizeof("is_dir") - 1, bucket->is_dir);
-			add_assoc_stringl_ex(&entry, "realpath", sizeof("realpath") - 1, bucket->realpath, bucket->realpath_len);
-			add_assoc_long_ex(&entry, "expires", sizeof("expires") - 1, bucket->expires);
+			add_assoc_bool_ex(&entry, "is_dir", sizeof("is_dir") - 1, VCWD_BUCKET_PATH_IS_DIR(bucket));
+			add_assoc_stringl_ex(&entry, "realpath", sizeof("realpath") - 1, VCWD_BUCKET_PATH_REAL_NAME(bucket), VCWD_BUCKET_PATH_REAL_LEN(bucket));
+			add_assoc_long_ex(&entry, "expires", sizeof("expires") - 1, VCWD_BUCKET_EXP(bucket));
 #ifdef PHP_WIN32
-			add_assoc_bool_ex(&entry, "is_rvalid", sizeof("is_rvalid") - 1, bucket->is_rvalid);
-			add_assoc_bool_ex(&entry, "is_wvalid", sizeof("is_wvalid") - 1, bucket->is_wvalid);
-			add_assoc_bool_ex(&entry, "is_readable", sizeof("is_readable") - 1, bucket->is_readable);
-			add_assoc_bool_ex(&entry, "is_writable", sizeof("is_writable") - 1, bucket->is_writable);
+			add_assoc_bool_ex(&entry, "is_rvalid", sizeof("is_rvalid") - 1, VCWD_BUCKET_PATH_IS_RVALID(bucket));
+			add_assoc_bool_ex(&entry, "is_wvalid", sizeof("is_wvalid") - 1, VCWD_BUCKET_PATH_IS_RVALID(bucket));
+			add_assoc_bool_ex(&entry, "is_readable", sizeof("is_readable") - 1, VCWD_BUCKET_PATH_IS_READABLE(bucket));
+			add_assoc_bool_ex(&entry, "is_writable", sizeof("is_writable") - 1, VCWD_BUCKET_PATH_IS_WRITABLE(bucket));
 #endif
-			zend_hash_str_update(Z_ARRVAL_P(return_value), bucket->path, bucket->path_len, &entry);
+			zend_hash_str_update(Z_ARRVAL_P(return_value), VCWD_BUCKET_PATH_ORIG_NAME(bucket), VCWD_BUCKET_PATH_ORIG_LEN(bucket), &entry);
 			bucket = bucket->next;
 		}
 		buckets++;
