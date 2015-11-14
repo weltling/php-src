@@ -210,22 +210,56 @@ CWD_API char *tsrm_realpath(const char *path, char *real_path);
 #define REALPATH_CACHE_TTL  (2*60) /* 2 minutes */
 #define REALPATH_CACHE_SIZE 0      /* disabled while php.ini isn't loaded */
 
-typedef struct _realpath_cache_bucket {
-	zend_ulong                    key;
-	char                          *path;
-	char                          *realpath;
-	struct _realpath_cache_bucket *next;
-	time_t                         expires;
-	int                            path_len;
-	int                            realpath_len;
-	int                            is_dir;
-#ifdef ZEND_WIN32
-	unsigned char                  is_rvalid;
-	unsigned char                  is_readable;
-	unsigned char                  is_wvalid;
-	unsigned char                  is_writable;
+typedef struct _zend_bucket_cache_path {
+        uint16_t len_orig;
+        uint16_t len_real;
+
+	/* cache attrs */
+        uint8_t is_dir:1;
+        uint8_t is_real_normalized:1;
+        uint8_t is_real_same:1;
+#if ZEND_WIN32
+        uint8_t is_rvalid:1;
+        uint8_t is_readable:1;
+        uint8_t is_wvalid:1;
+        uint8_t is_writable:1;
 #endif
+        /* 1 bit free yet*/
+
+	/*
+	     len_orig+1     len_real+1
+	    [#############\0##########\0]
+	*/
+        char names[1];
+} zend_bucket_cache_path;
+
+typedef struct _realpath_cache_bucket {
+        uint32_t                      key;
+        zend_bucket_cache_path        path;
+        time_t                        expires;
+        struct _realpath_cache_bucket *next;
 } realpath_cache_bucket;
+
+#define VCWD_BUCKET_PATH_ORIG_LEN(bucket) (bucket)->path.len_orig
+#define VCWD_BUCKET_PATH_ORIG_NAME(bucket) (bucket)->path.names
+#define VCWD_BUCKET_PATH_REAL_LEN(bucket) (bucket)->path.len_real
+#define VCWD_BUCKET_PATH_REAL_NAME(bucket) (VCWD_BUCKET_PATH_REAL_IS_SAME(bucket) ? VCWD_BUCKET_PATH_ORIG_NAME(bucket) : ((bucket)->path.names + (bucket)->path.len_orig + 1))
+#define VCWD_BUCKET_PATH_REAL_IS_NORMALIZED(bucket) (bucket)->path.is_real_normalized
+#define VCWD_BUCKET_PATH_REAL_IS_SAME(bucket) (bucket)->path.is_real_same
+#define VCWD_BUCKET_PATH_IS_DIR(bucket) (bucket)->path.is_dir
+#if ZEND_WIN32
+#define VCWD_BUCKET_PATH_IS_RVALID(bucket) (bucket)->path.is_rvalid
+#define VCWD_BUCKET_PATH_IS_READABLE(bucket) (bucket)->path.is_readable
+#define VCWD_BUCKET_PATH_IS_WVALID(bucket) (bucket)->path.is_wvalid
+#define VCWD_BUCKET_PATH_IS_WRITABLE(bucket) (bucket)->path.is_writable
+#endif
+#define VCWD_BUCKET_KEY(bucket) (bucket)->key
+#define VCWD_BUCKET_EXP(bucket) (bucket)->expires
+
+#define VCWD_PATH_ORIG_LEN(path) (path)->len_orig
+#define VCWD_PATH_ORIG_NAME(path) (path)->names
+#define VCWD_PATH_REAL_LEN(path) (path)->len_real
+#define VCWD_PATH_REAL_NAME(path) ((path)->names + (path)->len_orig + 1)
 
 typedef struct _virtual_cwd_globals {
 	cwd_state cwd;
@@ -244,8 +278,8 @@ extern virtual_cwd_globals cwd_globals;
 #endif
 
 CWD_API void realpath_cache_clean(void);
-CWD_API void realpath_cache_del(const char *path, int path_len);
-CWD_API realpath_cache_bucket* realpath_cache_lookup(const char *path, int path_len, time_t t);
+CWD_API void realpath_cache_del(const char *path, size_t path_len);
+CWD_API realpath_cache_bucket* realpath_cache_lookup(const char *path, size_t path_len, time_t t);
 CWD_API zend_long realpath_cache_size(void);
 CWD_API zend_long realpath_cache_max_buckets(void);
 CWD_API realpath_cache_bucket** realpath_cache_get_buckets(void);
