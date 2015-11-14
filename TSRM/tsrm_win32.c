@@ -295,26 +295,26 @@ TSRM_API int tsrm_win32_access(const char *pathname, int mode)
 
  		/* Do a full access check because access() will only check read-only attribute */
  		if(mode == 0 || mode > 6) {
-			if(bucket != NULL && bucket->is_rvalid) {
-				fAccess = bucket->is_readable;
+			if(bucket != NULL && VCWD_BUCKET_PATH_IS_RVALID(bucket)) {
+				fAccess = VCWD_BUCKET_PATH_IS_READABLE(bucket);
 				goto Finished;
 			}
  			desired_access = FILE_GENERIC_READ;
  		} else if(mode <= 2) {
-			if(bucket != NULL && bucket->is_wvalid) {
-				fAccess = bucket->is_writable;
+			if(bucket != NULL && VCWD_BUCKET_PATH_IS_WVALID(bucket)) {
+				fAccess = VCWD_BUCKET_PATH_IS_WRITABLE(bucket);
 				goto Finished;
 			}
 			desired_access = FILE_GENERIC_WRITE;
  		} else if(mode <= 4) {
-			if(bucket != NULL && bucket->is_rvalid) {
-				fAccess = bucket->is_readable;
+			if(bucket != NULL && VCWD_BUCKET_PATH_IS_RVALID(bucket)) {
+				fAccess = VCWD_BUCKET_PATH_IS_READABLE(bucket);
 				goto Finished;
 			}
 			desired_access = FILE_GENERIC_READ|FILE_FLAG_BACKUP_SEMANTICS;
  		} else { // if(mode <= 6)
-			if(bucket != NULL && bucket->is_rvalid && bucket->is_wvalid) {
-				fAccess = bucket->is_readable & bucket->is_writable;
+			if(bucket != NULL && VCWD_BUCKET_PATH_IS_RVALID(bucket) && VCWD_BUCKET_PATH_IS_WVALID(bucket)) {
+				fAccess = VCWD_BUCKET_PATH_IS_READABLE(bucket) & VCWD_BUCKET_PATH_IS_WRITABLE(bucket);
 				goto Finished;
 			}
 			desired_access = FILE_GENERIC_READ | FILE_GENERIC_WRITE;
@@ -344,17 +344,17 @@ TSRM_API int tsrm_win32_access(const char *pathname, int mode)
 		/* Keep the result in realpath_cache */
 		if(bucket != NULL) {
 			if(desired_access == (FILE_GENERIC_READ|FILE_FLAG_BACKUP_SEMANTICS)) {
-				bucket->is_rvalid = 1;
-				bucket->is_readable = fAccess;
+				VCWD_BUCKET_PATH_IS_RVALID(bucket) = 1;
+				VCWD_BUCKET_PATH_IS_READABLE(bucket) = fAccess;
 			}
 			else if(desired_access == FILE_GENERIC_WRITE) {
-				bucket->is_wvalid = 1;
-				bucket->is_writable = fAccess;
+				VCWD_BUCKET_PATH_IS_WVALID(bucket) = 1;
+				VCWD_BUCKET_PATH_IS_WRITABLE(bucket) = fAccess;
 			} else if (desired_access == (FILE_GENERIC_READ | FILE_GENERIC_WRITE)) {
-				bucket->is_rvalid = 1;
-				bucket->is_readable = fAccess;
-				bucket->is_wvalid = 1;
-				bucket->is_writable = fAccess;
+				VCWD_BUCKET_PATH_IS_RVALID(bucket) = 1;
+				VCWD_BUCKET_PATH_IS_READABLE(bucket) = fAccess;
+				VCWD_BUCKET_PATH_IS_WVALID(bucket) = 1;
+				VCWD_BUCKET_PATH_IS_WRITABLE(bucket) = fAccess;
 			}
 		}
 
