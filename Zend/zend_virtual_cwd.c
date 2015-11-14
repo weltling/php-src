@@ -592,9 +592,9 @@ CWD_API char *virtual_getcwd(char *buf, size_t size) /* {{{ */
 /* }}} */
 
 #ifdef ZEND_WIN32
-static inline zend_ulong realpath_cache_key(const char *path, int path_len) /* {{{ */
+static inline uint32_t realpath_cache_key(const char *path, size_t path_len) /* {{{ */
 {
-	register zend_ulong h;
+	register uint32_t h;
 	char *bucket_key_start = tsrm_win32_get_path_sid_key(path);
 	char *bucket_key = (char *)bucket_key_start;
 	const char *e = bucket_key + strlen(bucket_key);
@@ -603,8 +603,8 @@ static inline zend_ulong realpath_cache_key(const char *path, int path_len) /* {
 		return 0;
 	}
 
-	for (h = Z_UL(2166136261); bucket_key < e;) {
-		h *= Z_UL(16777619);
+	for (h = 2166136261U; bucket_key < e;) {
+		h *= 16777619U;
 		h ^= *bucket_key++;
 	}
 	HeapFree(GetProcessHeap(), 0, (LPVOID)bucket_key_start);
@@ -612,13 +612,13 @@ static inline zend_ulong realpath_cache_key(const char *path, int path_len) /* {
 }
 /* }}} */
 #else
-static inline zend_ulong realpath_cache_key(const char *path, int path_len) /* {{{ */
+static inline uint32_t realpath_cache_key(const char *path, size_t path_len) /* {{{ */
 {
-	register zend_ulong h;
+	register uint32_t h;
 	const char *e = path + path_len;
 
-	for (h = Z_UL(2166136261); path < e;) {
-		h *= Z_UL(16777619);
+	for (h = 2166136261U; path < e;) {
+		h *= 16777619U;
 		h ^= *path++;
 	}
 
@@ -644,23 +644,23 @@ CWD_API void realpath_cache_clean(void) /* {{{ */
 }
 /* }}} */
 
-CWD_API void realpath_cache_del(const char *path, int path_len) /* {{{ */
+CWD_API void realpath_cache_del(const char *path, size_t path_len) /* {{{ */
 {
-	zend_ulong key = realpath_cache_key(path, path_len);
-	zend_ulong n = key % (sizeof(CWDG(realpath_cache)) / sizeof(CWDG(realpath_cache)[0]));
+	uint32_t key = realpath_cache_key(path, path_len);
+	uint32_t n = key % (sizeof(CWDG(realpath_cache)) / sizeof(CWDG(realpath_cache)[0]));
 	realpath_cache_bucket **bucket = &CWDG(realpath_cache)[n];
 
 	while (*bucket != NULL) {
-		if (key == (*bucket)->key && path_len == (*bucket)->path_len &&
-					memcmp(path, (*bucket)->path, path_len) == 0) {
+		if (key == VCWD_BUCKET_KEY(*bucket) && path_len == VCWD_BUCKET_PATH_ORIG_LEN(*bucket) &&
+					memcmp(path, VCWD_BUCKET_PATH_ORIG_NAME(*bucket), path_len) == 0) {
 			realpath_cache_bucket *r = *bucket;
 			*bucket = (*bucket)->next;
 
 			/* if the pointers match then only subtract the length of the path */
-		   	if(r->path == r->realpath) {
-				CWDG(realpath_cache_size) -= sizeof(realpath_cache_bucket) + r->path_len + 1;
+		   	if(VCWD_BUCKET_PATH_REAL_IS_SAME(r)) {
+				CWDG(realpath_cache_size) -= sizeof(realpath_cache_bucket) + VCWD_BUCKET_PATH_ORIG_LEN(r) + 1;
 			} else {
-				CWDG(realpath_cache_size) -= sizeof(realpath_cache_bucket) + r->path_len + 1 + r->realpath_len + 1;
+				CWDG(realpath_cache_size) -= sizeof(realpath_cache_bucket) + VCWD_BUCKET_PATH_ORIG_LEN(r) + 1 + VCWD_BUCKET_PATH_REAL_LEN(r) + 1;
 			}
 
 			free(r);
@@ -672,10 +672,10 @@ CWD_API void realpath_cache_del(const char *path, int path_len) /* {{{ */
 }
 /* }}} */
 
-static inline void realpath_cache_add(const char *path, int path_len, const char *realpath, int realpath_len, int is_dir, time_t t) /* {{{ */
+static inline void realpath_cache_add(const char *path, int path_len, const char *realpath, int realpath_len, zend_bool is_dir, time_t t) /* {{{ */
 {
 	zend_long size = sizeof(realpath_cache_bucket) + path_len + 1;
-	int same = 1;
+	zend_bool same = 1;
 
 	if (realpath_len != path_len ||
 		memcmp(path, realpath, path_len) != 0) {
@@ -685,32 +685,29 @@ static inline void realpath_cache_add(const char *path, int path_len, const char
 
 	if (CWDG(realpath_cache_size) + size <= CWDG(realpath_cache_size_limit)) {
 		realpath_cache_bucket *bucket = malloc(size);
-		zend_ulong n;
+		size_t n;
 
 		if (bucket == NULL) {
 			return;
 		}
 
-		bucket->key = realpath_cache_key(path, path_len);
-		bucket->path = (char*)bucket + sizeof(realpath_cache_bucket);
-		memcpy(bucket->path, path, path_len+1);
-		bucket->path_len = path_len;
-		if (same) {
-			bucket->realpath = bucket->path;
-		} else {
-			bucket->realpath = bucket->path + (path_len + 1);
-			memcpy(bucket->realpath, realpath, realpath_len+1);
+		VCWD_BUCKET_KEY(bucket) = realpath_cache_key(path, path_len);
+		memcpy(VCWD_BUCKET_PATH_ORIG_NAME(bucket), path, path_len+1);
+		VCWD_BUCKET_PATH_ORIG_LEN(bucket) = path_len;
+		VCWD_BUCKET_PATH_REAL_IS_SAME(bucket) = same;
+		if (!same) {
+			memcpy(VCWD_BUCKET_PATH_REAL_NAME(bucket), realpath, realpath_len+1);
 		}
-		bucket->realpath_len = realpath_len;
-		bucket->is_dir = is_dir;
+		VCWD_BUCKET_PATH_REAL_LEN(bucket) = realpath_len;
+		VCWD_BUCKET_PATH_IS_DIR(bucket) = is_dir;
 #ifdef ZEND_WIN32
-		bucket->is_rvalid   = 0;
-		bucket->is_readable = 0;
-		bucket->is_wvalid   = 0;
-		bucket->is_writable = 0;
+		VCWD_BUCKET_PATH_IS_RVALID(bucket) = 0;
+		VCWD_BUCKET_PATH_IS_READABLE(bucket) = 0;
+		VCWD_BUCKET_PATH_IS_WVALID(bucket) = 0;
+		VCWD_BUCKET_PATH_IS_WRITABLE(bucket) = 0;
 #endif
-		bucket->expires = t + CWDG(realpath_cache_ttl);
-		n = bucket->key % (sizeof(CWDG(realpath_cache)) / sizeof(CWDG(realpath_cache)[0]));
+		VCWD_BUCKET_EXP(bucket) = t + CWDG(realpath_cache_ttl);
+		n = (size_t)VCWD_BUCKET_KEY(bucket) % (sizeof(CWDG(realpath_cache)) / sizeof(CWDG(realpath_cache)[0]));
 		bucket->next = CWDG(realpath_cache)[n];
 		CWDG(realpath_cache)[n] = bucket;
 		CWDG(realpath_cache_size) += size;
@@ -720,8 +717,8 @@ static inline void realpath_cache_add(const char *path, int path_len, const char
 
 static inline realpath_cache_bucket* realpath_cache_find(const char *path, int path_len, time_t t) /* {{{ */
 {
-	zend_ulong key = realpath_cache_key(path, path_len);
-	zend_ulong n = key % (sizeof(CWDG(realpath_cache)) / sizeof(CWDG(realpath_cache)[0]));
+	uint32_t key = realpath_cache_key(path, path_len);
+	uint32_t n = key % (sizeof(CWDG(realpath_cache)) / sizeof(CWDG(realpath_cache)[0]));
 	realpath_cache_bucket **bucket = &CWDG(realpath_cache)[n];
 
 	while (*bucket != NULL) {
@@ -730,14 +727,14 @@ static inline realpath_cache_bucket* realpath_cache_find(const char *path, int p
 			*bucket = (*bucket)->next;
 
 			/* if the pointers match then only subtract the length of the path */
-		   	if(r->path == r->realpath) {
-				CWDG(realpath_cache_size) -= sizeof(realpath_cache_bucket) + r->path_len + 1;
+		   	if(VCWD_BUCKET_PATH_REAL_IS_SAME(r)) {
+				CWDG(realpath_cache_size) -= sizeof(realpath_cache_bucket) + VCWD_BUCKET_PATH_ORIG_LEN(r) + 1;
 			} else {
-				CWDG(realpath_cache_size) -= sizeof(realpath_cache_bucket) + r->path_len + 1 + r->realpath_len + 1;
+				CWDG(realpath_cache_size) -= sizeof(realpath_cache_bucket) + VCWD_BUCKET_PATH_ORIG_LEN(r) + 1 + VCWD_BUCKET_PATH_REAL_LEN(r) + 1;
 			}
 			free(r);
-		} else if (key == (*bucket)->key && path_len == (*bucket)->path_len &&
-					memcmp(path, (*bucket)->path, path_len) == 0) {
+		} else if (key == VCWD_BUCKET_KEY(*bucket) && path_len == VCWD_BUCKET_PATH_ORIG_LEN(*bucket) &&
+					memcmp(path, VCWD_BUCKET_PATH_ORIG_NAME(*bucket), path_len) == 0) {
 			return *bucket;
 		} else {
 			bucket = &(*bucket)->next;
@@ -858,15 +855,15 @@ static int tsrm_realpath_r(char *path, int start, int len, int *ll, time_t *t, i
 				*t = time(0);
 			}
 			if ((bucket = realpath_cache_find(path, len, *t)) != NULL) {
-				if (is_dir && !bucket->is_dir) {
+				if (is_dir && !VCWD_BUCKET_PATH_IS_DIR(bucket)) {
 					/* not a directory */
 					return -1;
 				} else {
 					if (link_is_dir) {
-						*link_is_dir = bucket->is_dir;
+						*link_is_dir = VCWD_BUCKET_PATH_IS_DIR(bucket);
 					}
-					memcpy(path, bucket->realpath, bucket->realpath_len + 1);
-					return bucket->realpath_len;
+					memcpy(path, VCWD_BUCKET_PATH_REAL_NAME(bucket), VCWD_BUCKET_PATH_REAL_LEN(bucket) + 1);
+					return VCWD_BUCKET_PATH_REAL_LEN(bucket);
 				}
 			}
 		}
