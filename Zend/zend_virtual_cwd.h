@@ -235,9 +235,10 @@ typedef struct _zend_bucket_cache_path {
 
 typedef struct _realpath_cache_bucket {
         uint32_t                      key;
-        zend_bucket_cache_path        path;
         time_t                        expires;
         struct _realpath_cache_bucket *next;
+	/* This item HAS to be the last*/
+        zend_bucket_cache_path        path;
 } realpath_cache_bucket;
 
 #define VCWD_BUCKET_PATH_ORIG_LEN(bucket) (bucket)->path.len_orig
