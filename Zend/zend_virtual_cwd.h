@@ -210,7 +210,7 @@ CWD_API char *tsrm_realpath(const char *path, char *real_path);
 #define REALPATH_CACHE_TTL  (2*60) /* 2 minutes */
 #define REALPATH_CACHE_SIZE 0      /* disabled while php.ini isn't loaded */
 
-typedef struct _zend_bucket_cache_path {
+typedef struct _realpath_bucket_cache_path {
         uint16_t len_orig;
         uint16_t len_real;
 
@@ -231,14 +231,14 @@ typedef struct _zend_bucket_cache_path {
 	    [#############\0##########\0]
 	*/
         char names[1];
-} zend_bucket_cache_path;
+} realpath_bucket_cache_path;
 
 typedef struct _realpath_cache_bucket {
         uint32_t                      key;
         time_t                        expires;
         struct _realpath_cache_bucket *next;
 	/* This item HAS to be the last*/
-        zend_bucket_cache_path        path;
+        realpath_bucket_cache_path        path;
 } realpath_cache_bucket;
 
 #define VCWD_BUCKET_PATH_ORIG_LEN(bucket) (bucket)->path.len_orig
