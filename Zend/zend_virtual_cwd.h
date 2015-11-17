@@ -216,7 +216,7 @@ typedef struct _realpath_bucket_cache_path {
 
 	/* cache attrs */
         uint8_t is_dir:1;
-        uint8_t is_real_normalized:1;
+        uint8_t is_real_normalized:1; /* XXX unused yet*/
         uint8_t is_real_same:1;
 #if ZEND_WIN32
         uint8_t is_rvalid:1;
