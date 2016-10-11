@@ -354,7 +354,7 @@ PHPAPI int php_stream_filter_append_ex(php_stream_filter_chain *chain, php_strea
 		php_stream_bucket *bucket;
 		size_t consumed = 0;
 
-		bucket = php_stream_bucket_new(stream, (char*) stream->readbuf + stream->readpos, stream->writepos - stream->readpos, 0, 0);
+		bucket = php_stream_bucket_new(stream, (char*) PHP_STREAM_BUF(stream) + stream->readpos, stream->writepos - stream->readpos, 0, 0);
 		php_stream_bucket_append(brig_inp, bucket);
 		status = filter->fops->filter(stream, filter, brig_inp, brig_outp, &consumed, PSFS_FLAG_NORMAL);
 
@@ -396,11 +396,10 @@ PHPAPI int php_stream_filter_append_ex(php_stream_filter_chain *chain, php_strea
 					bucket = brig_outp->head;
 					/* Grow buffer to hold this bucket if need be.
 					   TODO: See warning in main/stream/streams.c::php_stream_fill_read_buffer */
-					if (stream->readbuflen - stream->writepos < bucket->buflen) {
-						stream->readbuflen += bucket->buflen;
-						stream->readbuf = perealloc(stream->readbuf, stream->readbuflen, stream->is_persistent);
+					if (PHP_STREAM_BUF_LEN(stream) - stream->writepos < bucket->buflen) {
+						php_stream_buffer_extend_size(stream, bucket->buflen);
 					}
-					memcpy(stream->readbuf + stream->writepos, bucket->buf, bucket->buflen);
+					php_stream_buffer_put(stream, stream->writepos, bucket->buf, bucket->buflen);
 					stream->writepos += bucket->buflen;
 
 					php_stream_bucket_unlink(bucket);
@@ -482,16 +481,16 @@ PHPAPI int _php_stream_filter_flush(php_stream_filter *filter, int finish)
 		/* Dump any newly flushed data to the read buffer */
 		if (stream->readpos > 0) {
 			/* Back the buffer up */
-			memcpy(stream->readbuf, stream->readbuf + stream->readpos, stream->writepos - stream->readpos);
+			memcpy(PHP_STREAM_BUF(stream), PHP_STREAM_BUF(stream) + stream->readpos, stream->writepos - stream->readpos);
 			stream->readpos = 0;
 			stream->writepos -= stream->readpos;
 		}
-		if (flushed_size > (stream->readbuflen - stream->writepos)) {
+		if (flushed_size > (PHP_STREAM_BUF_LEN(stream) - stream->writepos)) {
 			/* Grow the buffer */
-			stream->readbuf = perealloc(stream->readbuf, stream->writepos + flushed_size + stream->chunk_size, stream->is_persistent);
+			php_stream_buffer_extend_size(stream, stream->writepos + flushed_size + PHP_STREAM_BUF_CHUNK_LEN(stream));
 		}
 		while ((bucket = inp->head)) {
-			memcpy(stream->readbuf + stream->writepos, bucket->buf, bucket->buflen);
+			memcpy(PHP_STREAM_BUF(stream) + stream->writepos, bucket->buf, bucket->buflen);
 			stream->writepos += bucket->buflen;
 			php_stream_bucket_unlink(bucket);
 			php_stream_bucket_delref(bucket);

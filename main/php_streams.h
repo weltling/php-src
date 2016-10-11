@@ -104,6 +104,7 @@ typedef struct _php_stream_filter php_stream_filter;
 
 #include "streams/php_stream_context.h"
 #include "streams/php_stream_filter_api.h"
+#include "streams/php_stream_buffer.h"
 
 typedef struct _php_stream_statbuf {
 	zend_stat_t sb; /* regular info */
@@ -218,15 +219,12 @@ struct _php_stream  {
 
 	zend_resource *ctx;
 
-	/* buffer */
 	zend_off_t position; /* of underlying stream */
-	unsigned char *readbuf;
-	size_t readbuflen;
 	zend_off_t readpos;
 	zend_off_t writepos;
 
-	/* how much data to read when filling buffer */
-	size_t chunk_size;
+	/* buffer */
+	php_stream_buffer *buffer;
 
 #if ZEND_DEBUG
 	const char *open_filename;

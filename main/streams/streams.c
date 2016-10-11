@@ -284,7 +284,6 @@ fprintf(stderr, "stream_alloc: %s:%p persistent=%s\n", ops->label, ret, persiste
 	ret->ops = ops;
 	ret->abstract = abstract;
 	ret->is_persistent = persistent_id ? 1 : 0;
-	ret->chunk_size = FG(def_chunk_size);
 
 #if ZEND_DEBUG
 	ret->open_filename = __zend_orig_filename ? __zend_orig_filename : __zend_filename;
@@ -316,8 +315,9 @@ fprintf(stderr, "stream_alloc: %s:%p persistent=%s\n", ops->label, ret, persiste
 	ret->stdiocast        = NULL;
 	ret->orig_path        = NULL;
 	ret->ctx              = NULL;
-	ret->readbuf          = NULL;
 	ret->enclosing_stream = NULL;
+
+	php_stream_buffer_ctor(ret);
 
 	return ret;
 }
@@ -493,10 +493,7 @@ fprintf(stderr, "stream_free: %s:%p[%s] preserve_handle=%d release_cast=%d remov
 			ZVAL_UNDEF(&stream->wrapperdata);
 		}
 
-		if (stream->readbuf) {
-			pefree(stream->readbuf, stream->is_persistent);
-			stream->readbuf = NULL;
-		}
+		php_stream_buffer_dtor(stream);
 
 		if (stream->is_persistent && (close_options & PHP_STREAM_FREE_PERSISTENT)) {
 			/* we don't work with *stream but need its value for comparison */
@@ -566,7 +563,7 @@ PHPAPI void _php_stream_fill_read_buffer(php_stream *stream, size_t size)
 		stream->writepos = stream->readpos = 0;
 
 		/* allocate a buffer for reading chunks */
-		chunk_buf = emalloc(stream->chunk_size);
+		chunk_buf = emalloc(PHP_STREAM_BUF_CHUNK_LEN(stream));
 
 		while (!stream->eof && !err_flag && (stream->writepos - stream->readpos < (zend_off_t)size)) {
 			size_t justread = 0;
@@ -576,7 +573,7 @@ PHPAPI void _php_stream_fill_read_buffer(php_stream *stream, size_t size)
 			php_stream_filter *filter;
 
 			/* read a chunk into a bucket */
-			justread = stream->ops->read(stream, chunk_buf, stream->chunk_size);
+			justread = stream->ops->read(stream, chunk_buf, PHP_STREAM_BUF_CHUNK_LEN(stream));
 			if (justread && justread != (size_t)-1) {
 				bucket = php_stream_bucket_new(stream, chunk_buf, justread, 0, 0);
 
@@ -614,12 +611,11 @@ PHPAPI void _php_stream_fill_read_buffer(php_stream *stream, size_t size)
 						bucket = brig_inp->head;
 						/* grow buffer to hold this bucket
 						 * TODO: this can fail for persistent streams */
-						if (stream->readbuflen - stream->writepos < bucket->buflen) {
-							stream->readbuflen += bucket->buflen;
-							stream->readbuf = perealloc(stream->readbuf, stream->readbuflen,
-									stream->is_persistent);
+						if (PHP_STREAM_BUF_LEN(stream) - stream->writepos < bucket->buflen) {
+							PHP_STREAM_BUF_LEN(stream) += bucket->buflen;
+							php_stream_buffer_extend_size(stream, PHP_STREAM_BUF_LEN(stream));
 						}
-						memcpy(stream->readbuf + stream->writepos, bucket->buf, bucket->buflen);
+						php_stream_buffer_put(stream, stream->writepos, bucket->buf, bucket->buflen);
 						stream->writepos += bucket->buflen;
 
 						php_stream_bucket_unlink(bucket);
@@ -657,23 +653,23 @@ PHPAPI void _php_stream_fill_read_buffer(php_stream *stream, size_t size)
 		if (stream->writepos - stream->readpos < (zend_off_t)size) {
 			size_t justread = 0;
 
+#if 0
 			/* reduce buffer memory consumption if possible, to avoid a realloc */
-			if (stream->readbuf && stream->readbuflen - stream->writepos < stream->chunk_size) {
-				memmove(stream->readbuf, stream->readbuf + stream->readpos, stream->readbuflen - stream->readpos);
+			if (PHP_STREAM_BUF(stream) && PHP_STREAM_BUF(stream)len - stream->writepos < PHP_STREAM_BUF_CHUNK_LEN(stream)) {
+				memmove(PHP_STREAM_BUF(stream), PHP_STREAM_BUF(stream) + stream->readpos, PHP_STREAM_BUF(stream)len - stream->readpos);
 				stream->writepos -= stream->readpos;
 				stream->readpos = 0;
 			}
+#endif
 
 			/* grow the buffer if required
 			 * TODO: this can fail for persistent streams */
-			if (stream->readbuflen - stream->writepos < stream->chunk_size) {
-				stream->readbuflen += stream->chunk_size;
-				stream->readbuf = perealloc(stream->readbuf, stream->readbuflen,
-						stream->is_persistent);
+			if (PHP_STREAM_BUF_LEN(stream) - stream->writepos < PHP_STREAM_BUF_CHUNK_LEN(stream)) {
+				php_stream_buffer_extend(stream);
 			}
 
-			justread = stream->ops->read(stream, (char*)stream->readbuf + stream->writepos,
-					stream->readbuflen - stream->writepos
+			justread = stream->ops->read(stream, (char*) PHP_STREAM_BUF(stream) + stream->writepos,
+					PHP_STREAM_BUF_LEN(stream) - stream->writepos
 					);
 
 			if (justread != (size_t)-1) {
@@ -700,7 +696,7 @@ PHPAPI size_t _php_stream_read(php_stream *stream, char *buf, size_t size)
 				toread = size;
 			}
 
-			memcpy(buf, stream->readbuf + stream->readpos, toread);
+			memcpy(buf, PHP_STREAM_BUF(stream) + stream->readpos, toread);
 			stream->readpos += toread;
 			size -= toread;
 			buf += toread;
@@ -712,7 +708,9 @@ PHPAPI size_t _php_stream_read(php_stream *stream, char *buf, size_t size)
 			break;
 		}
 
-		if (!stream->readfilters.head && (stream->flags & PHP_STREAM_FLAG_NO_BUFFER || stream->chunk_size == 1)) {
+		php_stream_buffer_extend(stream);
+
+		if (!stream->readfilters.head && (stream->flags & PHP_STREAM_FLAG_NO_BUFFER || PHP_STREAM_BUF_CHUNK_LEN(stream) == 1)) {
 			toread = stream->ops->read(stream, buf, size);
 			if (toread == (size_t) -1) {
 				/* e.g. underlying read(2) returned -1 */
@@ -727,7 +725,7 @@ PHPAPI size_t _php_stream_read(php_stream *stream, char *buf, size_t size)
 			}
 
 			if (toread > 0) {
-				memcpy(buf, stream->readbuf + stream->readpos, toread);
+				memcpy(buf, PHP_STREAM_BUF(stream) + stream->readpos, toread);
 				stream->readpos += toread;
 			}
 		}
@@ -829,7 +827,7 @@ PHPAPI const char *php_stream_locate_eol(php_stream *stream, zend_string *buf)
 	const char *readptr;
 
 	if (!buf) {
-		readptr = (char*)stream->readbuf + stream->readpos;
+		readptr = (char*)PHP_STREAM_BUF(stream) + stream->readpos;
 		avail = stream->writepos - stream->readpos;
 	} else {
 		readptr = ZSTR_VAL(buf);
@@ -901,7 +899,7 @@ PHPAPI char *_php_stream_get_line(php_stream *stream, char *buf, size_t maxlen,
 			const char *eol;
 			int done = 0;
 
-			readptr = (char*)stream->readbuf + stream->readpos;
+			readptr = (char*)PHP_STREAM_BUF(stream) + stream->readpos;
 			eol = php_stream_locate_eol(stream, NULL);
 
 			if (eol) {
@@ -947,11 +945,11 @@ PHPAPI char *_php_stream_get_line(php_stream *stream, char *buf, size_t maxlen,
 			size_t toread;
 
 			if (grow_mode) {
-				toread = stream->chunk_size;
+				toread = PHP_STREAM_BUF_CHUNK_LEN(stream);
 			} else {
 				toread = maxlen - 1;
-				if (toread > stream->chunk_size) {
-					toread = stream->chunk_size;
+				if (toread > PHP_STREAM_BUF_CHUNK_LEN(stream)) {
+					toread = PHP_STREAM_BUF_CHUNK_LEN(stream);
 				}
 			}
 
@@ -996,12 +994,12 @@ static const char *_php_stream_search_delim(php_stream *stream,
 	}
 
 	if (delim_len == 1) {
-		return memchr(&stream->readbuf[stream->readpos + skiplen],
+		return memchr(&PHP_STREAM_BUF(stream)[stream->readpos + skiplen],
 			delim[0], seek_len - skiplen);
 	} else {
-		return php_memnstr((char*)&stream->readbuf[stream->readpos + skiplen],
+		return php_memnstr((char*)&PHP_STREAM_BUF(stream)[stream->readpos + skiplen],
 				delim, delim_len,
-				(char*)&stream->readbuf[stream->readpos + seek_len]);
+				(char*)&PHP_STREAM_BUF(stream)[stream->readpos + seek_len]);
 	}
 }
 
@@ -1028,7 +1026,7 @@ PHPAPI zend_string *php_stream_get_record(php_stream *stream, size_t maxlen, con
 		size_t	just_read,
 				to_read_now;
 
-		to_read_now = MIN(maxlen - buffered_len, stream->chunk_size);
+		to_read_now = MIN(maxlen - buffered_len, PHP_STREAM_BUF_CHUNK_LEN(stream));
 
 		php_stream_fill_read_buffer(stream, buffered_len + to_read_now);
 
@@ -1061,7 +1059,7 @@ PHPAPI zend_string *php_stream_get_record(php_stream *stream, size_t maxlen, con
 	}
 
 	if (has_delim && found_delim) {
-		tent_ret_len = found_delim - (char*)&stream->readbuf[stream->readpos];
+		tent_ret_len = found_delim - (char*)&PHP_STREAM_BUF(stream)[stream->readpos];
 	} else if (!has_delim && STREAM_BUFFERED_AMOUNT(stream) >= maxlen) {
 		tent_ret_len = maxlen;
 	} else {
@@ -1110,10 +1108,12 @@ static size_t _php_stream_write_buffer(php_stream *stream, const char *buf, size
 
 	while (count > 0) {
 		towrite = count;
-		if (towrite > stream->chunk_size)
-			towrite = stream->chunk_size;
+		if (towrite > PHP_STREAM_BUF_CHUNK_LEN(stream))
+			towrite = PHP_STREAM_BUF_CHUNK_LEN(stream);
 
 		justwrote = stream->ops->write(stream, buf, towrite);
+
+		php_stream_buffer_extend(stream);
 
 		/* convert justwrote to an integer, since normally it is unsigned */
 		if ((int)justwrote > 0) {
@@ -1354,8 +1354,8 @@ PHPAPI int _php_stream_set_option(php_stream *stream, int option, int value, voi
 		switch(option) {
 			case PHP_STREAM_OPTION_SET_CHUNK_SIZE:
 				/* XXX chunk size itself is of size_t, that might be ok or not for a particular case*/
-				ret = stream->chunk_size > INT_MAX ? INT_MAX : (int)stream->chunk_size;
-				stream->chunk_size = value;
+				ret = PHP_STREAM_BUF_CHUNK_LEN(stream) > INT_MAX ? INT_MAX : (int)PHP_STREAM_BUF_CHUNK_LEN(stream);
+				PHP_STREAM_BUF_CHUNK_LEN(stream) = value;
 				return ret;
 
 			case PHP_STREAM_OPTION_READ_BUFFER:
