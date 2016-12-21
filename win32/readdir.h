@@ -26,6 +26,14 @@ struct dirent {
 };
 
 /* typedef DIR - not the same as Unix */
+struct DIR_W32 {
+	HANDLE handle;			/* _findfirst/_findnext handle */
+	uint16_t offset;		/* offset into directory */
+	uint8_t finished;		/* 1 if there are not more files */
+	WIN32_FIND_DATAW fileinfo;	/* from _findfirst/_findnext */
+	wchar_t *dirw;			/* the dir we are reading */
+	struct dirent dent;		/* the dirent to return */
+};
 typedef struct DIR_W32 DIR;
 
 /* Function prototypes */
