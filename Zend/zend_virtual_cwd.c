@@ -736,7 +736,6 @@ static inline void realpath_cache_add(const char *path, int path_len, const char
 	CWDG(realpath_cache)[n] = bucket;
 	CWDG(realpath_cache_size) += size;
 
-	bucket->lru_prev = bucket->lru_next = NULL;
 	realpath_cache_lru_enqueue(bucket);
 }
 /* }}} */
