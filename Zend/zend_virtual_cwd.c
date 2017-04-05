@@ -634,6 +634,8 @@ CWD_API void realpath_cache_clean(void) /* {{{ */
 		CWDG(realpath_cache)[i] = NULL;
 	}
 	CWDG(realpath_cache_size) = 0;
+	REALPATH_LRU_HEAD = NULL;
+	REALPATH_LRU_TAIL = NULL;
 }
 /* }}} */
 
