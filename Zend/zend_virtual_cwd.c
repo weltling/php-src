@@ -528,8 +528,6 @@ CWD_API char *virtual_getcwd(char *buf, size_t size) /* {{{ */
 /* Put new item at the end of the LRU queue. */
 static inline void realpath_cache_lru_enqueue(realpath_cache_bucket *bucket)
 {
-
-	//if (NULL == REALPATH_LRU_TAIL && NULL == REALPATH_LRU_HEAD) {
 	if (NULL == REALPATH_LRU_HEAD) {
 		REALPATH_LRU_HEAD = bucket;
 		REALPATH_LRU_TAIL = bucket;
@@ -550,9 +548,7 @@ static inline void realpath_cache_lru_unbag(realpath_cache_bucket *bucket)
 
 	if (REALPATH_LRU_HEAD == bucket) {
 		REALPATH_LRU_HEAD = next;
-	}
-
-	if (REALPATH_LRU_TAIL == bucket) {
+	} else if (REALPATH_LRU_TAIL == bucket) {
 		REALPATH_LRU_TAIL = prev;
 	}
 
@@ -563,19 +559,6 @@ static inline void realpath_cache_lru_unbag(realpath_cache_bucket *bucket)
 	if (NULL != prev) {
 		prev->lru_next = next;
 	}
-
-	/*
-	if (NULL == prev) {
-		REALPATH_LRU_HEAD = next;
-	} else {
-		prev->lru_next = next;
-	}
-
-	if (NULL == next) {
-		REALPATH_LRU_TAIL = prev;
-	} else {
-		next->lru_prev = prev;
-	}*/
 }
 
 static inline realpath_cache_bucket *realpath_cache_lru_dequeue(void)
