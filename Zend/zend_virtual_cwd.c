@@ -669,6 +669,7 @@ static zend_always_inline void realpath_cache_evict(time_t t) /* {{{ */
 {
 	zend_long new_size = CWDG(realpath_cache_size_limit) - (zend_long)((CWDG(realpath_cache_size_limit)/100)*REALPATH_LRU_EVICT_PCT);
 
+	/* TODO optimize special case with ttl == 0. */
 	do {
 		realpath_cache_bucket *item_to_free = realpath_cache_lru_dequeue();
 		zend_ulong n = item_to_free->key % (sizeof(CWDG(realpath_cache)) / sizeof(CWDG(realpath_cache)[0]));
