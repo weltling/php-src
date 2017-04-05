@@ -200,12 +200,12 @@ CWD_API char *tsrm_realpath(const char *path, char *real_path);
 #define REALPATH_LRU_EVICT_PCT 30 /* % of LRU items to evict. */
 
 typedef struct _realpath_cache_bucket {
-	zend_ulong                    key;
-	char                          *path;
-	char                          *realpath;
 	struct _realpath_cache_bucket *next;
 	struct _realpath_cache_bucket *lru_next;
 	struct _realpath_cache_bucket *lru_prev;
+	zend_ulong                    key;
+	char                          *path;
+	char                          *realpath;
 	time_t                         expires;
 	uint16_t                       path_len;
 	uint16_t                       realpath_len;
