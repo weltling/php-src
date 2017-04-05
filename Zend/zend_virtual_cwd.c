@@ -526,7 +526,7 @@ CWD_API char *virtual_getcwd(char *buf, size_t size) /* {{{ */
 #define REALPATH_LRU_TAIL CWDG(lru_tail)
 
 /* Put new item at the end of the LRU queue. */
-static zend_always_inline void realpath_cache_lru_enqueue(realpath_cache_bucket *bucket)
+static zend_always_inline void realpath_cache_lru_enqueue(realpath_cache_bucket *bucket) /* {{{ */
 {
 	if (NULL == REALPATH_LRU_HEAD) {
 		REALPATH_LRU_HEAD = bucket;
@@ -540,8 +540,10 @@ static zend_always_inline void realpath_cache_lru_enqueue(realpath_cache_bucket 
 		REALPATH_LRU_TAIL = bucket;
 	}
 }
+/* }}} */
 
-static zend_always_inline void realpath_cache_lru_unbag(realpath_cache_bucket *bucket)
+/* Remove item from the LRU queue, where ever it is. */
+static zend_always_inline void realpath_cache_lru_unbag(realpath_cache_bucket *bucket) /* {{{ */
 {
 	realpath_cache_bucket *prev = bucket->lru_prev;
 	realpath_cache_bucket *next = bucket->lru_next;
@@ -560,8 +562,10 @@ static zend_always_inline void realpath_cache_lru_unbag(realpath_cache_bucket *b
 		prev->lru_next = next;
 	}
 }
+/* }}} */
 
-static zend_always_inline realpath_cache_bucket *realpath_cache_lru_dequeue(void)
+/* Shift next freeable item from the LRU queue. */
+static zend_always_inline realpath_cache_bucket *realpath_cache_lru_dequeue(void) /* {{{ */
 {
 	realpath_cache_bucket *tmp = REALPATH_LRU_HEAD;
 
@@ -569,12 +573,15 @@ static zend_always_inline realpath_cache_bucket *realpath_cache_lru_dequeue(void
 
 	return tmp;
 }
+/* }}} */
 
-static zend_always_inline void realpath_cache_lru_update(realpath_cache_bucket *bucket)
+/* Reflect LRU cache hit. */
+static zend_always_inline void realpath_cache_lru_update(realpath_cache_bucket *bucket) /* {{{ */
 {
 	realpath_cache_lru_unbag(bucket);
 	realpath_cache_lru_enqueue(bucket);
 }
+/* }}} */
 
 #ifdef ZEND_WIN32
 static zend_always_inline zend_ulong realpath_cache_key(const char *path, size_t path_len) /* {{{ */
@@ -1993,5 +2000,6 @@ CWD_API char *tsrm_realpath(const char *path, char *real_path) /* {{{ */
  * Local variables:
  * tab-width: 4
  * c-basic-offset: 4
+ * indent-tabs-mode: t
  * End:
  */
