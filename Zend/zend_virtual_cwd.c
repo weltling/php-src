@@ -526,7 +526,7 @@ CWD_API char *virtual_getcwd(char *buf, size_t size) /* {{{ */
 #define REALPATH_LRU_TAIL CWDG(lru_tail)
 
 /* Put new item at the end of the LRU queue. */
-static inline void realpath_cache_lru_enqueue(realpath_cache_bucket *bucket)
+static zend_always_inline void realpath_cache_lru_enqueue(realpath_cache_bucket *bucket)
 {
 	if (NULL == REALPATH_LRU_HEAD) {
 		REALPATH_LRU_HEAD = bucket;
@@ -541,7 +541,7 @@ static inline void realpath_cache_lru_enqueue(realpath_cache_bucket *bucket)
 	}
 }
 
-static inline void realpath_cache_lru_unbag(realpath_cache_bucket *bucket)
+static zend_always_inline void realpath_cache_lru_unbag(realpath_cache_bucket *bucket)
 {
 	realpath_cache_bucket *prev = bucket->lru_prev;
 	realpath_cache_bucket *next = bucket->lru_next;
@@ -561,7 +561,7 @@ static inline void realpath_cache_lru_unbag(realpath_cache_bucket *bucket)
 	}
 }
 
-static inline realpath_cache_bucket *realpath_cache_lru_dequeue(void)
+static zend_always_inline realpath_cache_bucket *realpath_cache_lru_dequeue(void)
 {
 	realpath_cache_bucket *tmp = REALPATH_LRU_HEAD;
 
@@ -570,14 +570,14 @@ static inline realpath_cache_bucket *realpath_cache_lru_dequeue(void)
 	return tmp;
 }
 
-static inline void realpath_cache_lru_update(realpath_cache_bucket *bucket)
+static zend_always_inline void realpath_cache_lru_update(realpath_cache_bucket *bucket)
 {
 	realpath_cache_lru_unbag(bucket);
 	realpath_cache_lru_enqueue(bucket);
 }
 
 #ifdef ZEND_WIN32
-static inline zend_ulong realpath_cache_key(const char *path, size_t path_len) /* {{{ */
+static zend_always_inline zend_ulong realpath_cache_key(const char *path, size_t path_len) /* {{{ */
 {
 	register zend_ulong h;
 	char *bucket_key_start = tsrm_win32_get_path_sid_key(path);
@@ -598,7 +598,7 @@ static inline zend_ulong realpath_cache_key(const char *path, size_t path_len) /
 }
 /* }}} */
 #else
-static inline zend_ulong realpath_cache_key(const char *path, size_t path_len) /* {{{ */
+static zend_always_inline zend_ulong realpath_cache_key(const char *path, size_t path_len) /* {{{ */
 {
 	register zend_ulong h;
 	const char *e = path + path_len;
@@ -631,7 +631,7 @@ CWD_API void realpath_cache_clean(void) /* {{{ */
 /* }}} */
 
  
-static inline void realpath_cache_remove_bucket(realpath_cache_bucket **bucket) /* {{{ */
+static zend_always_inline void realpath_cache_remove_bucket(realpath_cache_bucket **bucket) /* {{{ */
 {
 	realpath_cache_bucket *r = *bucket;
 	*bucket = (*bucket)->next;
@@ -665,7 +665,7 @@ CWD_API void realpath_cache_del(const char *path, size_t path_len) /* {{{ */
 }
 /* }}} */
 
-static void realpath_cache_evict(time_t t) /* {{{ */
+static zend_always_inline void realpath_cache_evict(time_t t) /* {{{ */
 {
 	zend_long new_size = CWDG(realpath_cache_size_limit) - (zend_long)((CWDG(realpath_cache_size_limit)/100)*REALPATH_LRU_EVICT_PCT);
 
@@ -690,7 +690,7 @@ static void realpath_cache_evict(time_t t) /* {{{ */
 }
 /* }}} */
 
-static inline void realpath_cache_add(const char *path, int path_len, const char *realpath, size_t realpath_len, int is_dir, time_t t) /* {{{ */
+static zend_always_inline void realpath_cache_add(const char *path, int path_len, const char *realpath, size_t realpath_len, int is_dir, time_t t) /* {{{ */
 {
 	zend_long size = sizeof(realpath_cache_bucket) + path_len + 1;
 	int same = 1;
@@ -740,7 +740,7 @@ static inline void realpath_cache_add(const char *path, int path_len, const char
 }
 /* }}} */
 
-static inline realpath_cache_bucket* realpath_cache_find(const char *path, size_t path_len, time_t t) /* {{{ */
+static zend_always_inline realpath_cache_bucket* realpath_cache_find(const char *path, size_t path_len, time_t t) /* {{{ */
 {
 	zend_ulong key = realpath_cache_key(path, path_len);
 	zend_ulong n = key % (sizeof(CWDG(realpath_cache)) / sizeof(CWDG(realpath_cache)[0]));
