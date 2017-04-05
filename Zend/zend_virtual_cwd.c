@@ -682,7 +682,7 @@ CWD_API void realpath_cache_del(const char *path, size_t path_len) /* {{{ */
 }
 /* }}} */
 
-static void realpath_cache_del_lru(void) /* {{{ */
+static void realpath_cache_evict(time_t t) /* {{{ */
 {
 	zend_long new_size = CWDG(realpath_cache_size_limit) - (zend_long)((CWDG(realpath_cache_size_limit)/100)*REALPATH_LRU_EVICT_PCT);
 
@@ -690,11 +690,15 @@ static void realpath_cache_del_lru(void) /* {{{ */
 		realpath_cache_bucket *victim = realpath_cache_lru_dequeue();
 		zend_ulong n = victim->key % (sizeof(CWDG(realpath_cache)) / sizeof(CWDG(realpath_cache)[0]));
 		realpath_cache_bucket **bucket = &CWDG(realpath_cache)[n];
+		zend_bool victim_freed = 0;
 	
 		while (*bucket != NULL) {
-			if ((*bucket) == victim) {
+			if (CWDG(realpath_cache_ttl) && (*bucket)->expires < t) {
+				realpath_cache_lru_unbag(*bucket);
 				realpath_cache_remove_bucket(bucket);
-				break;
+			} else if (!victim_freed && (*bucket) == victim) {
+				realpath_cache_remove_bucket(bucket);
+				victim_freed = 1;
 			} else {
 				bucket = &(*bucket)->next;
 			}
@@ -715,7 +719,7 @@ static inline void realpath_cache_add(const char *path, int path_len, const char
 	}
 
 	if (CWDG(realpath_cache_size) + size > CWDG(realpath_cache_size_limit)) {
-		realpath_cache_del_lru();
+		realpath_cache_evict(t);
 	}
 
 	if (CWDG(realpath_cache_size) + size <= CWDG(realpath_cache_size_limit)) {
@@ -763,11 +767,13 @@ static inline realpath_cache_bucket* realpath_cache_find(const char *path, size_
 	realpath_cache_bucket **bucket = &CWDG(realpath_cache)[n];
 
 	while (*bucket != NULL) {
-		if (CWDG(realpath_cache_ttl) && (*bucket)->expires < t) {
-			realpath_cache_lru_unbag(*bucket);
-			realpath_cache_remove_bucket(bucket);
-		} else if (key == (*bucket)->key && path_len == (*bucket)->path_len &&
+		if (key == (*bucket)->key && path_len == (*bucket)->path_len &&
 					memcmp(path, (*bucket)->path, path_len) == 0) {
+			if (CWDG(realpath_cache_ttl) && (*bucket)->expires < t) {
+				realpath_cache_lru_unbag(*bucket);
+				realpath_cache_remove_bucket(bucket);
+				return NULL;
+			}
 			/* LRU hit, update cache. */
 			realpath_cache_lru_update(*bucket);
 			return *bucket;
