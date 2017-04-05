@@ -694,6 +694,8 @@ static inline void realpath_cache_add(const char *path, int path_len, const char
 {
 	zend_long size = sizeof(realpath_cache_bucket) + path_len + 1;
 	int same = 1;
+	zend_ulong n;
+	realpath_cache_bucket *bucket;
 
 	if (realpath_len != path_len ||
 		memcmp(path, realpath, path_len) != 0) {
@@ -705,41 +707,37 @@ static inline void realpath_cache_add(const char *path, int path_len, const char
 		realpath_cache_evict(t);
 	}
 
-	if (CWDG(realpath_cache_size) + size <= CWDG(realpath_cache_size_limit)) {
-		realpath_cache_bucket *bucket = malloc(size);
-		zend_ulong n;
-
-		if (bucket == NULL) {
-			return;
-		}
-
-		bucket->key = realpath_cache_key(path, path_len);
-		bucket->path = (char*)bucket + sizeof(realpath_cache_bucket);
-		memcpy(bucket->path, path, path_len+1);
-		bucket->path_len = path_len;
-		if (same) {
-			bucket->realpath = bucket->path;
-		} else {
-			bucket->realpath = bucket->path + (path_len + 1);
-			memcpy(bucket->realpath, realpath, realpath_len+1);
-		}
-		bucket->realpath_len = realpath_len;
-		bucket->is_dir = is_dir > 0;
-#ifdef ZEND_WIN32
-		bucket->is_rvalid   = 0;
-		bucket->is_readable = 0;
-		bucket->is_wvalid   = 0;
-		bucket->is_writable = 0;
-#endif
-		bucket->expires = t + CWDG(realpath_cache_ttl);
-		n = bucket->key % (sizeof(CWDG(realpath_cache)) / sizeof(CWDG(realpath_cache)[0]));
-		bucket->next = CWDG(realpath_cache)[n];
-		CWDG(realpath_cache)[n] = bucket;
-		CWDG(realpath_cache_size) += size;
-
-		bucket->lru_prev = bucket->lru_next = NULL;
-		realpath_cache_lru_enqueue(bucket);
+	bucket = malloc(size);
+	if (bucket == NULL) {
+		return;
 	}
+
+	bucket->key = realpath_cache_key(path, path_len);
+	bucket->path = (char*)bucket + sizeof(realpath_cache_bucket);
+	memcpy(bucket->path, path, path_len+1);
+	bucket->path_len = path_len;
+	if (same) {
+		bucket->realpath = bucket->path;
+	} else {
+		bucket->realpath = bucket->path + (path_len + 1);
+		memcpy(bucket->realpath, realpath, realpath_len+1);
+	}
+	bucket->realpath_len = realpath_len;
+	bucket->is_dir = is_dir > 0;
+#ifdef ZEND_WIN32
+	bucket->is_rvalid   = 0;
+	bucket->is_readable = 0;
+	bucket->is_wvalid   = 0;
+	bucket->is_writable = 0;
+#endif
+	bucket->expires = t + CWDG(realpath_cache_ttl);
+	n = bucket->key % (sizeof(CWDG(realpath_cache)) / sizeof(CWDG(realpath_cache)[0]));
+	bucket->next = CWDG(realpath_cache)[n];
+	CWDG(realpath_cache)[n] = bucket;
+	CWDG(realpath_cache_size) += size;
+
+	bucket->lru_prev = bucket->lru_next = NULL;
+	realpath_cache_lru_enqueue(bucket);
 }
 /* }}} */
 
