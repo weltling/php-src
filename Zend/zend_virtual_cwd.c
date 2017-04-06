@@ -545,8 +545,15 @@ static zend_always_inline void realpath_cache_lru_enqueue(realpath_cache_bucket 
 /* Remove item from the LRU queue, where ever it is. */
 static zend_always_inline void realpath_cache_lru_unbag(realpath_cache_bucket *bucket) /* {{{ */
 {
-	realpath_cache_bucket *prev = bucket->lru_prev;
-	realpath_cache_bucket *next = bucket->lru_next;
+	realpath_cache_bucket *prev;
+	realpath_cache_bucket *next;
+
+	if (NULL == bucket) {
+		return;
+	}
+
+	prev = bucket->lru_prev;
+	next = bucket->lru_next;
 
 	if (REALPATH_LRU_HEAD == bucket) {
 		REALPATH_LRU_HEAD = next;
@@ -680,6 +687,10 @@ static zend_always_inline void realpath_cache_evict(time_t t) /* {{{ */
 {
 	zend_long new_size = CWDG(realpath_cache_size_limit) - (zend_long)((CWDG(realpath_cache_size_limit)/100)*REALPATH_LRU_EVICT_PCT);
 
+	if (NULL == REALPATH_LRU_HEAD) {
+		return;
+	}
+
 	if (CWDG(realpath_cache_ttl)) {
 		do {
 			realpath_cache_bucket *item_to_free = realpath_cache_lru_dequeue();
@@ -732,6 +743,9 @@ static zend_always_inline void realpath_cache_add(const char *path, int path_len
 
 	if (CWDG(realpath_cache_size) + size > CWDG(realpath_cache_size_limit)) {
 		realpath_cache_evict(t);
+		if (CWDG(realpath_cache_size) + size > CWDG(realpath_cache_size_limit)) {
+			return;
+		}
 	}
 
 	bucket = malloc(size);
