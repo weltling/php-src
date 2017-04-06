@@ -706,15 +706,14 @@ static zend_always_inline void realpath_cache_evict(time_t t) /* {{{ */
 			realpath_cache_bucket *item_to_free = realpath_cache_lru_dequeue();
 			zend_ulong n = item_to_free->key % (sizeof(CWDG(realpath_cache)) / sizeof(CWDG(realpath_cache)[0]));
 			realpath_cache_bucket **bucket = &CWDG(realpath_cache)[n];
-			zend_bool item_to_free_freed = 0;
 		
 			while (*bucket != NULL) {
-				if (!item_to_free_freed && (*bucket) == item_to_free) {
-					realpath_cache_remove_bucket(bucket);
-					item_to_free_freed = 1;
-				} else if ((*bucket)->expires < t) {
+				if ((*bucket)->expires < t) {
 					realpath_cache_lru_unbag(*bucket);
 					realpath_cache_remove_bucket(bucket);
+				} else if ((*bucket) == item_to_free) {
+					realpath_cache_remove_bucket(bucket);
+					item_to_free = NULL;
 				} else {
 					bucket = &(*bucket)->next;
 				}
