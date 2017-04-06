@@ -578,8 +578,10 @@ static zend_always_inline realpath_cache_bucket *realpath_cache_lru_dequeue(void
 /* Reflect LRU cache hit. */
 static zend_always_inline void realpath_cache_lru_update(realpath_cache_bucket *bucket) /* {{{ */
 {
-	realpath_cache_lru_unbag(bucket);
-	realpath_cache_lru_enqueue(bucket);
+	if (REALPATH_LRU_TAIL != bucket) {
+		realpath_cache_lru_unbag(bucket);
+		realpath_cache_lru_enqueue(bucket);
+	}
 }
 /* }}} */
 
