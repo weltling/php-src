@@ -680,25 +680,40 @@ static zend_always_inline void realpath_cache_evict(time_t t) /* {{{ */
 {
 	zend_long new_size = CWDG(realpath_cache_size_limit) - (zend_long)((CWDG(realpath_cache_size_limit)/100)*REALPATH_LRU_EVICT_PCT);
 
-	/* TODO optimize special case with ttl == 0. */
-	do {
-		realpath_cache_bucket *item_to_free = realpath_cache_lru_dequeue();
-		zend_ulong n = item_to_free->key % (sizeof(CWDG(realpath_cache)) / sizeof(CWDG(realpath_cache)[0]));
-		realpath_cache_bucket **bucket = &CWDG(realpath_cache)[n];
-		zend_bool item_to_free_freed = 0;
-	
-		while (*bucket != NULL) {
-			if (CWDG(realpath_cache_ttl) && (*bucket)->expires < t) {
-				realpath_cache_lru_unbag(*bucket);
-				realpath_cache_remove_bucket(bucket);
-			} else if (!item_to_free_freed && (*bucket) == item_to_free) {
-				realpath_cache_remove_bucket(bucket);
-				item_to_free_freed = 1;
-			} else {
-				bucket = &(*bucket)->next;
+	if (CWDG(realpath_cache_ttl)) {
+		do {
+			realpath_cache_bucket *item_to_free = realpath_cache_lru_dequeue();
+			zend_ulong n = item_to_free->key % (sizeof(CWDG(realpath_cache)) / sizeof(CWDG(realpath_cache)[0]));
+			realpath_cache_bucket **bucket = &CWDG(realpath_cache)[n];
+		
+			while (*bucket != NULL) {
+				if ((*bucket) == item_to_free) {
+					realpath_cache_remove_bucket(bucket);
+				} else {
+					bucket = &(*bucket)->next;
+				}
 			}
-		}
-	} while (CWDG(realpath_cache_size) > new_size);
+		} while (CWDG(realpath_cache_size) > new_size);
+	} else {
+		do {
+			realpath_cache_bucket *item_to_free = realpath_cache_lru_dequeue();
+			zend_ulong n = item_to_free->key % (sizeof(CWDG(realpath_cache)) / sizeof(CWDG(realpath_cache)[0]));
+			realpath_cache_bucket **bucket = &CWDG(realpath_cache)[n];
+			zend_bool item_to_free_freed = 0;
+		
+			while (*bucket != NULL) {
+				if ((*bucket)->expires < t) {
+					realpath_cache_lru_unbag(*bucket);
+					realpath_cache_remove_bucket(bucket);
+				} else if (!item_to_free_freed && (*bucket) == item_to_free) {
+					realpath_cache_remove_bucket(bucket);
+					item_to_free_freed = 1;
+				} else {
+					bucket = &(*bucket)->next;
+				}
+			}
+		} while (CWDG(realpath_cache_size) > new_size);
+	}
 }
 /* }}} */
 
