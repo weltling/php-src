@@ -548,10 +548,6 @@ static zend_always_inline void realpath_cache_lru_unbag(realpath_cache_bucket *b
 	realpath_cache_bucket *prev;
 	realpath_cache_bucket *next;
 
-	if (NULL == bucket) {
-		return;
-	}
-
 	prev = bucket->lru_prev;
 	next = bucket->lru_next;
 
