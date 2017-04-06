@@ -709,12 +709,12 @@ static zend_always_inline void realpath_cache_evict(time_t t) /* {{{ */
 			zend_bool item_to_free_freed = 0;
 		
 			while (*bucket != NULL) {
-				if ((*bucket)->expires < t) {
-					realpath_cache_lru_unbag(*bucket);
-					realpath_cache_remove_bucket(bucket);
-				} else if (!item_to_free_freed && (*bucket) == item_to_free) {
+				if (!item_to_free_freed && (*bucket) == item_to_free) {
 					realpath_cache_remove_bucket(bucket);
 					item_to_free_freed = 1;
+				} else if ((*bucket)->expires < t) {
+					realpath_cache_lru_unbag(*bucket);
+					realpath_cache_remove_bucket(bucket);
 				} else {
 					bucket = &(*bucket)->next;
 				}
