@@ -209,6 +209,8 @@ typedef struct _realpath_cache_bucket {
 	time_t                         expires;
 	uint16_t                       path_len;
 	uint16_t                       realpath_len;
+	uint32_t                       size;
+	uint8_t                        occupied:1;
 	uint8_t                        is_dir:1;
 #ifdef ZEND_WIN32
 	uint8_t                        is_rvalid:1;

@@ -578,8 +578,41 @@ static zend_always_inline realpath_cache_bucket *realpath_cache_lru_dequeue(void
 }
 /* }}} */
 
+static zend_always_inline void realpath_cache_lru_demote(realpath_cache_bucket *bucket) /* {{{ */
+{
+	if (REALPATH_LRU_HEAD != bucket) {
+		realpath_cache_lru_unbag(bucket); 
+
+		bucket->lru_next = REALPATH_LRU_HEAD;
+		bucket->lru_prev = NULL;
+		REALPATH_LRU_HEAD->lru_prev = bucket;
+		REALPATH_LRU_HEAD = bucket;
+
+	}
+
+	bucket->occupied = 0;
+}
+/* }}} */
+
+static zend_always_inline realpath_cache_bucket *realpath_cache_lru_find_demoted_bucket(size_t size) /* {{{ */
+{
+	realpath_cache_bucket *cur = REALPATH_LRU_HEAD;
+
+	while (cur && !cur->occupied) {
+		if (cur->size >= size) {
+			realpath_cache_lru_unbag(cur);
+			memset(cur, 0, size);
+			return cur;
+		}
+		cur = cur->lru_next;
+	}
+
+	return NULL;
+}
+/* }}} */
+
 /* Reflect LRU cache hit. */
-static zend_always_inline void realpath_cache_lru_update(realpath_cache_bucket *bucket) /* {{{ */
+static zend_always_inline void realpath_cache_lru_promote(realpath_cache_bucket *bucket) /* {{{ */
 {
 	if (REALPATH_LRU_TAIL != bucket) {
 		realpath_cache_lru_unbag(bucket);
@@ -644,6 +677,27 @@ CWD_API void realpath_cache_clean(void) /* {{{ */
 }
 /* }}} */
 
+#define REALPATH_DEC_SIZE(r) if (r->occupied) { \
+	if(r->path == r->realpath) { \
+		CWDG(realpath_cache_size) -= sizeof(realpath_cache_bucket) + r->path_len + 1; \
+	} else { \
+		CWDG(realpath_cache_size) -= sizeof(realpath_cache_bucket) + r->path_len + 1 + r->realpath_len + 1; \
+	} \
+}
+
+static zend_always_inline void realpath_cache_invalidate_bucket(realpath_cache_bucket **bucket) /* {{{ */
+{
+	realpath_cache_bucket *r = *bucket;
+	*bucket = (*bucket)->next;
+
+	r->occupied = 0;
+
+	REALPATH_DEC_SIZE(r)
+
+	realpath_cache_lru_demote(r); 
+
+}
+/* }}} */
  
 static zend_always_inline void realpath_cache_remove_bucket(realpath_cache_bucket **bucket) /* {{{ */
 {
@@ -651,11 +705,8 @@ static zend_always_inline void realpath_cache_remove_bucket(realpath_cache_bucke
 	*bucket = (*bucket)->next;
 
 	/* if the pointers match then only subtract the length of the path */
-	if(r->path == r->realpath) {
-		CWDG(realpath_cache_size) -= sizeof(realpath_cache_bucket) + r->path_len + 1;
-	} else {
-		CWDG(realpath_cache_size) -= sizeof(realpath_cache_bucket) + r->path_len + 1 + r->realpath_len + 1;
-	}
+	REALPATH_DEC_SIZE(r)
+
 	free(r);
 }
 /* }}} */
@@ -743,7 +794,9 @@ static zend_always_inline void realpath_cache_add(const char *path, int path_len
 		}
 	}
 
-	bucket = malloc(size);
+	if (NULL == (bucket = realpath_cache_lru_find_demoted_bucket(size))) {
+		bucket = malloc(size);
+	}
 	if (bucket == NULL) {
 		return;
 	}
@@ -772,6 +825,9 @@ static zend_always_inline void realpath_cache_add(const char *path, int path_len
 	CWDG(realpath_cache)[n] = bucket;
 	CWDG(realpath_cache_size) += size;
 
+	bucket->occupied = 1;
+	bucket->size = size;
+
 	realpath_cache_lru_enqueue(bucket);
 }
 /* }}} */
@@ -786,12 +842,12 @@ static zend_always_inline realpath_cache_bucket* realpath_cache_find(const char 
 		if (key == (*bucket)->key && path_len == (*bucket)->path_len &&
 					memcmp(path, (*bucket)->path, path_len) == 0) {
 			if (CWDG(realpath_cache_ttl) && (*bucket)->expires < t) {
-				realpath_cache_lru_unbag(*bucket);
-				realpath_cache_remove_bucket(bucket);
+				/* realpath_cache_lru_unbag(*bucket); */
+				realpath_cache_invalidate_bucket(bucket);
 				return NULL;
 			}
 			/* LRU hit, update cache. */
-			realpath_cache_lru_update(*bucket);
+			realpath_cache_lru_promote(*bucket);
 			return *bucket;
 		} else {
 			bucket = &(*bucket)->next;
