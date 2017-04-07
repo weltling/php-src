@@ -697,7 +697,7 @@ static zend_always_inline void realpath_cache_invalidate_bucket(realpath_cache_b
 
 }
 /* }}} */
- 
+
 static zend_always_inline void realpath_cache_remove_bucket(realpath_cache_bucket **bucket) /* {{{ */
 {
 	realpath_cache_bucket *r = *bucket;
@@ -729,47 +729,24 @@ CWD_API void realpath_cache_del(const char *path, size_t path_len) /* {{{ */
 }
 /* }}} */
 
-static zend_always_inline void realpath_cache_evict(time_t t) /* {{{ */
+static zend_always_inline void realpath_cache_evict(void) /* {{{ */
 {
 	zend_long new_size = CWDG(realpath_cache_size_limit) - (zend_long)((CWDG(realpath_cache_size_limit)/100)*REALPATH_LRU_EVICT_PCT);
 
-	if (NULL == REALPATH_LRU_HEAD) {
-		return;
-	}
-
-	if (!CWDG(realpath_cache_ttl)) {
-		do {
-			realpath_cache_bucket *item_to_free = realpath_cache_lru_dequeue();
-			zend_ulong n = item_to_free->key % (sizeof(CWDG(realpath_cache)) / sizeof(CWDG(realpath_cache)[0]));
-			realpath_cache_bucket **bucket = &CWDG(realpath_cache)[n];
-		
-			while (*bucket != NULL) {
-				if ((*bucket) == item_to_free) {
-					realpath_cache_remove_bucket(bucket);
-				} else {
-					bucket = &(*bucket)->next;
-				}
+	do {
+		realpath_cache_bucket *item_to_free = realpath_cache_lru_dequeue();
+		zend_ulong n = item_to_free->key % (sizeof(CWDG(realpath_cache)) / sizeof(CWDG(realpath_cache)[0]));
+		realpath_cache_bucket **bucket = &CWDG(realpath_cache)[n];
+	
+		while (*bucket != NULL) {
+			if ((*bucket) == item_to_free) {
+				realpath_cache_remove_bucket(bucket);
+				break;
+			} else {
+				bucket = &(*bucket)->next;
 			}
-		} while (CWDG(realpath_cache_size) > new_size);
-	} else {
-		do {
-			realpath_cache_bucket *item_to_free = realpath_cache_lru_dequeue();
-			zend_ulong n = item_to_free->key % (sizeof(CWDG(realpath_cache)) / sizeof(CWDG(realpath_cache)[0]));
-			realpath_cache_bucket **bucket = &CWDG(realpath_cache)[n];
-		
-			while (*bucket != NULL) {
-				if ((*bucket)->expires < t) {
-					realpath_cache_lru_unbag(*bucket);
-					realpath_cache_remove_bucket(bucket);
-				} else if ((*bucket) == item_to_free) {
-					realpath_cache_remove_bucket(bucket);
-					item_to_free = NULL;
-				} else {
-					bucket = &(*bucket)->next;
-				}
-			}
-		} while (CWDG(realpath_cache_size) > new_size);
-	}
+		}
+	} while (CWDG(realpath_cache_size) > new_size);
 }
 /* }}} */
 
@@ -787,7 +764,7 @@ static zend_always_inline void realpath_cache_add(const char *path, int path_len
 	}
 
 	if (CWDG(realpath_cache_size) + size > CWDG(realpath_cache_size_limit)) {
-		realpath_cache_evict(t);
+		realpath_cache_evict();
 		if (CWDG(realpath_cache_size) + size > CWDG(realpath_cache_size_limit)) {
 			return;
 		}
@@ -841,7 +818,6 @@ static zend_always_inline realpath_cache_bucket* realpath_cache_find(const char 
 		if (key == (*bucket)->key && path_len == (*bucket)->path_len &&
 					memcmp(path, (*bucket)->path, path_len) == 0) {
 			if (CWDG(realpath_cache_ttl) && (*bucket)->expires < t) {
-				/* realpath_cache_lru_unbag(*bucket); */
 				realpath_cache_invalidate_bucket(bucket);
 				return NULL;
 			}
