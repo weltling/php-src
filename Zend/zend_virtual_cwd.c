@@ -660,18 +660,17 @@ static zend_always_inline zend_ulong realpath_cache_key(const char *path, size_t
 
 CWD_API void realpath_cache_clean(void) /* {{{ */
 {
-	uint32_t i;
+	realpath_cache_bucket *cur = REALPATH_LRU_HEAD;
 
-	for (i = 0; i < sizeof(CWDG(realpath_cache))/sizeof(CWDG(realpath_cache)[0]); i++) {
-		realpath_cache_bucket *p = CWDG(realpath_cache)[i];
-		while (p != NULL) {
-			realpath_cache_bucket *r = p;
-			p = p->next;
-			free(r);
-		}
-		CWDG(realpath_cache)[i] = NULL;
+	while (cur && cur->next) {
+		realpath_cache_bucket *r = cur;
+		cur = cur->lru_next;
+		free(r);
 	}
+
 	CWDG(realpath_cache_size) = 0;
+	memset(CWDG(realpath_cache), 0, sizeof(CWDG(realpath_cache)));
+
 	REALPATH_LRU_HEAD = NULL;
 	REALPATH_LRU_TAIL = NULL;
 }
