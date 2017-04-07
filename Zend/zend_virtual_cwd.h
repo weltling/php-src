@@ -197,7 +197,7 @@ CWD_API char *tsrm_realpath(const char *path, char *real_path);
 
 #define REALPATH_CACHE_TTL  (2*60) /* 2 minutes */
 #define REALPATH_CACHE_SIZE 0      /* disabled while php.ini isn't loaded */
-#define REALPATH_LRU_EVICT_PCT 33 /* % of LRU items to evict. */
+#define REALPATH_LRU_EXPUNGE_PCT 33 /* % of LRU items to exputge. */
 
 typedef struct _realpath_cache_bucket {
 	struct _realpath_cache_bucket *next;

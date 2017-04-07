@@ -729,9 +729,9 @@ CWD_API void realpath_cache_del(const char *path, size_t path_len) /* {{{ */
 }
 /* }}} */
 
-static zend_always_inline void realpath_cache_evict(void) /* {{{ */
+static zend_always_inline void realpath_cache_expunge(void) /* {{{ */
 {
-	zend_long new_size = CWDG(realpath_cache_size_limit) - (zend_long)((CWDG(realpath_cache_size_limit)/100)*REALPATH_LRU_EVICT_PCT);
+	zend_long new_size = CWDG(realpath_cache_size_limit) - (zend_long)((CWDG(realpath_cache_size_limit)/100)*REALPATH_LRU_EXPUNGE_PCT);
 
 	do {
 		realpath_cache_bucket *item_to_free = realpath_cache_lru_dequeue();
@@ -764,7 +764,7 @@ static zend_always_inline void realpath_cache_add(const char *path, int path_len
 	}
 
 	if (CWDG(realpath_cache_size) + size > CWDG(realpath_cache_size_limit)) {
-		realpath_cache_evict();
+		realpath_cache_expunge();
 		if (CWDG(realpath_cache_size) + size > CWDG(realpath_cache_size_limit)) {
 			return;
 		}
