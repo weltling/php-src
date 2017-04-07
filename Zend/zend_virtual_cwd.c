@@ -662,7 +662,7 @@ CWD_API void realpath_cache_clean(void) /* {{{ */
 {
 	realpath_cache_bucket *cur = REALPATH_LRU_HEAD;
 
-	while (cur && cur->next) {
+	while (cur) {
 		realpath_cache_bucket *r = cur;
 		cur = cur->lru_next;
 		free(r);
