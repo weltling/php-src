@@ -676,6 +676,7 @@ CWD_API void realpath_cache_clean(void) /* {{{ */
 }
 /* }}} */
 
+/* if the pointers match then only subtract the length of the path */
 #define REALPATH_DEC_SIZE(r) if (r->occupied) { \
 	if(r->path == r->realpath) { \
 		CWDG(realpath_cache_size) -= sizeof(realpath_cache_bucket) + r->path_len + 1; \
@@ -703,7 +704,6 @@ static zend_always_inline void realpath_cache_remove_bucket(realpath_cache_bucke
 	realpath_cache_bucket *r = *bucket;
 	*bucket = (*bucket)->next;
 
-	/* if the pointers match then only subtract the length of the path */
 	REALPATH_DEC_SIZE(r)
 
 	free(r);
