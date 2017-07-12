@@ -218,6 +218,7 @@ snap-nano: $(BUILD_DIR)\$(DIST_ZIP_SNAP)
 	-$(ZIP) -d -q $(DIST_ZIP_SNAP_NANO) "/dev/php*.lib"
 	-$(ZIP) -d -q $(DIST_ZIP_SNAP_NANO) "/dev"
 	-$(ZIP) -d -q $(DIST_ZIP_SNAP_NANO) "/php*embed.lib"
+	-$(ZIP) -d -q $(DIST_ZIP_SNAP_NANO) "/php*phpdbg.dll"
 	-copy "%VCToolsRedistDir%\onecore\x64\Microsoft.VC$(PHP_SDK_VC_NUM)0.CRT\vcruntime140.dll" .
 	-$(ZIP) -u -q $(DIST_ZIP_SNAP_NANO) vcruntime140.dll
 	-del vcruntime140.dll
