@@ -209,7 +209,7 @@ dist: all build-dist
 snap: build-snap build-devel build-dist
 
 snap-nano: $(BUILD_DIR)\$(DIST_ZIP_SNAP)
-	@if not "$(PHP_ARCHITECTURE)"=="x64" (@echo Nano is supported only on x64 architectures & exit 1)
+	@if not "$(PHP_ARCHITECTURE)"=="x64" (@echo Nano server supports only x64 architecture & exit 1)
 	@if $(PHP_SDK_VC_NUM) lss 15 (@echo VC15 required & exit 1)
 	cd $(BUILD_DIR)
 	copy /b /y $(DIST_ZIP_SNAP) $(DIST_ZIP_SNAP_NANO)
