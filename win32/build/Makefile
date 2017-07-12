@@ -30,6 +30,7 @@ BUILD_DIR_DEV_NAME=php-$(PHP_VERSION_STRING)-devel-$(PHP_COMPILER_SHORT)-$(PHP_A
 BUILD_DIR_DEV=$(BUILD_DIR)\$(BUILD_DIR_DEV_NAME)
 
 DIST_ZIP_SNAP=php-$(PHP_VERSION_STRING)$(PHP_ZTS_ARCHIVE_POSTFIX)-Win32-$(PHP_COMPILER_SHORT)-$(PHP_ARCHITECTURE).zip
+DIST_ZIP_SNAP_NANO=php-$(PHP_VERSION_STRING)$(PHP_ZTS_ARCHIVE_POSTFIX)-Win32-$(PHP_COMPILER_SHORT)-$(PHP_ARCHITECTURE)-Nano.zip
 DIST_ZIP_PECL=pecl-$(PHP_VERSION_STRING)$(PHP_ZTS_ARCHIVE_POSTFIX)-Win32-$(PHP_COMPILER_SHORT)-$(PHP_ARCHITECTURE).zip
 DIST_ZIP_DEV_PACK=php-devel-pack-$(PHP_VERSION_STRING)$(PHP_ZTS_ARCHIVE_POSTFIX)-Win32-$(PHP_COMPILER_SHORT)-$(PHP_ARCHITECTURE).zip
 DIST_ZIP_TEST_PACK=php-test-pack-$(PHP_VERSION_STRING).zip
@@ -206,6 +207,21 @@ build-dist: $(BUILD_DIR)\deplister.exe
 
 dist: all build-dist
 snap: build-snap build-devel build-dist
+
+snap-nano: $(BUILD_DIR)\$(DIST_ZIP_SNAP)
+	@if not "$(PHP_ARCHITECTURE)"=="x64" (@echo Nano is supported only on x64 architectures & exit 1)
+	@if not "$(PHP_ARCHITECTURE)"=="x64" (@echo Nano is supported only on x64 architectures & exit 1)
+	cd $(BUILD_DIR)
+	copy /b /y $(DIST_ZIP_SNAP) $(DIST_ZIP_SNAP_NANO)
+	-$(ZIP) -d -q $(DIST_ZIP_SNAP_NANO) "/ext/php_com_dotnet.dll"
+	-$(ZIP) -d -q $(DIST_ZIP_SNAP_NANO) "/ext/php_zend_test.dll"
+	-$(ZIP) -d -q $(DIST_ZIP_SNAP_NANO) "/dev/php*.lib"
+	-$(ZIP) -d -q $(DIST_ZIP_SNAP_NANO) "/dev"
+	-$(ZIP) -d -q $(DIST_ZIP_SNAP_NANO) "/php*embed.lib"
+	-copy "%VCToolsRedistDir%\onecore\x64\Microsoft.VC$(PHP_SDK_VC_NUM)0.CRT\vcruntime140.dll" .
+	-$(ZIP) -u -q $(DIST_ZIP_SNAP_NANO) vcruntime140.dll
+	-del vcruntime140.dll
+
 
 $(BUILD_DIR)\deplister.exe:	win32\build\deplister.c
 	$(CC) /Fo$(BUILD_DIR)\ /Fd$(BUILD_DIR)\ /Fp$(BUILD_DIR)\ /FR$(BUILD_DIR) /Fe$(BUILD_DIR)\deplister.exe win32\build\deplister.c imagehlp.lib
