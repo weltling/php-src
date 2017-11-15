@@ -145,7 +145,7 @@ typedef struct {
 			wchar_t        ReparseTarget[1];
 		} MountPointReparseBuffer;
 		struct {
-			unsigned char  ReparseTarget[1];
+			unsigned char ReparseTarget[1];
 		} GenericReparseBuffer;
 	};
 } REPARSE_DATA_BUFFER, *PREPARSE_DATA_BUFFER;
@@ -187,8 +187,8 @@ CWD_API ssize_t php_sys_readlink(const char *link, char *target, size_t target_l
 	}
 
 	hFile = CreateFileW(linkw,            // file to open
-				 GENERIC_READ,          // open for reading
-				 FILE_SHARE_READ,       // share for reading
+				 0,          // query possible attributes
+				 PHP_WIN32_IOUTIL_DEFAULT_SHARE_MODE,
 				 NULL,                  // default security
 				 OPEN_EXISTING,         // existing file only
 				 FILE_FLAG_BACKUP_SEMANTICS, // normal file
@@ -271,7 +271,7 @@ CWD_API int php_sys_stat_ex(const char *path, zend_stat_t *buf, int lstat) /* {{
 		} else {
 			buf->st_dev = buf->st_rdev = pathw[0] - L'a';
 		}
-	} else if (PHP_WIN32_IOUTIL_IS_UNC(pathw, pathw_len)) {
+	} else if (PHP_WIN32_IOUTIL_IS_UNC_PATHW(pathw, pathw_len) || PHP_WIN32_IOUTIL_IS_UNC_PATHW2(pathw, pathw_len)) {
 		buf->st_dev = buf->st_rdev = 0;
 	} else {
 		wchar_t cur_path[MAXPATHLEN+1];
@@ -299,7 +299,13 @@ CWD_API int php_sys_stat_ex(const char *path, zend_stat_t *buf, int lstat) /* {{
 		REPARSE_DATA_BUFFER * pbuffer;
 		DWORD retlength = 0;
 
-		hLink = CreateFileW(pathw, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_FLAG_OPEN_REPARSE_POINT|FILE_FLAG_BACKUP_SEMANTICS, NULL);
+		hLink = CreateFileW(pathw,
+				FILE_READ_ATTRIBUTES,
+				PHP_WIN32_IOUTIL_DEFAULT_SHARE_MODE,
+				NULL,
+				OPEN_EXISTING,
+				FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS,
+				NULL);
 		if(hLink == INVALID_HANDLE_VALUE) {
 			free(pathw);
 			return -1;
@@ -724,21 +730,394 @@ CWD_API realpath_cache_bucket** realpath_cache_get_buckets(void)
 #undef LINK_MAX
 #define LINK_MAX 32
 
+#ifdef ZEND_WIN32
+static size_t tsrm_realpath_r_w(wchar_t *path, size_t start, size_t len, int *ll, time_t *t, int use_realpath, int is_dir, int *link_is_dir) /* {{{ */
+{
+	size_t i, j;
+	int directory = 0, save;
+	WIN32_FIND_DATAW dataw;
+	HANDLE hFind = INVALID_HANDLE_VALUE;
+	ALLOCA_FLAG(use_heap_large)
+	realpath_cache_bucket *bucket;
+	wchar_t *tmp;
+	ALLOCA_FLAG(use_heap)
+
+	while (1) {
+		if (len <= start) {
+			if (link_is_dir) {
+				*link_is_dir = 1;
+			}
+			return start;
+		}
+
+		i = len;
+		while (i > start && !PHP_WIN32_IOUTIL_IS_SLASHW(path[i-1])) {
+			i--;
+		}
+
+		if (i == len ||
+			(i + 1 == len && path[i] == L'.')) {
+			/* remove double slashes and '.' */
+			len = i - 1;
+			is_dir = 1;
+			continue;
+		} else if (i + 2 == len && path[i] == L'.' && path[i+1] == L'.') {
+			/* remove '..' and previous directory */
+			is_dir = 1;
+			if (link_is_dir) {
+				*link_is_dir = 1;
+			}
+			if (i <= start + 1) {
+				return start ? start : len;
+			}
+			j = tsrm_realpath_r_w(path, start, i-1, ll, t, use_realpath, 1, NULL);
+			if (j > start && j != (size_t)-1) {
+				j--;
+				while (j > start && !PHP_WIN32_IOUTIL_IS_SLASHW(path[j])) {
+					j--;
+				}
+				if (!start) {
+					/* leading '..' must not be removed in case of relative path */
+					if (j == 0 && path[0] == L'.' && path[1] == L'.' &&
+							PHP_WIN32_IOUTIL_IS_SLASHW(path[2])) {
+						path[3] = L'.';
+						path[4] = L'.';
+						path[5] = PHP_WIN32_IOUTIL_DEFAULT_SLASHW;
+						j = 5;
+					} else if (j > 0 &&
+							path[j+1] == L'.' && path[j+2] == L'.' &&
+							PHP_WIN32_IOUTIL_IS_SLASHW(path[j+3])) {
+						j += 4;
+						path[j++] = L'.';
+						path[j++] = L'.';
+						path[j] = PHP_WIN32_IOUTIL_DEFAULT_SLASHW;
+					}
+				}
+			} else if (!start && !j) {
+				/* leading '..' must not be removed in case of relative path */
+				path[0] = L'.';
+				path[1] = L'.';
+				path[2] = PHP_WIN32_IOUTIL_DEFAULT_SLASHW;
+				j = 2;
+			}
+			return j;
+		}
+
+		path[len] = 0;
+
+		save = (use_realpath != CWD_EXPAND);
+
+		if (start && save && CWDG(realpath_cache_size_limit)) {
+			size_t subj_len = 0;
+			char *subj = php_win32_ioutil_conv_w_to_any(path, PHP_WIN32_CP_IGNORE_LEN, &subj_len);
+			/* cache lookup for absolute path */
+			if (subj) {
+				if (!*t) {
+					*t = time(0);
+				}
+				if ((bucket = realpath_cache_find(subj, subj_len, *t)) != NULL) {
+					free(subj);
+					if (is_dir && !bucket->is_dir) {
+						/* not a directory */
+						return (size_t)-1;
+					} else {
+						size_t subjw_len;
+						wchar_t *subjw = php_win32_ioutil_conv_any_to_w(bucket->realpath, bucket->realpath_len, &subjw_len);
+						if (subjw) {
+							if (link_is_dir) {
+								*link_is_dir = bucket->is_dir;
+							}
+							memcpy(path, subjw, subjw_len * sizeof(wchar_t));
+							path[subjw_len] = L'\0';
+							free(subjw);
+							return subjw_len;
+						}
+					}
+				}
+			}
+		}
+
+		if (save) {
+			hFind = FindFirstFileExW(path, FindExInfoBasic, &dataw, FindExSearchNameMatch, NULL, 0);
+			if (INVALID_HANDLE_VALUE == hFind) {
+				if (use_realpath == CWD_REALPATH) {
+					/* file not found */
+					return (size_t)-1;
+				}
+				/* continue resolution anyway but don't save result in the cache */
+				save = 0;
+			} else {
+				FindClose(hFind);
+			}
+		}
+
+		tmp = do_alloca(sizeof(wchar_t)*(len+1), use_heap);
+		memcpy(tmp, path, sizeof(wchar_t)*(len+1));
+
+		if(save &&
+				!(PHP_WIN32_IOUTIL_IS_UNC_PATHW(path, len) && len >= 3 && path[2] != L'?') &&
+                               (dataw.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)) {
+			/* File is a reparse point. Get the target */
+			HANDLE hLink = NULL;
+			REPARSE_DATA_BUFFER * pbuffer;
+			DWORD retlength = 0;
+			size_t bufindex = 0;
+			uint8_t isabsolute = 0;
+			BOOL isVolume = FALSE;
+#if VIRTUAL_CWD_DEBUG
+			wchar_t *printname = NULL;
+#endif
+			wchar_t substitutename[PHP_WIN32_IOUTIL_MAXPATHLEN];
+			size_t substitutename_len;
+			size_t substitutename_off = 0;
+
+			if(++(*ll) > LINK_MAX) {
+				free_alloca(tmp, use_heap);
+				return (size_t)-1;
+			}
+
+			hLink = CreateFileW(path,
+					0,
+					PHP_WIN32_IOUTIL_DEFAULT_SHARE_MODE,
+					NULL,
+					OPEN_EXISTING,
+					FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS,
+					NULL);
+			if(hLink == INVALID_HANDLE_VALUE) {
+				free_alloca(tmp, use_heap);
+				return (size_t)-1;
+			}
+
+			pbuffer = (REPARSE_DATA_BUFFER *)do_alloca(MAXIMUM_REPARSE_DATA_BUFFER_SIZE, use_heap_large);
+			if (pbuffer == NULL) {
+				CloseHandle(hLink);
+				free_alloca(tmp, use_heap);
+				return (size_t)-1;
+			}
+			if(!DeviceIoControl(hLink, FSCTL_GET_REPARSE_POINT, NULL, 0, pbuffer,  MAXIMUM_REPARSE_DATA_BUFFER_SIZE, &retlength, NULL)) {
+				free_alloca(pbuffer, use_heap_large);
+				free_alloca(tmp, use_heap);
+				CloseHandle(hLink);
+				return (size_t)-1;
+			}
+
+			CloseHandle(hLink);
+
+			if(pbuffer->ReparseTag == IO_REPARSE_TAG_SYMLINK) {
+				wchar_t *reparsetarget = pbuffer->SymbolicLinkReparseBuffer.ReparseTarget;
+				isabsolute = (pbuffer->SymbolicLinkReparseBuffer.Flags == 0) ? 1 : 0;
+#if VIRTUAL_CWD_DEBUG
+				printname = reparsetarget + pbuffer->MountPointReparseBuffer.PrintNameOffset;
+#endif
+
+				substitutename_len = pbuffer->MountPointReparseBuffer.SubstituteNameLength / sizeof(wchar_t);
+				if (substitutename_len >= PHP_WIN32_IOUTIL_MAXPATHLEN) {
+					free_alloca(pbuffer, use_heap_large);
+					free_alloca(tmp, use_heap);
+					return (size_t)-1;
+				}
+				memmove(substitutename, reparsetarget + pbuffer->MountPointReparseBuffer.SubstituteNameOffset / sizeof(wchar_t), pbuffer->MountPointReparseBuffer.SubstituteNameLength);
+				substitutename[substitutename_len] = L'\0';
+			} else if (pbuffer->ReparseTag == IO_REPARSE_TAG_MOUNT_POINT) {
+				wchar_t *reparsetarget = pbuffer->MountPointReparseBuffer.ReparseTarget;
+				isabsolute = 1;
+#if VIRTUAL_CWD_DEBUG
+				printname = reparsetarget + pbuffer->MountPointReparseBuffer.PrintNameOffset;
+#endif
+
+				substitutename_len = pbuffer->MountPointReparseBuffer.SubstituteNameLength / sizeof(wchar_t);
+				if (substitutename_len >= PHP_WIN32_IOUTIL_MAXPATHLEN) {
+					free_alloca(pbuffer, use_heap_large);
+					free_alloca(tmp, use_heap);
+					return (size_t)-1;
+				}
+				memmove(substitutename, reparsetarget + pbuffer->MountPointReparseBuffer.SubstituteNameOffset / sizeof(wchar_t), pbuffer->MountPointReparseBuffer.SubstituteNameLength);
+				substitutename[substitutename_len] = L'\0';
+			} else if (pbuffer->ReparseTag == IO_REPARSE_TAG_DEDUP ||
+					/* Starting with 1709. */
+					(pbuffer->ReparseTag & IO_REPARSE_TAG_CLOUD_MASK) != 0 && 0x90001018L != pbuffer->ReparseTag ||
+					IO_REPARSE_TAG_CLOUD == pbuffer->ReparseTag ||
+					IO_REPARSE_TAG_ONEDRIVE == pbuffer->ReparseTag) {
+				isabsolute = 1;
+				memmove(substitutename, path, (len + 1)*sizeof(wchar_t));
+				substitutename_len = len;
+			} else {
+				/* XXX this might be not the end, restart handling with REPARSE_GUID_DATA_BUFFER should be implemented. */
+				free_alloca(pbuffer, use_heap_large);
+				free_alloca(tmp, use_heap);
+				return (size_t)-1;
+			}
+
+			if(isabsolute && substitutename_len > 4) {
+				/* Do not resolve volumes (for now). A mounted point can
+				   target a volume without a drive, it is not certain that
+				   all IO functions we use in php and its deps support
+				   path with volume GUID instead of the DOS way, like:
+				   d:\test\mnt\foo
+				   \\?\Volume{62d1c3f8-83b9-11de-b108-806e6f6e6963}\foo
+				*/
+				if (wcsncmp(substitutename, L"\\??\\Volume{",11) == 0
+					|| wcsncmp(substitutename, L"\\\\?\\Volume{",11) == 0
+					|| wcsncmp(substitutename, L"\\??\\UNC\\", 8) == 0
+					) {
+					isVolume = TRUE;
+					substitutename_off = 0;
+				} else
+					/* do not use the \??\ and \\?\ prefix*/
+					if (wcsncmp(substitutename, L"\\??\\", 4) == 0
+						|| wcsncmp(substitutename, L"\\\\?\\", 4) == 0) {
+					substitutename_off = 4;
+				}
+			}
+
+			if (!isVolume) {
+				wchar_t *tmp2 = substitutename + substitutename_off;
+				for(bufindex = 0; bufindex < (substitutename_len - substitutename_off); bufindex++) {
+					*(path + bufindex) = *(tmp2 + bufindex);
+				}
+
+				*(path + bufindex) = 0;
+				j = bufindex;
+			} else {
+				j = len;
+			}
+
+
+#if VIRTUAL_CWD_DEBUG
+			fwprintf(stderr, L"reparse: print: %s ", printname);
+			fwprintf(stderr, L"sub: %s ", substitutename);
+			fwprintf(stderr, L"resolved: %s ", path);
+#endif
+			free_alloca(pbuffer, use_heap_large);
+
+			if(isabsolute == 1) {
+				if (!((j == 3) && (path[1] == L':') && (path[2] == L'\\'))) {
+					/* use_realpath is 0 in the call below coz path is absolute*/
+					j = tsrm_realpath_r_w(path, 0, j, ll, t, 0, is_dir, &directory);
+					if(j == (size_t)-1) {
+						free_alloca(tmp, use_heap);
+						return (size_t)-1;
+					}
+				}
+			} else {
+				if(i + j >= PHP_WIN32_IOUTIL_MAXPATHLEN - 1) {
+					free_alloca(tmp, use_heap);
+					return (size_t)-1;
+				}
+
+				memmove(path+i, path, (j+1)*sizeof(wchar_t));
+				memcpy(path, tmp, (i-1)*sizeof(wchar_t));
+				path[i-1] = PHP_WIN32_IOUTIL_DEFAULT_SLASHW;
+				j  = tsrm_realpath_r_w(path, start, i + j, ll, t, use_realpath, is_dir, &directory);
+				if(j == (size_t)-1) {
+					free_alloca(tmp, use_heap);
+					return (size_t)-1;
+				}
+			}
+			directory = (dataw.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY);
+
+			if(link_is_dir) {
+				*link_is_dir = directory;
+			}
+		} else {
+			if (save) {
+				directory = (dataw.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+				if (is_dir && !directory) {
+					/* not a directory */
+					free_alloca(tmp, use_heap);
+					return (size_t)-1;
+				}
+			}
+
+			if (i <= start + 1) {
+				j = start;
+			} else {
+				/* some leading directories may be unaccessable */
+				j = tsrm_realpath_r_w(path, start, i-1, ll, t, save ? CWD_FILEPATH : use_realpath, 1, NULL);
+				if (j > start && j != (size_t)-1) {
+					path[j++] = PHP_WIN32_IOUTIL_DEFAULT_SLASHW;
+				}
+			}
+
+			if (j == (size_t)-1 || j + len >= PHP_WIN32_IOUTIL_MAXPATHLEN - 1 + i) {
+				free_alloca(tmp, use_heap);
+				return (size_t)-1;
+			}
+			if (save) {
+				i = wcslen(dataw.cFileName);
+				memcpy(path+j, dataw.cFileName, (i+1)*sizeof(wchar_t));
+				j += i;
+			} else {
+				/* use the original file or directory name as it wasn't found */
+				memcpy(path+j, tmp+i, (len-i+1)*sizeof(wchar_t));
+				j += (len-i);
+			}
+		}
+
+		if (save && start && CWDG(realpath_cache_size_limit)) {
+			size_t subj_len = 0;
+			size_t real_len = 0;
+			char *subj = php_win32_ioutil_conv_w_to_any(tmp, PHP_WIN32_CP_IGNORE_LEN, &subj_len);
+			char *real = php_win32_ioutil_conv_w_to_any(path, PHP_WIN32_CP_IGNORE_LEN, &real_len);
+			if (subj && real) {
+				/* save absolute path in the cache */
+				realpath_cache_add(subj, subj_len, real, real_len, directory, *t);
+				free(subj);
+				free(real);
+			}
+		}
+		free_alloca(tmp, use_heap);
+
+		return j;
+	}
+}
+/* }}} */
+
+static size_t tsrm_realpath_r(char *path, size_t start, size_t len, int *ll, time_t *t, int use_realpath, int is_dir, int *link_is_dir) /* {{{ */
+{
+	wchar_t *pathw_buf = NULL, pathw[PHP_WIN32_IOUTIL_MAXPATHLEN];
+	size_t ret, lenw;
+	char *_tmp;
+
+	pathw_buf = php_win32_ioutil_conv_any_to_w(path, len, &lenw);
+	if (!pathw_buf) {
+		return -1;
+	}
+	if (PHP_WIN32_IOUTIL_IS_LONG_PATHW(pathw_buf, lenw)) {
+		start += PHP_WIN32_IOUTIL_LONG_PATH_PREFIX_LENW;
+	}
+	memmove(pathw, pathw_buf, (lenw+1)*sizeof(wchar_t));
+	free(pathw_buf);
+
+	lenw = tsrm_realpath_r_w(pathw, start, lenw, ll, t, use_realpath, is_dir, link_is_dir);
+	if ((size_t)-1 == lenw) {
+		return -1;
+	}
+	pathw[lenw] = L'\0';
+
+	if (PHP_WIN32_IOUTIL_IS_LONG_PATHW(pathw, lenw)) {
+		_tmp = php_win32_cp_conv_w_to_any(pathw + PHP_WIN32_IOUTIL_LONG_PATH_PREFIX_LENW, lenw - PHP_WIN32_IOUTIL_LONG_PATH_PREFIX_LENW, &ret); 
+	} else {
+		_tmp = php_win32_cp_conv_w_to_any(pathw, lenw, &ret); 
+	}
+	if (!_tmp) {
+		return -1;
+	}
+	memmove(path, _tmp, ret+1);
+	path[ret] = '\0';
+
+	free(_tmp);
+
+	return ret;
+}
+/* }}} */
+#else
+
 static size_t tsrm_realpath_r(char *path, size_t start, size_t len, int *ll, time_t *t, int use_realpath, int is_dir, int *link_is_dir) /* {{{ */
 {
 	size_t i, j;
 	int directory = 0, save;
-#ifdef ZEND_WIN32
-	WIN32_FIND_DATAW dataw;
-	HANDLE hFind = INVALID_HANDLE_VALUE;
-	ALLOCA_FLAG(use_heap_large)
-	wchar_t *pathw = NULL;
-#define FREE_PATHW() \
-	do { free(pathw); } while(0);
-
-#else
 	zend_stat_t st;
-#endif
 	realpath_cache_bucket *bucket;
 	char *tmp;
 	ALLOCA_FLAG(use_heap)
@@ -755,7 +1134,6 @@ static size_t tsrm_realpath_r(char *path, size_t start, size_t len, int *ll, tim
 		while (i > start && !IS_SLASH(path[i-1])) {
 			i--;
 		}
-		assert(i < MAXPATHLEN);
 
 		if (i == len ||
 			(i + 1 == len && path[i] == '.')) {
@@ -775,11 +1153,9 @@ static size_t tsrm_realpath_r(char *path, size_t start, size_t len, int *ll, tim
 			j = tsrm_realpath_r(path, start, i-1, ll, t, use_realpath, 1, NULL);
 			if (j > start && j != (size_t)-1) {
 				j--;
-				assert(i < MAXPATHLEN);
 				while (j > start && !IS_SLASH(path[j])) {
 					j--;
 				}
-				assert(i < MAXPATHLEN);
 				if (!start) {
 					/* leading '..' must not be removed in case of relative path */
 					if (j == 0 && path[0] == '.' && path[1] == '.' &&
@@ -830,260 +1206,6 @@ static size_t tsrm_realpath_r(char *path, size_t start, size_t len, int *ll, tim
 			}
 		}
 
-#ifdef ZEND_WIN32
-		if (save) {
-			pathw = php_win32_ioutil_any_to_w(path);
-			if (!pathw) {
-				return (size_t)-1;
-			}
-			hFind = FindFirstFileExW(pathw, FindExInfoBasic, &dataw, FindExSearchNameMatch, NULL, 0);
-			if (INVALID_HANDLE_VALUE == hFind) {
-				if (use_realpath == CWD_REALPATH) {
-					/* file not found */
-					FREE_PATHW()
-					return (size_t)-1;
-				}
-				/* continue resolution anyway but don't save result in the cache */
-				save = 0;
-			} else {
-				FindClose(hFind);
-			}
-		}
-
-		tmp = do_alloca(len+1, use_heap);
-		memcpy(tmp, path, len+1);
-
-		if(save &&
-				!(IS_UNC_PATH(path, len) && len >= 3 && path[2] != '?') &&
-                               (dataw.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)
-				) {
-			/* File is a reparse point. Get the target */
-			HANDLE hLink = NULL;
-			REPARSE_DATA_BUFFER * pbuffer;
-			DWORD retlength = 0;
-			size_t bufindex = 0;
-			uint8_t isabsolute = 0;
-			wchar_t * reparsetarget;
-			BOOL isVolume = FALSE;
-#if VIRTUAL_CWD_DEBUG
-			char *printname = NULL;
-#endif
-			char *substitutename = NULL;
-			size_t substitutename_len;
-			size_t substitutename_off = 0;
-			wchar_t tmpsubstname[MAXPATHLEN];
-
-			if(++(*ll) > LINK_MAX) {
-				free_alloca(tmp, use_heap);
-				FREE_PATHW()
-				return (size_t)-1;
-			}
-
-			hLink = CreateFileW(pathw, 0, 0, NULL, OPEN_EXISTING, FILE_FLAG_OPEN_REPARSE_POINT|FILE_FLAG_BACKUP_SEMANTICS, NULL);
-			if(hLink == INVALID_HANDLE_VALUE) {
-				free_alloca(tmp, use_heap);
-				FREE_PATHW()
-				return (size_t)-1;
-			}
-
-			pbuffer = (REPARSE_DATA_BUFFER *)do_alloca(MAXIMUM_REPARSE_DATA_BUFFER_SIZE, use_heap_large);
-			if (pbuffer == NULL) {
-				CloseHandle(hLink);
-				free_alloca(tmp, use_heap);
-				FREE_PATHW()
-				return (size_t)-1;
-			}
-			if(!DeviceIoControl(hLink, FSCTL_GET_REPARSE_POINT, NULL, 0, pbuffer,  MAXIMUM_REPARSE_DATA_BUFFER_SIZE, &retlength, NULL)) {
-				free_alloca(pbuffer, use_heap_large);
-				free_alloca(tmp, use_heap);
-				CloseHandle(hLink);
-				FREE_PATHW()
-				return (size_t)-1;
-			}
-
-			CloseHandle(hLink);
-
-			if(pbuffer->ReparseTag == IO_REPARSE_TAG_SYMLINK) {
-				reparsetarget = pbuffer->SymbolicLinkReparseBuffer.ReparseTarget;
-				isabsolute = (pbuffer->SymbolicLinkReparseBuffer.Flags == 0) ? 1 : 0;
-#if VIRTUAL_CWD_DEBUG
-				printname = php_win32_ioutil_w_to_any(reparsetarget + pbuffer->MountPointReparseBuffer.PrintNameOffset  / sizeof(WCHAR));
-				if (!printname) {
-					free_alloca(pbuffer, use_heap_large);
-					free_alloca(tmp, use_heap);
-					FREE_PATHW()
-					return (size_t)-1;
-				}
-#endif
-
-				substitutename_len = pbuffer->MountPointReparseBuffer.SubstituteNameLength / sizeof(WCHAR);
-				if (substitutename_len >= MAXPATHLEN) {
-					free_alloca(pbuffer, use_heap_large);
-					free_alloca(tmp, use_heap);
-					FREE_PATHW()
-					return (size_t)-1;
-				}
-				memmove(tmpsubstname, reparsetarget + pbuffer->MountPointReparseBuffer.SubstituteNameOffset / sizeof(WCHAR), pbuffer->MountPointReparseBuffer.SubstituteNameLength);
-				tmpsubstname[substitutename_len] = L'\0';
-				substitutename = php_win32_cp_conv_w_to_any(tmpsubstname, substitutename_len, &substitutename_len);
-				if (!substitutename || substitutename_len >= MAXPATHLEN) {
-					free_alloca(pbuffer, use_heap_large);
-					free_alloca(tmp, use_heap);
-					free(substitutename);
-#if VIRTUAL_CWD_DEBUG
-					free(printname);
-#endif
-					FREE_PATHW()
-					return (size_t)-1;
-				}
-			}
-			else if(pbuffer->ReparseTag == IO_REPARSE_TAG_MOUNT_POINT) {
-				isabsolute = 1;
-				reparsetarget = pbuffer->MountPointReparseBuffer.ReparseTarget;
-#if VIRTUAL_CWD_DEBUG
-				printname = php_win32_ioutil_w_to_any(reparsetarget + pbuffer->MountPointReparseBuffer.PrintNameOffset  / sizeof(WCHAR));
-				if (!printname) {
-					free_alloca(pbuffer, use_heap_large);
-					free_alloca(tmp, use_heap);
-					FREE_PATHW()
-					return (size_t)-1;
-				}
-#endif
-
-
-				substitutename_len = pbuffer->MountPointReparseBuffer.SubstituteNameLength / sizeof(WCHAR);
-				if (substitutename_len >= MAXPATHLEN) {
-					free_alloca(pbuffer, use_heap_large);
-					free_alloca(tmp, use_heap);
-					FREE_PATHW()
-					return (size_t)-1;
-				}
-				memmove(tmpsubstname, reparsetarget + pbuffer->MountPointReparseBuffer.SubstituteNameOffset / sizeof(WCHAR), pbuffer->MountPointReparseBuffer.SubstituteNameLength);
-				tmpsubstname[substitutename_len] = L'\0';
-				substitutename = php_win32_cp_conv_w_to_any(tmpsubstname, substitutename_len, &substitutename_len);
-				if (!substitutename || substitutename_len >= MAXPATHLEN) {
-					free_alloca(pbuffer, use_heap_large);
-					free_alloca(tmp, use_heap);
-					free(substitutename);
-#if VIRTUAL_CWD_DEBUG
-					free(printname);
-#endif
-					FREE_PATHW()
-					return (size_t)-1;
-				}
-			}
-			else if (pbuffer->ReparseTag == IO_REPARSE_TAG_DEDUP ||
-					/* Starting with 1709. */
-					(pbuffer->ReparseTag & IO_REPARSE_TAG_CLOUD_MASK) != 0 && 0x90001018L != pbuffer->ReparseTag ||
-					IO_REPARSE_TAG_CLOUD == pbuffer->ReparseTag ||
-					IO_REPARSE_TAG_ONEDRIVE == pbuffer->ReparseTag) {
-				isabsolute = 1;
-				substitutename = malloc((len + 1) * sizeof(char));
-				if (!substitutename) {
-					free_alloca(pbuffer, use_heap_large);
-					free_alloca(tmp, use_heap);
-					FREE_PATHW()
-					return (size_t)-1;
-				}
-				memcpy(substitutename, path, len + 1);
-				substitutename_len = len;
-			} else {
-				/* XXX this might be not the end, restart handling with REPARSE_GUID_DATA_BUFFER should be implemented. */
-				free_alloca(pbuffer, use_heap_large);
-				free_alloca(tmp, use_heap);
-				FREE_PATHW()
-				return (size_t)-1;
-			}
-
-			if(isabsolute && substitutename_len > 4) {
-				/* Do not resolve volumes (for now). A mounted point can
-				   target a volume without a drive, it is not certain that
-				   all IO functions we use in php and its deps support
-				   path with volume GUID instead of the DOS way, like:
-				   d:\test\mnt\foo
-				   \\?\Volume{62d1c3f8-83b9-11de-b108-806e6f6e6963}\foo
-				*/
-				if (strncmp(substitutename, "\\??\\Volume{",11) == 0
-					|| strncmp(substitutename, "\\\\?\\Volume{",11) == 0
-					|| strncmp(substitutename, "\\??\\UNC\\", 8) == 0
-					) {
-					isVolume = TRUE;
-					substitutename_off = 0;
-				} else
-					/* do not use the \??\ and \\?\ prefix*/
-					if (strncmp(substitutename, "\\??\\", 4) == 0
-						|| strncmp(substitutename, "\\\\?\\", 4) == 0) {
-					substitutename_off = 4;
-				}
-			}
-
-			if (!isVolume) {
-				char * tmp2 = substitutename + substitutename_off;
-				for (bufindex = 0; bufindex + substitutename_off < substitutename_len; bufindex++) {
-					*(path + bufindex) = *(tmp2 + bufindex);
-				}
-
-				*(path + bufindex) = 0;
-				j = bufindex;
-			} else {
-				j = len;
-			}
-
-
-#if VIRTUAL_CWD_DEBUG
-			fprintf(stderr, "reparse: print: %s ", printname);
-			fprintf(stderr, "sub: %s ", substitutename);
-			fprintf(stderr, "resolved: %s ", path);
-			free(printname);
-#endif
-			free_alloca(pbuffer, use_heap_large);
-			free(substitutename);
-
-			if(isabsolute == 1) {
-				if (!((j == 3) && (path[1] == ':') && (path[2] == '\\'))) {
-					/* use_realpath is 0 in the call below coz path is absolute*/
-					j = tsrm_realpath_r(path, 0, j, ll, t, 0, is_dir, &directory);
-					if(j == (size_t)-1) {
-						free_alloca(tmp, use_heap);
-						FREE_PATHW()
-						return (size_t)-1;
-					}
-				}
-			}
-			else {
-				if(i + j >= MAXPATHLEN - 1) {
-					free_alloca(tmp, use_heap);
-					FREE_PATHW()
-					return (size_t)-1;
-				}
-
-				memmove(path+i, path, j+1);
-				memcpy(path, tmp, i-1);
-				path[i-1] = DEFAULT_SLASH;
-				j  = tsrm_realpath_r(path, start, i + j, ll, t, use_realpath, is_dir, &directory);
-				if(j == (size_t)-1) {
-					free_alloca(tmp, use_heap);
-					FREE_PATHW()
-					return (size_t)-1;
-				}
-			}
-			directory = (dataw.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY);
-
-			if(link_is_dir) {
-				*link_is_dir = directory;
-			}
-		}
-		else {
-			if (save) {
-				directory = (dataw.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
-				if (is_dir && !directory) {
-					/* not a directory */
-					free_alloca(tmp, use_heap);
-					FREE_PATHW()
-					return (size_t)-1;
-				}
-			}
-#else
 		if (save && php_sys_lstat(path, &st) < 0) {
 			if (use_realpath == CWD_REALPATH) {
 				/* file not found */
@@ -1138,7 +1260,6 @@ static size_t tsrm_realpath_r(char *path, size_t start, size_t len, int *ll, tim
 					return (size_t)-1;
 				}
 			}
-#endif
 			if (i <= start + 1) {
 				j = start;
 			} else {
@@ -1148,31 +1269,6 @@ static size_t tsrm_realpath_r(char *path, size_t start, size_t len, int *ll, tim
 					path[j++] = DEFAULT_SLASH;
 				}
 			}
-#ifdef ZEND_WIN32
-			if (j == (size_t)-1 || j + len >= MAXPATHLEN - 1 + i) {
-				free_alloca(tmp, use_heap);
-				FREE_PATHW()
-				return (size_t)-1;
-			}
-			if (save) {
-				size_t sz;
-				char *tmp_path = php_win32_ioutil_conv_w_to_any(dataw.cFileName, PHP_WIN32_CP_IGNORE_LEN, &sz);
-				if (!tmp_path) {
-					free_alloca(tmp, use_heap);
-					FREE_PATHW()
-					return (size_t)-1;
-				}
-				i = sz;
-				memcpy(path+j, tmp_path, i+1);
-				free(tmp_path);
-				j += i;
-			} else {
-				/* use the original file or directory name as it wasn't found */
-				memcpy(path+j, tmp+i, len-i+1);
-				j += (len-i);
-			}
-		}
-#else
 			if (j == (size_t)-1 || j + len >= MAXPATHLEN - 1 + i) {
 				free_alloca(tmp, use_heap);
 				return (size_t)-1;
@@ -1180,7 +1276,6 @@ static size_t tsrm_realpath_r(char *path, size_t start, size_t len, int *ll, tim
 			memcpy(path+j, tmp+i, len-i+1);
 			j += (len-i);
 		}
-#endif
 
 		if (save && start && CWDG(realpath_cache_size_limit)) {
 			/* save absolute path in the cache */
@@ -1188,14 +1283,12 @@ static size_t tsrm_realpath_r(char *path, size_t start, size_t len, int *ll, tim
 		}
 
 		free_alloca(tmp, use_heap);
-#ifdef ZEND_WIN32
-		FREE_PATHW()
-#undef FREE_PATHW
-#endif
+
 		return j;
 	}
 }
 /* }}} */
+#endif
 
 /* Resolve path relatively to state and put the real path into state */
 /* returns 0 for ok, 1 for error */
