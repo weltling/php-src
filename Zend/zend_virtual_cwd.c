@@ -1338,12 +1338,17 @@ CWD_API int virtual_file_ex(cwd_state *state, const char *path, verify_path_func
 	t = CWDG(realpath_cache_ttl) ? 0 : -1;
 #ifdef ZEND_WIN32
 	if (CWD_REALPATH == use_realpath) {
-		if (!php_win32_ioutil_realpath(resolved_path, resolved_path)) {
+		char tmp_resolved_path[MAXPATHLEN];
+		int tmp_resolved_path_len;
+		if (!php_win32_ioutil_realpath(resolved_path, tmp_resolved_path)) {
 			DWORD err = GetLastError();
 			SET_ERRNO_FROM_WIN32_CODE(err);
 			return 1;
 		}
-		path_length = strlen(resolved_path);
+		tmp_resolved_path_len = strlen(tmp_resolved_path);
+		realpath_cache_add(resolved_path, path_length, tmp_resolved_path, tmp_resolved_path_len, 0, t);
+		memmove(resolved_path, tmp_resolved_path, tmp_resolved_path_len + 1);
+		path_length = tmp_resolved_path_len;
 	} else
 #endif
 	path_length = tsrm_realpath_r(resolved_path, start, path_length, &ll, &t, use_realpath, 0, NULL);
