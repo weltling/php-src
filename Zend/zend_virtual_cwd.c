@@ -1336,6 +1336,16 @@ CWD_API int virtual_file_ex(cwd_state *state, const char *path, verify_path_func
 
 	add_slash = (use_realpath != CWD_REALPATH) && path_length > 0 && IS_SLASH(resolved_path[path_length-1]);
 	t = CWDG(realpath_cache_ttl) ? 0 : -1;
+#ifdef ZEND_WIN32
+	if (CWD_REALPATH == use_realpath) {
+		if (!php_win32_ioutil_realpath(resolved_path, resolved_path)) {
+			DWORD err = GetLastError();
+			SET_ERRNO_FROM_WIN32_CODE(err);
+			return 1;
+		}
+		path_length = strlen(resolved_path);
+	} else
+#endif
 	path_length = tsrm_realpath_r(resolved_path, start, path_length, &ll, &t, use_realpath, 0, NULL);
 
 	if (path_length == (size_t)-1) {
@@ -1346,6 +1356,7 @@ CWD_API int virtual_file_ex(cwd_state *state, const char *path, verify_path_func
 	if (!start && !path_length) {
 		resolved_path[path_length++] = '.';
 	}
+
 	if (add_slash && path_length && !IS_SLASH(resolved_path[path_length-1])) {
 		if (path_length >= MAXPATHLEN-1) {
 			return -1;
