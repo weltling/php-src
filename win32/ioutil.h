@@ -259,6 +259,7 @@ PW32IO int php_win32_ioutil_access_w(const wchar_t *path, mode_t mode);
 PW32IO int php_win32_ioutil_mkdir_w(const wchar_t *path, mode_t mode);
 PW32IO FILE *php_win32_ioutil_fopen_w(const wchar_t *path, const wchar_t *mode);
 PW32IO wchar_t *php_win32_ioutil_realpath_w(const wchar_t *path, wchar_t *resolved);
+PW32IO wchar_t *php_win32_ioutil_realpath_w_ex0(const wchar_t *path, wchar_t *resolved, PBY_HANDLE_FILE_INFORMATION info);
 
 __forceinline static int php_win32_ioutil_access(const char *path, mode_t mode)
 {/*{{{*/
@@ -585,7 +586,8 @@ __forceinline static int php_win32_ioutil_mkdir(const char *path, mode_t mode)
 
 #define HAVE_REALPATH 1
 PW32IO char *realpath(const char *path, char *resolved);
-__forceinline static char *php_win32_ioutil_realpath(const char *path, char *resolved)
+
+__forceinline static char *php_win32_ioutil_realpath_ex0(const char *path, char *resolved, PBY_HANDLE_FILE_INFORMATION info)
 {/*{{{*/
 	wchar_t retw[PHP_WIN32_IOUTIL_MAXPATHLEN];
 	char *reta;
@@ -597,7 +599,7 @@ __forceinline static char *php_win32_ioutil_realpath(const char *path, char *res
 		return NULL;
 	}
 
-	if (NULL == php_win32_ioutil_realpath_w(pathw, retw)) {
+	if (NULL == php_win32_ioutil_realpath_w_ex0(pathw, retw, info)) {
 		DWORD err = GetLastError();
 		PHP_WIN32_IOUTIL_CLEANUP_W()
 		SET_ERRNO_FROM_WIN32_CODE(err);
@@ -628,6 +630,11 @@ __forceinline static char *php_win32_ioutil_realpath(const char *path, char *res
 	free(reta);
 
 	return resolved;
+}/*}}}*/
+
+__forceinline static char *php_win32_ioutil_realpath(const char *path, char *resolved)
+{/*{{{*/
+	return php_win32_ioutil_realpath_ex0(path, resolved, NULL);
 }/*}}}*/
 
 #ifdef __cplusplus
