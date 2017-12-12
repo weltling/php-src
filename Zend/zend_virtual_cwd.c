@@ -1209,6 +1209,56 @@ static size_t tsrm_realpath_r(char *path, size_t start, size_t len, int *ll, tim
 }
 /* }}} */
 
+#ifdef ZEND_WIN32
+static size_t tsrm_win32_realpath_once(char *path, size_t len, time_t *t, int use_realpath) /* {{{ */
+{
+	char tmp_resolved_path[MAXPATHLEN];
+	int tmp_resolved_path_len;
+	BY_HANDLE_FILE_INFORMATION info;
+	realpath_cache_bucket *bucket;
+
+	if (CWD_EXPAND == use_realpath) {
+		return (size_t)-1;
+	}
+
+	if (!*t) {
+		*t = time(0);
+	}
+
+	if (CWDG(realpath_cache_size_limit) && (bucket = realpath_cache_find(path, len, *t)) != NULL) {
+		memcpy(path, bucket->realpath, bucket->realpath_len + 1);
+		return bucket->realpath_len;
+	}
+
+#if 0
+		if (!php_win32_ioutil_realpath_ex0(resolved_path, tmp_resolved_path, &info)) {
+			if (CWD_REALPATH == use_realpath) {
+				DWORD err = GetLastError();
+				SET_ERRNO_FROM_WIN32_CODE(err);
+				return 1;
+			} else {
+				/* Fallback to expand only to retain BC. */
+				path_length = tsrm_realpath_r(resolved_path, start, path_length, &ll, &t, use_realpath, 0, NULL);
+			}
+		} else {
+#endif
+
+	if (!php_win32_ioutil_realpath_ex0(path, tmp_resolved_path, &info)) {
+		DWORD err = GetLastError();
+		SET_ERRNO_FROM_WIN32_CODE(err);
+		return (size_t)-1;
+	}
+
+	tmp_resolved_path_len = strlen(tmp_resolved_path);
+	if (CWDG(realpath_cache_size_limit)) {
+		realpath_cache_add(path, len, tmp_resolved_path, tmp_resolved_path_len, info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY, *t);
+	}
+	memmove(path, tmp_resolved_path, tmp_resolved_path_len + 1);
+
+	return tmp_resolved_path_len;
+}
+#endif
+
 /* Resolve path relatively to state and put the real path into state */
 /* returns 0 for ok, 1 for error */
 CWD_API int virtual_file_ex(cwd_state *state, const char *path, verify_path_func verify_path, int use_realpath) /* {{{ */
@@ -1337,37 +1387,9 @@ CWD_API int virtual_file_ex(cwd_state *state, const char *path, verify_path_func
 	add_slash = (use_realpath != CWD_REALPATH) && path_length > 0 && IS_SLASH(resolved_path[path_length-1]);
 	t = CWDG(realpath_cache_ttl) ? 0 : -1;
 #ifdef ZEND_WIN32
-	if (CWD_FILEPATH == use_realpath) {
-		char tmp_resolved_path[MAXPATHLEN];
-		int tmp_resolved_path_len;
-		BY_HANDLE_FILE_INFORMATION info;
-		realpath_cache_bucket *bucket;
-		if (!t) {
-			t = time(0);
-		}
-		if ((bucket = realpath_cache_find(resolved_path, path_length, t)) != NULL) {
-				memcpy(resolved_path, bucket->realpath, bucket->realpath_len + 1);
-				path_length = bucket->realpath_len;
-		} else {
-#if 0
-			if (!php_win32_ioutil_realpath_ex0(resolved_path, tmp_resolved_path, &info)) {
-				if (CWD_REALPATH == use_realpath) {
-					DWORD err = GetLastError();
-					SET_ERRNO_FROM_WIN32_CODE(err);
-					return 1;
-				} else {
-					/* Fallback to expand only to retain BC. */
-					path_length = tsrm_realpath_r(resolved_path, start, path_length, &ll, &t, use_realpath, 0, NULL);
-				}
-			} else {
-#endif
-			if (php_win32_ioutil_realpath_ex0(resolved_path, tmp_resolved_path, &info)) {
-				tmp_resolved_path_len = strlen(tmp_resolved_path);
-				realpath_cache_add(resolved_path, path_length, tmp_resolved_path, tmp_resolved_path_len, info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY, t);
-				memmove(resolved_path, tmp_resolved_path, tmp_resolved_path_len + 1);
-				path_length = tmp_resolved_path_len;
-			}
-		}
+	size_t tmp_len = tsrm_win32_realpath_once(resolved_path, path_length, &t, use_realpath);
+	if ((size_t)-1 != tmp_len) {
+		path_length = tmp_len;
 	} else
 #endif
 	path_length = tsrm_realpath_r(resolved_path, start, path_length, &ll, &t, use_realpath, 0, NULL);
