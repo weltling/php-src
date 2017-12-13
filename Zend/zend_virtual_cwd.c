@@ -1385,10 +1385,15 @@ CWD_API int virtual_file_ex(cwd_state *state, const char *path, verify_path_func
 	t = CWDG(realpath_cache_ttl) ? 0 : -1;
 #ifdef ZEND_WIN32
 	if (CWD_EXPAND != use_realpath) {
-		size_t tmp_len = tsrm_win32_realpath_quick(resolved_path, path_length, &t, use_realpath);
+		size_t tmp_len = tsrm_win32_realpath_quick(resolved_path, path_length, &t);
 		if ((size_t)-1 != tmp_len) {
 			path_length = tmp_len;
 		} else {
+			if (CWD_REALPATH == use_realpath) {
+				DWORD err = GetLastError();
+				SET_ERRNO_FROM_WIN32_CODE(err);
+				return -1;
+			}
 			path_length = tsrm_realpath_r(resolved_path, start, path_length, &ll, &t, use_realpath, 0, NULL);
 		}
 	} else {
