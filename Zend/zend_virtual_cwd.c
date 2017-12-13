@@ -1388,7 +1388,7 @@ CWD_API int virtual_file_ex(cwd_state *state, const char *path, verify_path_func
 		size_t tmp_len = tsrm_win32_realpath_quick(resolved_path, path_length, &t, use_realpath);
 		if ((size_t)-1 != tmp_len) {
 			path_length = tmp_len;
-		} else if (CWD_FILEPATH == use_realpath) {
+		} else {
 			path_length = tsrm_realpath_r(resolved_path, start, path_length, &ll, &t, use_realpath, 0, NULL);
 		}
 	} else {
