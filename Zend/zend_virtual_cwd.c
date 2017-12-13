@@ -1389,8 +1389,10 @@ CWD_API int virtual_file_ex(cwd_state *state, const char *path, verify_path_func
 		if ((size_t)-1 != tmp_len) {
 			path_length = tmp_len;
 		} else {
-			if (CWD_REALPATH == use_realpath) {
-				DWORD err = GetLastError();
+			DWORD err = GetLastError();
+			/* The access denied error can mean something completely else,
+				fallback to complicated way. */
+			if (CWD_REALPATH == use_realpath && ERROR_ACCESS_DENIED != err) {
 				SET_ERRNO_FROM_WIN32_CODE(err);
 				return -1;
 			}
