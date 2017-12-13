@@ -1210,16 +1210,12 @@ static size_t tsrm_realpath_r(char *path, size_t start, size_t len, int *ll, tim
 /* }}} */
 
 #ifdef ZEND_WIN32
-static size_t tsrm_win32_realpath_once(char *path, size_t len, time_t *t, int use_realpath) /* {{{ */
+static size_t tsrm_win32_realpath_quick(char *path, size_t len, time_t *t) /* {{{ */
 {
 	char tmp_resolved_path[MAXPATHLEN];
 	int tmp_resolved_path_len;
 	BY_HANDLE_FILE_INFORMATION info;
 	realpath_cache_bucket *bucket;
-
-	if (CWD_EXPAND == use_realpath) {
-		return (size_t)-1;
-	}
 
 	if (!*t) {
 		*t = time(0);
@@ -1257,6 +1253,7 @@ static size_t tsrm_win32_realpath_once(char *path, size_t len, time_t *t, int us
 
 	return tmp_resolved_path_len;
 }
+/* }}} */
 #endif
 
 /* Resolve path relatively to state and put the real path into state */
@@ -1387,12 +1384,19 @@ CWD_API int virtual_file_ex(cwd_state *state, const char *path, verify_path_func
 	add_slash = (use_realpath != CWD_REALPATH) && path_length > 0 && IS_SLASH(resolved_path[path_length-1]);
 	t = CWDG(realpath_cache_ttl) ? 0 : -1;
 #ifdef ZEND_WIN32
-	size_t tmp_len = tsrm_win32_realpath_once(resolved_path, path_length, &t, use_realpath);
-	if ((size_t)-1 != tmp_len) {
-		path_length = tmp_len;
-	} else
-#endif
+	if (CWD_EXPAND != use_realpath) {
+		size_t tmp_len = tsrm_win32_realpath_quick(resolved_path, path_length, &t, use_realpath);
+		if ((size_t)-1 != tmp_len) {
+			path_length = tmp_len;
+		} else if (CWD_FILEPATH == use_realpath) {
+			path_length = tsrm_realpath_r(resolved_path, start, path_length, &ll, &t, use_realpath, 0, NULL);
+		}
+	} else {
+		path_length = tsrm_realpath_r(resolved_path, start, path_length, &ll, &t, use_realpath, 0, NULL);
+	}
+#else
 	path_length = tsrm_realpath_r(resolved_path, start, path_length, &ll, &t, use_realpath, 0, NULL);
+#endif
 
 	if (path_length == (size_t)-1) {
 		errno = ENOENT;
