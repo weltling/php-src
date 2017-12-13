@@ -746,8 +746,9 @@ static size_t php_win32_ioutil_realpath_h(HANDLE *h, wchar_t **resolved)
 	ret_real = ret;
 	ret_real_len = ret_len;
 	if (0 == wcsncmp(ret, PHP_WIN32_IOUTIL_UNC_PATH_PREFIXW, PHP_WIN32_IOUTIL_UNC_PATH_PREFIX_LENW)) {
-		ret_real += PHP_WIN32_IOUTIL_UNC_PATH_PREFIX_LENW;
-		ret_real_len -= PHP_WIN32_IOUTIL_UNC_PATH_PREFIX_LENW;
+		ret_real += (PHP_WIN32_IOUTIL_UNC_PATH_PREFIX_LENW - 2);
+		ret_real[0] = L'\\';
+		ret_real_len -= (PHP_WIN32_IOUTIL_UNC_PATH_PREFIX_LENW - 2);
 	} else if (PHP_WIN32_IOUTIL_IS_LONG_PATHW(ret, ret_len)) {
 		ret_real += PHP_WIN32_IOUTIL_LONG_PATH_PREFIX_LENW;
 		ret_real_len -= PHP_WIN32_IOUTIL_LONG_PATH_PREFIX_LENW;
