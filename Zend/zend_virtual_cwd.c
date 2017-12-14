@@ -1377,6 +1377,9 @@ CWD_API int virtual_file_ex(cwd_state *state, const char *path, verify_path_func
 		/* skip DRIVE name */
 		resolved_path[0] = toupper(resolved_path[0]);
 		resolved_path[2] = DEFAULT_SLASH;
+		if (path_length <= 3) {
+			resolved_path[3] = '\0';
+		}
 		start = 3;
 	}
 #endif
@@ -1394,7 +1397,7 @@ CWD_API int virtual_file_ex(cwd_state *state, const char *path, verify_path_func
 				fallback to complicated way. */
 			if (CWD_REALPATH == use_realpath && ERROR_ACCESS_DENIED != err) {
 				SET_ERRNO_FROM_WIN32_CODE(err);
-				return -1;
+				return 1;
 			}
 			path_length = tsrm_realpath_r(resolved_path, start, path_length, &ll, &t, use_realpath, 0, NULL);
 		}
