@@ -302,6 +302,36 @@ static zend_always_inline zend_bool zend_string_equals(zend_string *s1, zend_str
 #define zend_string_equals_literal(str, literal) \
 	(ZSTR_LEN(str) == sizeof(literal)-1 && !memcmp(ZSTR_VAL(str), literal, sizeof(literal) - 1))
 
+#if defined(__i386__) || defined(__x86_64__) || defined(ZEND_WIN32)
+/*
+ * Code by Daniel Lemire http://lemire.me/blog/
+ */
+static zend_always_inline zend_ulong zend_inline_hash_func(const char *str, size_t len)
+{
+	zend_ulong hash = UINT32_C(5381);
+	size_t i = 0;
+
+	for (; i + 3 < len; i += 4) {
+		hash = 33 * 33 * 33 * 33 * hash
+				+ 33 * 33 * 33 * str[i]
+				+ 33 * 33 * str[i + 1]
+				+ 33 * str[i + 2]
+				+ str[i + 3];
+	}
+	for (; i < len; i++) {
+		hash = 33 * hash + str[i];
+	}
+
+	/* Hash value can't be zero, so we always set the high bit */
+#if SIZEOF_ZEND_LONG == 8
+	return hash | Z_UL(0x8000000000000000);
+#elif SIZEOF_ZEND_LONG == 4
+	return hash | Z_UL(0x80000000);
+#else
+# error "Unknown SIZEOF_ZEND_LONG"
+#endif
+}
+#else
 /*
  * DJBX33A (Daniel J. Bernstein, Times 33 with Addition)
  *
@@ -371,6 +401,7 @@ EMPTY_SWITCH_DEFAULT_CASE()
 # error "Unknown SIZEOF_ZEND_LONG"
 #endif
 }
+#endif
 
 #define ZEND_KNOWN_STRINGS(_) \
 	_(ZEND_STR_FILE,                   "file") \
