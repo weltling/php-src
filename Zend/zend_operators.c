@@ -2564,7 +2564,7 @@ ZEND_API void zend_update_current_locale(void) /* {{{ */
 #endif
 
 #ifdef __SSE2__
-static void _tolower_sse2(char *dst, const char *src, size_t length)
+static zend_always_inline void _tolower_sse2(char *dst, const char *src, size_t length)
 {
 	char *idx = (char *)src;
 	const char *aidx = (const char *)ZEND_SLIDE_TO_ALIGNED16(src);
