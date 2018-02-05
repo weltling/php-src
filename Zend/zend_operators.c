@@ -2564,7 +2564,7 @@ ZEND_API void zend_update_current_locale(void) /* {{{ */
 #endif
 
 #ifdef __SSE2__
-static zend_always_inline void _tolower_sse2(char *dst, const char *src, size_t length)
+static zend_always_inline void _tolower_sse2(char *dst, const char *src, size_t length) /* {{{ */
 {
 	char *idx = (char *)src;
 	const char *aidx = (const char *)ZEND_SLIDE_TO_ALIGNED16(src);
@@ -2593,7 +2593,7 @@ static zend_always_inline void _tolower_sse2(char *dst, const char *src, size_t 
 		*dst++ = zend_tolower_ascii(*idx);
 		idx++;
 	}
-}
+} /* }}} */
 #endif
 
 ZEND_API char* ZEND_FASTCALL zend_str_tolower_copy(char *dest, const char *source, size_t length) /* {{{ */
