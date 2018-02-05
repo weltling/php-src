@@ -31,6 +31,9 @@
 #include "zend_strtod.h"
 #include "zend_exceptions.h"
 #include "zend_closures.h"
+#ifdef __SSE2__
+#include "xmmintrin.h"
+#endif
 
 #if ZEND_USE_TOLOWER_L
 #include <locale.h>
@@ -2560,8 +2563,45 @@ ZEND_API void zend_update_current_locale(void) /* {{{ */
 /* }}} */
 #endif
 
+#ifdef __SSE2__
+static void _tolower_sse2(char *dst, const char *src, size_t length)
+{
+	char *idx = (char *)src;
+	const char *aidx = (const char *)ZEND_SLIDE_TO_ALIGNED16(src);
+	const char *end = src + length;
+
+	if (length > 15) {
+		while (idx < aidx) {
+			*dst++ = zend_tolower_ascii(*idx);
+			idx++;
+		}
+
+		if (end - idx > 15) {
+			while (end - idx > 15) {
+				__m128i v1 = _mm_load_si128((__m128i*)idx);
+				__m128i v2 = _mm_cmplt_epi8(v1,_mm_set1_epi8('A'));
+				__m128i v3 = _mm_cmpgt_epi8(v1,_mm_set1_epi8('Z'));
+				__m128i v4 = _mm_or_si128(v2,v3);
+				__m128i v5 = _mm_andnot_si128(v4,_mm_set1_epi8(0x20));
+				_mm_storeu_si128((__m128i*)dst, _mm_or_si128(v1,v5));
+				idx += 16;
+				dst += 16;
+			}
+		}
+	}
+	while (idx < end) {
+		*dst++ = zend_tolower_ascii(*idx);
+		idx++;
+	}
+}
+#endif
+
 ZEND_API char* ZEND_FASTCALL zend_str_tolower_copy(char *dest, const char *source, size_t length) /* {{{ */
 {
+#ifdef __SSE2__
+	_tolower_sse2(dest, source, length);
+	*(dest + length) = '\0';
+#else
 	register unsigned char *str = (unsigned char*)source;
 	register unsigned char *result = (unsigned char*)dest;
 	register unsigned char *end = str + length;
@@ -2570,6 +2610,7 @@ ZEND_API char* ZEND_FASTCALL zend_str_tolower_copy(char *dest, const char *sourc
 		*result++ = zend_tolower_ascii(*str++);
 	}
 	*result = '\0';
+#endif
 
 	return dest;
 }
@@ -2583,6 +2624,9 @@ ZEND_API char* ZEND_FASTCALL zend_str_tolower_dup(const char *source, size_t len
 
 ZEND_API void ZEND_FASTCALL zend_str_tolower(char *str, size_t length) /* {{{ */
 {
+#ifdef __SSE2__
+	_tolower_sse2(str, str, length);
+#else
 	register unsigned char *p = (unsigned char*)str;
 	register unsigned char *end = p + length;
 
@@ -2590,6 +2634,7 @@ ZEND_API void ZEND_FASTCALL zend_str_tolower(char *str, size_t length) /* {{{ */
 		*p = zend_tolower_ascii(*p);
 		p++;
 	}
+#endif
 }
 /* }}} */
 
