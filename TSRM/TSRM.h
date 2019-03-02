@@ -13,11 +13,9 @@
 #ifndef TSRM_H
 #define TSRM_H
 
-#if !defined(__CYGWIN__) && defined(WIN32)
-# define TSRM_WIN32
-# include "tsrm_config.w32.h"
-#else
-# include <tsrm_config.h>
+/* TODO Just reuse PHP_WIN32, also concerns other duplicated defs. */
+#ifdef PHP_WIN32
+# define TSRM_WIN32 1
 #endif
 
 #include "main/php_stdint.h"
