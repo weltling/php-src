@@ -156,13 +156,37 @@ TSRM_API const char *tsrm_api_name(void);
 #define TSRM_SHUFFLE_RSRC_ID(rsrc_id)		((rsrc_id)+1)
 #define TSRM_UNSHUFFLE_RSRC_ID(rsrc_id)		((rsrc_id)-1)
 
-#define TSRMLS_FETCH_FROM_CTX(ctx)	void ***tsrm_ls = (void ***) ctx
-#define TSRMLS_SET_CTX(ctx)		ctx = (void ***) tsrm_get_ls_cache()
-#define TSRMG(id, type, element)	(TSRMG_BULK(id, type)->element)
-#define TSRMG_BULK(id, type)	((type) (*((void ***) tsrm_get_ls_cache()))[TSRM_UNSHUFFLE_RSRC_ID(id)])
+typedef struct _tsrm_tls_entry tsrm_tls_entry;
+struct _tsrm_tls_entry {
+	int count;
+	size_t size;
+	THREAD_T thread_id;
+	tsrm_tls_entry *next;
+	char entry_data[1];
+};
+
+/*#define TSRM_DATA_START(entry) ((char*)(entry) + XtOffsetOf(tsrm_tls_entry, entry_data))
+#define TSRM_DATA_SLOT(entry, offt) (TSRM_DATA_START(entry) + (offt))*/
+#define TSRM_DATA_SLOT(entry, offt) ((char*)(entry) + (offt) - sizeof(char*))
+
+#define TSRMG_BULK_ARG(cache_ptr, offt, type) ((type)(TSRM_DATA_SLOT(cache_ptr, offt)))
+#define TSRMG_BULK(offt, type) TSRMG_BULK_ARG(tsrm_get_ls_cache(), offt, type)
+#define TSRMG_BULK_STATIC(offt, type) TSRMG_BULK_ARG(TSRMLS_CACHE, offt, type)
+
+#define TSRMG(offt, type, element) (TSRMG_BULK(offt, type)->element)
+#define TSRMG_STATIC(offt, type, element) (TSRMG_BULK_STATIC(offt, type)->element)
+/*#define TSRMG(offt, type, element) ((char*)TSRMG_BULK(id, type) + XtOffsetOf(type, element))
+#define TSRMG_STATIC(offt, type, element) ((char*)TSRMG_BULK_STATIC(offt, type) + XtOffsetOf(type, element))*/
+
+/*#define TSRMG(id, type, element)	(TSRMG_BULK(id, type)->element)
+ #define TSRMG_BULK(id, type)	((type) (*((void ***) tsrm_get_ls_cache()))[TSRM_UNSHUFFLE_RSRC_ID(id)]) 
 
 #define TSRMG_STATIC(id, type, element)	(TSRMG_BULK_STATIC(id, type)->element)
-#define TSRMG_BULK_STATIC(id, type)	((type) (*((void ***) TSRMLS_CACHE))[TSRM_UNSHUFFLE_RSRC_ID(id)])
+#define TSRMG_BULK_STATIC(id, type)	((type) (*((void ***) TSRMLS_CACHE))[TSRM_UNSHUFFLE_RSRC_ID(id)]) */
+
+#define TSRMLS_FETCH_FROM_CTX(ctx)	void ***tsrm_ls = (void ***) ctx
+#define TSRMLS_SET_CTX(ctx)		ctx = (void ***) tsrm_get_ls_cache()
+
 #define TSRMLS_CACHE_EXTERN() extern TSRM_TLS void *TSRMLS_CACHE;
 #define TSRMLS_CACHE_DEFINE() TSRM_TLS void *TSRMLS_CACHE = NULL;
 #if ZEND_DEBUG
