@@ -71,31 +71,6 @@ var headers_install = new Array();
 /* Store unknown configure options */
 var INVALID_CONFIG_ARGS = new Array();
 
-/* Mapping CL version > human readable name */
-var VC_VERSIONS = new Array();
-VC_VERSIONS[1700] = 'MSVC11 (Visual C++ 2012)';
-VC_VERSIONS[1800] = 'MSVC12 (Visual C++ 2013)';
-VC_VERSIONS[1900] = 'MSVC14 (Visual C++ 2015)';
-VC_VERSIONS[1910] = 'MSVC15 (Visual C++ 2017)';
-VC_VERSIONS[1911] = 'MSVC15 (Visual C++ 2017)';
-VC_VERSIONS[1912] = 'MSVC15 (Visual C++ 2017)';
-VC_VERSIONS[1913] = 'MSVC15 (Visual C++ 2017)';
-VC_VERSIONS[1914] = 'MSVC15 (Visual C++ 2017)';
-VC_VERSIONS[1915] = 'MSVC15 (Visual C++ 2017)';
-VC_VERSIONS[1916] = 'MSVC15 (Visual C++ 2017)';
-
-var VC_VERSIONS_SHORT = new Array();
-VC_VERSIONS_SHORT[1700] = 'VC11';
-VC_VERSIONS_SHORT[1800] = 'VC12';
-VC_VERSIONS_SHORT[1900] = 'VC14';
-VC_VERSIONS_SHORT[1910] = 'VC15';
-VC_VERSIONS_SHORT[1911] = 'VC15';
-VC_VERSIONS_SHORT[1912] = 'VC15';
-VC_VERSIONS_SHORT[1913] = 'VC15';
-VC_VERSIONS_SHORT[1914] = 'VC15';
-VC_VERSIONS_SHORT[1915] = 'VC15';
-VC_VERSIONS_SHORT[1916] = 'VC15';
-
 if (PROGRAM_FILES == null) {
 	PROGRAM_FILES = "C:\\Program Files";
 }
@@ -2959,23 +2934,7 @@ function toolset_setup_compiler()
 	COMPILER_NAME = toolset_get_compiler_name();
 
 	if (VS_TOOLSET) {
-		/* For the record here: */
-		// 1200 is VC6
-		// 1300 is vs.net 2002
-		// 1310 is vs.net 2003
-		// 1400 is vs.net 2005
-		// 1500 is vs.net 2008
-		// 1600 is vs.net 2010
-		// 1700 is vs.net 2011
-		// 1800 is vs.net 2012
-		// 1900 is vs.net 2015
-		// 1910 is vs.net 2017
-		// Which version of the compiler do we have?
 		VCVERS = COMPILER_NUMERIC_VERSION;
-
-		if (VCVERS < 1700) {
-			ERROR("Unsupported MS C++ Compiler, VC11 (2011) minimum is required");
-		}
 
 		if (undefined == COMPILER_NAME) {
 			var tmp = probe_binary(PHP_CL);
@@ -2988,8 +2947,8 @@ function toolset_setup_compiler()
 			AC_DEFINE('PHP_COMPILER_ID', tmp, "Compiler compatibility ID");
 		} else {
 			AC_DEFINE('COMPILER', COMPILER_NAME, "Detected compiler version");
-			DEFINE("PHP_COMPILER_SHORT", VC_VERSIONS_SHORT[VCVERS]);
-			AC_DEFINE('PHP_COMPILER_ID', VC_VERSIONS_SHORT[VCVERS], "Compiler compatibility ID");
+			DEFINE("PHP_COMPILER_SHORT", "msvc");
+			AC_DEFINE('PHP_COMPILER_ID', "MSVC", "Compiler compatibility ID");
 		}
 	} else if (CLANG_TOOLSET) {
 		CLANGVERS = COMPILER_NUMERIC_VERSION;
@@ -3068,15 +3027,11 @@ function toolset_setup_project_tools()
 	PATH_PROG('7za');
 
 	// avoid picking up midnight commander from cygwin
-	if (!PATH_PROG('mc', WshShell.Environment("Process").Item("PATH"))) {
-		ERROR('mc is required')
-	}
+	PATH_PROG('mc', WshShell.Environment("Process").Item("PATH"));
 
 	// Try locating the manifest tool
 	if (VS_TOOLSET) {
-		if (!PATH_PROG('mt', WshShell.Environment("Process").Item("PATH"))) {
-			ERROR('mt is required')
-		}
+		PATH_PROG('mt', WshShell.Environment("Process").Item("PATH"));
 	}
 }
 /* Get compiler if the toolset is supported */
@@ -3139,8 +3094,14 @@ function toolset_get_compiler_name()
 
 		version = probe_binary(PHP_CL).substr(0, 5).replace('.', '');
 
-		if (undefined != VC_VERSIONS[version]) {
-			name = VC_VERSIONS[version];
+		if (version >= 1920) {
+			name = "Visual C++ 2019 or above";
+		} else if (version >= 1910) {
+			name = "Visual C++ 2017";
+		} else if (version >= 1900) {
+			name = "Visual C++ 2015";
+		} else {
+			ERROR("Unsupported Visual C++ compiler " + version);
 		}
 
 		return name;
@@ -3211,16 +3172,29 @@ function toolset_setup_codegen_arch()
 
 function toolset_setup_linker()
 {
+	var lnk = false;
 	if (VS_TOOLSET) {
-		return PATH_PROG('link', null);
+		lnk = PATH_PROG('link', null);
 	} else if (CLANG_TOOLSET) {
 		//return PATH_PROG('lld', WshShell.Environment("Process").Item("PATH"), "LINK");
-		return PATH_PROG('link', WshShell.Environment("Process").Item("PATH"));
+		lnk = PATH_PROG('link', WshShell.Environment("Process").Item("PATH"));
 	} else if (ICC_TOOLSET) {
-		return PATH_PROG('xilink', WshShell.Environment("Process").Item("PATH"), "LINK");
+		lnk = PATH_PROG('xilink', WshShell.Environment("Process").Item("PATH"), "LINK");
 	}
 
-	ERROR("Unsupported toolset");
+	if (!lnk) {
+		ERROR("Unsupported toolset");
+	}
+
+	var ver = probe_binary(lnk);
+
+	var major = ver.substr(0, 2);
+	var minor = ver.substr(3, 2);
+
+	AC_DEFINE('PHP_LINKER_MAJOR', major, "Linker major version", false);
+	AC_DEFINE('PHP_LINKER_MINOR', minor, "Linker minor version", false);
+
+	return lnk;
 }
 
 function toolset_setup_common_cflags()
@@ -3407,7 +3381,7 @@ function toolset_setup_common_ldlags()
 function toolset_setup_common_libs()
 {
 	// urlmon.lib ole32.lib oleaut32.lib uuid.lib gdi32.lib winspool.lib comdlg32.lib
-	DEFINE("LIBS", "kernel32.lib ole32.lib user32.lib advapi32.lib shell32.lib ws2_32.lib Dnsapi.lib psapi.lib bcrypt.lib");
+	DEFINE("LIBS", "kernel32.lib ole32.lib user32.lib advapi32.lib shell32.lib ws2_32.lib Dnsapi.lib psapi.lib bcrypt.lib imagehlp.lib");
 }
 
 function toolset_setup_build_mode()
