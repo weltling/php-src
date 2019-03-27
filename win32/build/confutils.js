@@ -35,7 +35,8 @@ var VCVERS = -1;
 var CLANGVERS = -1;
 var INTELVERS = -1;
 var COMPILER_NUMERIC_VERSION = -1;
-var COMPILER_NAME = "unknown";
+var COMPILER_NAME_LONG = "unknown";
+var COMPILER_NAME_SHORT = "unknown";
 var PHP_OBJECT_OUT_DIR = "";
 var PHP_CONFIG_PROFILE = "no";
 var PHP_SANITIZER = "no";
@@ -1950,7 +1951,7 @@ function write_summary()
 	}
 	ar[k++] = ['Build type', PHP_DEBUG == "yes" ? "Debug" : "Release"];
 	ar[k++] = ['Thread Safety', PHP_ZTS == "yes" ? "Yes" : "No"];
-	ar[k++] = ['Compiler', COMPILER_NAME];
+	ar[k++] = ['Compiler', COMPILER_NAME_LONG];
 	ar[k++] = ['Architecture', X64 ? 'x64' : 'x86'];
 	if (PHP_PGO == "yes") {
 		ar[k++] = ['Optimization', "PGO"];
@@ -2931,40 +2932,41 @@ function toolset_setup_compiler()
 	}
 
 	COMPILER_NUMERIC_VERSION = toolset_get_compiler_version();
-	COMPILER_NAME = toolset_get_compiler_name();
+	COMPILER_NAME_LONG = toolset_get_compiler_name();
+	COMPILER_NAME_SHORT = toolset_get_compiler_name(true);
 
 	if (VS_TOOLSET) {
 		VCVERS = COMPILER_NUMERIC_VERSION;
 
-		if (undefined == COMPILER_NAME) {
+		if ("unknown" == COMPILER_NAME_LONG) {
 			var tmp = probe_binary(PHP_CL);
 			COMPILER_NAME = "MSVC " + tmp + ", untested";
 
 			WARNING("Using unknown MSVC version " + tmp);
 
-			AC_DEFINE('COMPILER', COMPILER_NAME, "Detected compiler version");
+			AC_DEFINE('COMPILER', COMPILER_NAME_LONG, "Detected compiler version");
 			DEFINE("PHP_COMPILER_SHORT", tmp);
 			AC_DEFINE('PHP_COMPILER_ID', tmp, "Compiler compatibility ID");
 		} else {
-			AC_DEFINE('COMPILER', COMPILER_NAME, "Detected compiler version");
-			DEFINE("PHP_COMPILER_SHORT", "msvc");
-			AC_DEFINE('PHP_COMPILER_ID', "MSVC", "Compiler compatibility ID");
+			AC_DEFINE('COMPILER', COMPILER_NAME_LONG, "Detected compiler version");
+			DEFINE("PHP_COMPILER_SHORT", COMPILER_NAME_SHORT.toLowerCase());
+			AC_DEFINE('PHP_COMPILER_ID', COMPILER_NAME_SHORT.toUpperCase(), "Compiler compatibility ID");
 		}
 	} else if (CLANG_TOOLSET) {
 		CLANGVERS = COMPILER_NUMERIC_VERSION;
 
-		AC_DEFINE('COMPILER', COMPILER_NAME, "Detected compiler version");
+		AC_DEFINE('COMPILER', COMPILER_NAME_LONG, "Detected compiler version");
 		DEFINE("PHP_COMPILER_SHORT", "clang");
 		AC_DEFINE('PHP_COMPILER_ID', "clang"); /* XXX something better were to write here */
 
 	} else if (ICC_TOOLSET) {
 		INTELVERS = COMPILER_NUMERIC_VERSION;
 
-		AC_DEFINE('COMPILER', COMPILER_NAME, "Detected compiler version");
+		AC_DEFINE('COMPILER', COMPILER_NAME_LONG, "Detected compiler version");
 		DEFINE("PHP_COMPILER_SHORT", "icc");
 		AC_DEFINE('PHP_COMPILER_ID', "icc"); /* XXX something better were to write here */
 	}
-	STDOUT.WriteLine("  Detected compiler " + COMPILER_NAME);
+	STDOUT.WriteLine("  Detected compiler " + COMPILER_NAME_LONG);
 }
 
 function toolset_setup_project_tools()
@@ -3089,21 +3091,24 @@ function toolset_get_compiler_version()
 }
 
 /* Get compiler name if the toolset is supported */
-function toolset_get_compiler_name()
+function toolset_get_compiler_name(short)
 {
 	var version;
+	short = !!short;
 
 	if (VS_TOOLSET) {
-		var name = undefined;
+		var name = "unknown";
 
 		version = probe_binary(PHP_CL).substr(0, 5).replace('.', '');
 
-		if (version >= 1920) {
-			name = "Visual C++ 2019 or above";
+		if (version >= 1930) {
+			return name;
+		} if (version >= 1920) {
+			name = short ? "VS16" : "Visual C++ 2019";
 		} else if (version >= 1910) {
-			name = "Visual C++ 2017";
+			name = short ? "VS15" : "Visual C++ 2017";
 		} else if (version >= 1900) {
-			name = "Visual C++ 2015";
+			name = short ? "VS14" : "Visual C++ 2015";
 		} else {
 			ERROR("Unsupported Visual C++ compiler " + version);
 		}
