@@ -3106,9 +3106,9 @@ function toolset_get_compiler_name(short)
 		} if (version >= 1920) {
 			name = short ? "VS16" : "Visual C++ 2019";
 		} else if (version >= 1910) {
-			name = short ? "VS15" : "Visual C++ 2017";
+			name = short ? "VC15" : "Visual C++ 2017";
 		} else if (version >= 1900) {
-			name = short ? "VS14" : "Visual C++ 2015";
+			name = short ? "VC14" : "Visual C++ 2015";
 		} else {
 			ERROR("Unsupported Visual C++ compiler " + version);
 		}
